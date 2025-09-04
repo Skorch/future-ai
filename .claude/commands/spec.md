@@ -56,7 +56,7 @@ Create visual, comprehensive markdown specification including:
    - Avoid implementation details
 
 3. **Structure**:
-   ```markdown
+   ````markdown
    # Architecture: [Topic]
    Date: YYYY-MM-DD
    
@@ -77,6 +77,7 @@ Create visual, comprehensive markdown specification including:
    [ASCII or Mermaid diagram]
    
    ### File Structure
+   //ALWAYS show this file tree
    ```
    src/
    ├── 📄 existing-file.ts (modified)
@@ -89,6 +90,26 @@ Create visual, comprehensive markdown specification including:
    ### Data Flow
    [Mermaid sequence diagram]
    
+   ### UI Layout
+   [if applicable]
+   ```
+   ┌─────────────────────────────────────────────────────┐
+   │ 🤖 Assistant                                        │
+   │                                                      │
+   │ I've created a document with an initial title.      │
+   │                                                      │
+   │ ┌──────────────────────────────────────────────┐   │
+   │ │ 📄 Silicon Valley: The Global Hub...    [💾] │◀── Save Button (auth users only)
+   │ │ ─────────────────────────────────────────── │   │
+   │ │                                              │   │
+   │ │ Silicon Valley, located in the southern     │   │
+   │ │ part of the San Francisco Bay Area...       │   │
+   │ │                                              │   │
+   │ │ [Full document content...]                   │   │
+   │ └──────────────────────────────────────────────┘   │
+   └─────────────────────────────────────────────────────┘
+   ```
+
    ### Core Business Rules
    ```typescript
    // ONLY critical rules here
@@ -99,7 +120,7 @@ Create visual, comprehensive markdown specification including:
    
    ### Migration Strategy
    [If applicable]
-   ```
+   ````
 
 ### Phase 4: Pragmatic Review
 1. **Delegate to `code-quality-pragmatist`**: Review for over-engineering

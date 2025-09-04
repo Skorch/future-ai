@@ -1,4 +1,4 @@
 {
   "*.{ts,tsx,js,jsx}": ["biome check --write --unsafe --error-on-warnings"],
-  "*.{json,md,css}": ["biome format --write"]
+  "*.{json,css}": ["biome format --write"]
 }
