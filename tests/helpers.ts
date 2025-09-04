@@ -20,11 +20,11 @@ export type UserContext = {
 export async function createAuthenticatedContext({
   browser,
   name,
-  chatModel = 'chat-model',
+  chatModel = 'grok-vision',
 }: {
   browser: Browser;
   name: string;
-  chatModel?: 'chat-model' | 'chat-model-reasoning';
+  chatModel?: 'grok-vision' | 'grok-reasoning';
 }): Promise<UserContext> {
   const directory = path.join(__dirname, '../playwright/.sessions');
 
@@ -53,8 +53,8 @@ export async function createAuthenticatedContext({
 
   const chatPage = new ChatPage(page);
   await chatPage.createNewChat();
-  await chatPage.chooseModelFromSelector('chat-model-reasoning');
-  await expect(chatPage.getSelectedModel()).resolves.toEqual('Reasoning model');
+  await chatPage.chooseModelFromSelector('grok-reasoning');
+  await expect(chatPage.getSelectedModel()).resolves.toEqual('Grok Reasoning');
 
   await page.waitForTimeout(1000);
   await context.storageState({ path: storageFile });

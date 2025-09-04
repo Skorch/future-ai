@@ -35,7 +35,7 @@ import {
 import { after } from 'next/server';
 import { ChatSDKError } from '@/lib/errors';
 import type { ChatMessage } from '@/lib/types';
-import type { ChatModel } from '@/lib/ai/models';
+import { chatModels, type ChatModel } from '@/lib/ai/models';
 import type { VisibilityType } from '@/components/visibility-selector';
 
 export const maxDuration = 60;
@@ -48,6 +48,7 @@ export function getStreamContext() {
       globalStreamContext = createResumableStreamContext({
         waitUntil: after,
       });
+      // biome-ignore lint/suspicious/noExplicitAny: Error type is unknown
     } catch (error: any) {
       if (error.message.includes('REDIS_URL')) {
         console.log(
@@ -150,6 +151,29 @@ export async function POST(request: Request) {
     const streamId = generateUUID();
     await createStreamId({ streamId, chatId: id });
 
+    // Get model configuration to check for reasoning capabilities
+    const modelConfig = chatModels.find((m) => m.id === selectedChatModel);
+    const isReasoningModel =
+      modelConfig?.supportsReasoning || modelConfig?.outputsRawReasoningTag;
+
+    // Anthropic models support tools with reasoning, other providers may have issues
+    // - Anthropic has "think" tool and interleaved thinking support
+    // - xAI/Grok has limitations with reasoning + tools (performance/cost issues)
+    // - Other providers untested with reasoning + tools
+    const shouldDisableTools =
+      isReasoningModel && modelConfig?.provider !== 'anthropic';
+
+    // Only add provider options for models with native reasoning support
+    const providerOptions = modelConfig?.supportsReasoning
+      ? {
+          anthropic: {
+            thinking: {
+              type: 'enabled' as const,
+              budgetTokens: 12000, // 12k tokens for thinking process
+            },
+          },
+        }
+      : undefined;
 
     const stream = createUIMessageStream({
       execute: ({ writer: dataStream }) => {
@@ -158,9 +182,9 @@ export async function POST(request: Request) {
             model: myProvider.languageModel(selectedChatModel),
             system: systemPrompt({ selectedChatModel, requestHints }),
             messages: convertToModelMessages(uiMessages),
-          stopWhen: stepCountIs(5),
-          experimental_activeTools:
-            selectedChatModel === 'chat-model-reasoning'
+            providerOptions, // Add provider options for thinking models
+            stopWhen: stepCountIs(5),
+            experimental_activeTools: shouldDisableTools
               ? []
               : [
                   'getWeather',
@@ -168,29 +192,29 @@ export async function POST(request: Request) {
                   'updateDocument',
                   'requestSuggestions',
                 ],
-          experimental_transform: smoothStream({ chunking: 'word' }),
-          tools: {
-            getWeather,
-            createDocument: createDocument({ session, dataStream }),
-            updateDocument: updateDocument({ session, dataStream }),
-            requestSuggestions: requestSuggestions({
-              session,
-              dataStream,
+            experimental_transform: smoothStream({ chunking: 'word' }),
+            tools: {
+              getWeather,
+              createDocument: createDocument({ session, dataStream }),
+              updateDocument: updateDocument({ session, dataStream }),
+              requestSuggestions: requestSuggestions({
+                session,
+                dataStream,
+              }),
+            },
+            experimental_telemetry: {
+              isEnabled: isProductionEnvironment,
+              functionId: 'stream-text',
+            },
+          });
+
+          result.consumeStream();
+
+          dataStream.merge(
+            result.toUIMessageStream({
+              sendReasoning: true,
             }),
-          },
-          experimental_telemetry: {
-            isEnabled: isProductionEnvironment,
-            functionId: 'stream-text',
-          },
-        });
-
-        result.consumeStream();
-
-        dataStream.merge(
-          result.toUIMessageStream({
-            sendReasoning: true,
-          }),
-        );
+          );
         } catch (streamError) {
           console.error('[Chat API] Stream error:', streamError);
           throw streamError;
@@ -209,9 +233,12 @@ export async function POST(request: Request) {
           })),
         });
       },
+      // biome-ignore lint/suspicious/noExplicitAny: Error type is unknown
       onError: (error: any) => {
         console.error('[Chat API] Stream processing error:', error);
-        return error?.message || 'An error occurred while processing your request';
+        return (
+          error?.message || 'An error occurred while processing your request'
+        );
       },
     });
 
