@@ -1,0 +1,25 @@
+#!/usr/bin/env sh
+
+echo "🔍 Running pre-commit checks (STRICT MODE)..."
+
+# Run lint-staged for incremental checks on staged files
+# This will fail on ANY Biome warnings or errors
+echo "📝 Checking code quality with Biome (warnings = errors)..."
+pnpm exec lint-staged || {
+    echo "❌ Code quality check failed. All Biome warnings and errors must be fixed."
+    echo "💡 Run 'pnpm biome check --write' on your files to auto-fix what's possible"
+    exit 1
+}
+
+# Run type checking on the entire project (excluding tests for now)
+echo "🔧 Running TypeScript type check..."
+pnpm exec tsc --noEmit --project tsconfig.precommit.json || {
+    echo "❌ Type checking failed. Please fix TypeScript errors before committing."
+    echo "💡 Tip: Run 'pnpm type-check' to see all errors"
+    exit 1
+}
+
+echo "✅ All pre-commit checks passed!"
+
+# Note: Unit tests would go here if they existed
+# For now, we're skipping Playwright E2E tests as requested
