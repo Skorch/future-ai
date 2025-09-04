@@ -36,14 +36,15 @@ const prepareContent = (content: string, kind: string): Buffer | string => {
 
 export async function POST(
   _req: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const { id } = await params;
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const documents = await getDocumentsById({ id: params.id });
+  const documents = await getDocumentsById({ id });
   const [document] = documents;
 
   if (!document || document.userId !== session.user.id) {
