@@ -5,6 +5,7 @@ import { type Dispatch, memo, type SetStateAction, useState } from 'react';
 import type { ArtifactActionContext } from './create-artifact';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { SaveDocumentButton } from './save-document-button';
 
 interface ArtifactActionsProps {
   artifact: UIArtifact;
@@ -12,8 +13,8 @@ interface ArtifactActionsProps {
   currentVersionIndex: number;
   isCurrentVersion: boolean;
   mode: 'edit' | 'diff';
-  metadata: any;
-  setMetadata: Dispatch<SetStateAction<any>>;
+  metadata: unknown;
+  setMetadata: Dispatch<SetStateAction<unknown>>;
 }
 
 function PureArtifactActions({
@@ -82,6 +83,7 @@ function PureArtifactActions({
           <TooltipContent>{action.description}</TooltipContent>
         </Tooltip>
       ))}
+      <SaveDocumentButton documentId={artifact.documentId} />
     </div>
   );
 }

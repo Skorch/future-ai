@@ -21,11 +21,12 @@ import { useArtifact } from '@/hooks/use-artifact';
 import equal from 'fast-deep-equal';
 import { SpreadsheetEditor } from './sheet-editor';
 import { ImageEditor } from './image-editor';
+import { SaveDocumentButton } from './save-document-button';
 
 interface DocumentPreviewProps {
   isReadonly: boolean;
-  result?: any;
-  args?: any;
+  result?: { id: string; title: string; kind: ArtifactKind };
+  args?: { title: string; kind: ArtifactKind };
 }
 
 export function DocumentPreview({
@@ -81,7 +82,9 @@ export function DocumentPreview({
   }
 
   if (isDocumentsFetching) {
-    return <LoadingSkeleton artifactKind={result.kind ?? args.kind} />;
+    return (
+      <LoadingSkeleton artifactKind={result?.kind ?? args?.kind ?? 'text'} />
+    );
   }
 
   const document: Document | null = previewDocument
@@ -101,15 +104,18 @@ export function DocumentPreview({
 
   return (
     <div className="relative w-full cursor-pointer">
-      <HitboxLayer
-        hitboxRef={hitboxRef}
-        result={result}
-        setArtifact={setArtifact}
-      />
+      {result && (
+        <HitboxLayer
+          hitboxRef={hitboxRef}
+          result={result}
+          setArtifact={setArtifact}
+        />
+      )}
       <DocumentHeader
         title={document.title}
         kind={document.kind}
         isStreaming={artifact.status === 'streaming'}
+        documentId={document.id}
       />
       <DocumentContent document={document} />
     </div>
@@ -147,7 +153,7 @@ const PureHitboxLayer = ({
   setArtifact,
 }: {
   hitboxRef: React.RefObject<HTMLDivElement>;
-  result: any;
+  result: { id: string; title: string; kind: ArtifactKind };
   setArtifact: (
     updaterFn: UIArtifact | ((currentArtifact: UIArtifact) => UIArtifact),
   ) => void;
@@ -203,10 +209,12 @@ const PureDocumentHeader = ({
   title,
   kind,
   isStreaming,
+  documentId,
 }: {
   title: string;
   kind: ArtifactKind;
   isStreaming: boolean;
+  documentId: string;
 }) => (
   <div className="p-4 border rounded-t-2xl flex flex-row gap-2 items-start sm:items-center justify-between dark:bg-muted border-b-0 dark:border-zinc-700">
     <div className="flex flex-row items-start sm:items-center gap-3">
@@ -223,13 +231,19 @@ const PureDocumentHeader = ({
       </div>
       <div className="-translate-y-1 sm:translate-y-0 font-medium">{title}</div>
     </div>
-    <div className="w-8" />
+    <div className="flex flex-row items-center gap-2 relative z-20">
+      {!isStreaming && documentId && (
+        <SaveDocumentButton documentId={documentId} />
+      )}
+      <div className="w-8" />
+    </div>
   </div>
 );
 
 const DocumentHeader = memo(PureDocumentHeader, (prevProps, nextProps) => {
   if (prevProps.title !== nextProps.title) return false;
   if (prevProps.isStreaming !== nextProps.isStreaming) return false;
+  if (prevProps.documentId !== nextProps.documentId) return false;
 
   return true;
 });
