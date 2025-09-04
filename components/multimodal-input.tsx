@@ -54,6 +54,7 @@ function PureMultimodalInput({
   className,
   selectedVisibilityType,
   selectedModelId,
+  onModelChange,
 }: {
   chatId: string;
   input: string;
@@ -68,6 +69,7 @@ function PureMultimodalInput({
   className?: string;
   selectedVisibilityType: VisibilityType;
   selectedModelId: string;
+  onModelChange?: (modelId: string) => void;
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { width } = useWindowSize();
@@ -324,7 +326,7 @@ function PureMultimodalInput({
         <PromptInputToolbar className="px-4 py-2 !border-t-0 !border-top-0 shadow-none dark:!border-transparent dark:border-0">
           <PromptInputTools className="gap-2">
             <AttachmentsButton fileInputRef={fileInputRef} status={status} />
-            <ModelSelectorCompact selectedModelId={selectedModelId} />
+            <ModelSelectorCompact selectedModelId={selectedModelId} onModelChange={onModelChange} />
           </PromptInputTools>
           {status === 'submitted' ? (
             <StopButton stop={stop} setMessages={setMessages} />
@@ -384,8 +386,10 @@ const AttachmentsButton = memo(PureAttachmentsButton);
 
 function PureModelSelectorCompact({
   selectedModelId,
+  onModelChange,
 }: {
   selectedModelId: string;
+  onModelChange?: (modelId: string) => void;
 }) {
   const [optimisticModelId, setOptimisticModelId] = useState(selectedModelId);
 
@@ -400,6 +404,7 @@ function PureModelSelectorCompact({
         const model = chatModels.find((m) => m.name === modelName);
         if (model) {
           setOptimisticModelId(model.id);
+          onModelChange?.(model.id);
           startTransition(() => {
             saveChatModelAsCookie(model.id);
           });

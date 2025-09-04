@@ -68,7 +68,8 @@ export async function POST(request: Request) {
   try {
     const json = await request.json();
     requestBody = postRequestBodySchema.parse(json);
-  } catch (_) {
+  } catch (error) {
+    console.error('[Chat API] Schema validation failed:', error);
     return new ChatSDKError('bad_request:api').toResponse();
   }
 
@@ -149,12 +150,14 @@ export async function POST(request: Request) {
     const streamId = generateUUID();
     await createStreamId({ streamId, chatId: id });
 
+
     const stream = createUIMessageStream({
       execute: ({ writer: dataStream }) => {
-        const result = streamText({
-          model: myProvider.languageModel(selectedChatModel),
-          system: systemPrompt({ selectedChatModel, requestHints }),
-          messages: convertToModelMessages(uiMessages),
+        try {
+          const result = streamText({
+            model: myProvider.languageModel(selectedChatModel),
+            system: systemPrompt({ selectedChatModel, requestHints }),
+            messages: convertToModelMessages(uiMessages),
           stopWhen: stepCountIs(5),
           experimental_activeTools:
             selectedChatModel === 'chat-model-reasoning'
@@ -188,6 +191,10 @@ export async function POST(request: Request) {
             sendReasoning: true,
           }),
         );
+        } catch (streamError) {
+          console.error('[Chat API] Stream error:', streamError);
+          throw streamError;
+        }
       },
       generateId: generateUUID,
       onFinish: async ({ messages }) => {
@@ -202,8 +209,9 @@ export async function POST(request: Request) {
           })),
         });
       },
-      onError: () => {
-        return 'Oops, an error occurred!';
+      onError: (error: any) => {
+        console.error('[Chat API] Stream processing error:', error);
+        return error?.message || 'An error occurred while processing your request';
       },
     });
 
@@ -223,7 +231,7 @@ export async function POST(request: Request) {
       return error.toResponse();
     }
 
-    console.error('Unhandled error in chat API:', error);
+    console.error('[Chat API] Unhandled error:', error);
     return new ChatSDKError('offline:chat').toResponse();
   }
 }
