@@ -462,14 +462,17 @@ async function testQuery() {
     const client = new PineconeClient({ indexName: INDEX_NAME });
 
     const queries = [
-      { text: 'What is the main topic?', filters: undefined },
-      { text: 'test', filters: undefined }, // Simple query
-      { text: 'hello', filters: undefined }, // Another simple query
+      { text: 'What are the top metrics for executives?', filters: undefined },
+      { text: 'revenue MRR ARR growth', filters: undefined },
+      { text: 'customer churn rate', filters: undefined },
       {
-        text: 'Technical implementation details',
+        text: 'dashboard requirements',
         filters: { type: 'transcript' },
       },
-      { text: 'Business strategy', filters: { topic: 'business' } },
+      {
+        text: 'revenue tracking',
+        filters: { topic: 'Revenue Metrics' },
+      },
     ];
 
     const results: QueryTestResult[] = [];

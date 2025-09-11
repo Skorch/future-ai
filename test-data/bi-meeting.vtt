@@ -1,0 +1,133 @@
+WEBVTT
+
+00:00:00.000 --> 00:00:08.000
+<v Sarah Chen>Good morning everyone. Let's kick off our BI metrics planning session for the executive dashboard.
+
+00:00:08.000 --> 00:00:15.000
+<v Michael Torres>Thanks Sarah. I've prepared an overview of the core metrics we should prioritize for the C-suite.
+
+00:00:15.000 --> 00:00:25.000
+<v Sarah Chen>Perfect. Let's start with revenue metrics. We need real-time visibility into MRR, ARR, and growth rates.
+
+00:00:25.000 --> 00:00:35.000
+<v Jennifer Park>Absolutely. The CFO specifically requested daily revenue tracking with month-over-month comparisons.
+
+00:00:35.000 --> 00:00:45.000
+<v Michael Torres>For revenue, I suggest we break it down by product line, geography, and customer segment.
+
+00:00:45.000 --> 00:00:55.000
+<v David Liu>We should also include customer acquisition cost and lifetime value. Those are critical KPIs.
+
+00:00:55.000 --> 00:01:05.000
+<v Sarah Chen>Good point David. Let's move to customer metrics. What's essential for the executive team?
+
+00:01:05.000 --> 00:01:15.000
+<v Jennifer Park>Churn rate is number one. We need both logo churn and revenue churn displayed prominently.
+
+00:01:15.000 --> 00:01:25.000
+<v Michael Torres>Net Promoter Score and customer satisfaction scores should be there too. Weekly updates minimum.
+
+00:01:25.000 --> 00:01:35.000
+<v David Liu>Don't forget about customer engagement metrics - daily active users, feature adoption rates.
+
+00:01:35.000 --> 00:01:45.000
+<v Sarah Chen>Excellent. Now for operational metrics. What do the executives need to see?
+
+00:01:45.000 --> 00:01:55.000
+<v Jennifer Park>Employee productivity metrics, sprint velocity for engineering, and support ticket resolution times.
+
+00:01:55.000 --> 00:02:05.000
+<v Michael Torres>The CEO wants to see our burn rate and runway prominently. That's non-negotiable.
+
+00:02:05.000 --> 00:02:15.000
+<v David Liu>We should add pipeline coverage ratio and sales conversion rates for the sales metrics section.
+
+00:02:15.000 --> 00:02:25.000
+<v Sarah Chen>Let's talk about data freshness. How real-time does this need to be?
+
+00:02:25.000 --> 00:02:35.000
+<v Jennifer Park>Financial metrics need to be updated hourly. Customer metrics can be daily.
+
+00:02:35.000 --> 00:02:45.000
+<v Michael Torres>I disagree. Customer churn should be real-time. It's too critical to wait.
+
+00:02:45.000 --> 00:02:55.000
+<v David Liu>We need to consider our data pipeline capacity. Real-time for everything isn't feasible.
+
+00:02:55.000 --> 00:03:05.000
+<v Sarah Chen>Let's prioritize. What are the top 5 metrics the CEO looks at every morning?
+
+00:03:05.000 --> 00:03:15.000
+<v Jennifer Park>Based on our meetings: ARR, burn rate, customer churn, pipeline coverage, and NPS.
+
+00:03:15.000 --> 00:03:25.000
+<v Michael Torres>Those five should be real-time or near real-time. Everything else can be daily.
+
+00:03:25.000 --> 00:03:35.000
+<v David Liu>Agreed. I'll work on the data architecture to support those refresh rates.
+
+00:03:35.000 --> 00:03:45.000
+<v Sarah Chen>Now about visualization. The executives prefer simple, clear charts. No complex graphics.
+
+00:03:45.000 --> 00:03:55.000
+<v Jennifer Park>Traffic light system for KPIs - green, yellow, red based on targets.
+
+00:03:55.000 --> 00:04:05.000
+<v Michael Torres>Trend lines are crucial. They want to see 13-week rolling trends for key metrics.
+
+00:04:05.000 --> 00:04:15.000
+<v David Liu>We should include variance analysis - actual versus budget and forecast.
+
+00:04:15.000 --> 00:04:25.000
+<v Sarah Chen>Let's discuss drill-down capabilities. How deep should executives be able to go?
+
+00:04:25.000 --> 00:04:35.000
+<v Jennifer Park>Two levels maximum. Summary view, then one level of detail. Keep it simple.
+
+00:04:35.000 --> 00:04:45.000
+<v Michael Torres>They should be able to filter by time period, region, and product line at minimum.
+
+00:04:45.000 --> 00:04:55.000
+<v David Liu>I'll implement role-based access control. Not all executives should see all metrics.
+
+00:04:55.000 --> 00:05:05.000
+<v Sarah Chen>Good thinking. CFO needs financial details, CPO needs product metrics, and so on.
+
+00:05:05.000 --> 00:05:15.000
+<v Jennifer Park>What about mobile access? The CEO specifically requested dashboard access on his phone.
+
+00:05:15.000 --> 00:05:25.000
+<v Michael Torres>Mobile-responsive design is a must. Maybe even a dedicated mobile app eventually.
+
+00:05:25.000 --> 00:05:35.000
+<v David Liu>Let's start with responsive web. We can consider native apps in phase two.
+
+00:05:35.000 --> 00:05:45.000
+<v Sarah Chen>Alerting is critical. What thresholds trigger notifications to executives?
+
+00:05:45.000 --> 00:05:55.000
+<v Jennifer Park>Any metric going red should trigger immediate alerts. Yellow can be daily summaries.
+
+00:05:55.000 --> 00:06:05.000
+<v Michael Torres>Churn spike over 2% should alert immediately. Same with burn rate exceeding plan by 10%.
+
+00:06:05.000 --> 00:06:15.000
+<v David Liu>I'll set up intelligent alerting to avoid alert fatigue. Anomaly detection, not just thresholds.
+
+00:06:15.000 --> 00:06:25.000
+<v Sarah Chen>Perfect. Let's wrap up with timeline. When can we deliver the MVP dashboard?
+
+00:06:25.000 --> 00:06:35.000
+<v Jennifer Park>If we focus on the top 5 metrics first, we could have something in two weeks.
+
+00:06:35.000 --> 00:06:45.000
+<v Michael Torres>The data pipelines for real-time metrics will take at least three weeks to properly test.
+
+00:06:45.000 --> 00:06:55.000
+<v David Liu>I think four weeks for a solid MVP is realistic. Better to do it right than rush.
+
+00:06:55.000 --> 00:07:05.000
+<v Sarah Chen>Let's commit to four weeks for MVP with the top 5 metrics, then iterate from there.
+
+00:07:05.000 --> 00:07:15.000
+<v Everyone>Agreed. Let's do this!
