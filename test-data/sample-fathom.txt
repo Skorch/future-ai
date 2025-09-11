@@ -1,0 +1,34 @@
+Team Planning - January 15
+VIEW RECORDING - 30 mins: https://fathom.video/share/sample
+
+---
+
+0:00 - Drew Beaupre (Mammoth Growth)
+  Let's review our Q2 objectives.
+
+0:15 - Sarah Chen (Engineering)
+  I've prepared a list of technical priorities.
+
+0:30 - Mike Johnson (Product)
+  We should align these with customer feedback.
+
+1:00 - Drew Beaupre (Mammoth Growth)
+  Authentication is the top priority based on user requests.
+
+1:30 - Sarah Chen (Engineering)
+  We can implement OAuth2 and SAML support.
+
+2:00 - Mike Johnson (Product)
+  What about mobile authentication?
+
+2:30 - Drew Beaupre (Mammoth Growth)
+  Good point. Let's include biometric support.
+
+3:00 - Sarah Chen (Engineering)
+  That will require native mobile development.
+
+3:30 - Mike Johnson (Product)
+  We should also consider passwordless options.
+
+4:00 - Drew Beaupre (Mammoth Growth)
+  Let's create a comprehensive authentication roadmap.

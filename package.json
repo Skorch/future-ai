@@ -34,6 +34,7 @@
     "@icons-pack/react-simple-icons": "^13.7.0",
     "@opentelemetry/api": "^1.9.0",
     "@opentelemetry/api-logs": "^0.200.0",
+    "@pinecone-database/pinecone": "^6.1.2",
     "@radix-ui/react-alert-dialog": "^1.1.2",
     "@radix-ui/react-avatar": "^1.1.10",
     "@radix-ui/react-collapsible": "^1.1.12",

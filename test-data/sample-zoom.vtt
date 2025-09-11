@@ -1,0 +1,41 @@
+WEBVTT
+
+1
+00:00:03.840 --> 00:00:08.200
+Drew Beaupre: Let's start with our Q2 planning discussion.
+
+2
+00:00:08.500 --> 00:00:15.000
+Sarah Chen: Great. I think we should focus on the authentication system first.
+
+3
+00:00:15.500 --> 00:00:22.000
+Drew Beaupre: Agreed. We need OAuth integration and SSO support.
+
+4
+00:00:22.500 --> 00:00:28.000
+Sarah Chen: What about the timeline? We need to be realistic.
+
+5
+00:00:28.500 --> 00:00:35.000
+Drew Beaupre: I'm thinking 3 sprints for the core functionality.
+
+6
+00:00:35.500 --> 00:00:42.000
+Mike Johnson: Don't forget about the security audit requirements.
+
+7
+00:00:42.500 --> 00:00:48.000
+Sarah Chen: Good point. We should build that into the timeline.
+
+8
+00:00:48.500 --> 00:00:55.000
+Drew Beaupre: Let's move on to the budget considerations.
+
+9
+00:00:55.500 --> 00:01:02.000
+Mike Johnson: We have approximately 200K allocated for Q2.
+
+10
+00:01:02.500 --> 00:01:09.000
+Sarah Chen: That should cover the authentication work and the API redesign.
