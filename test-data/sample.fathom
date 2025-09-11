@@ -1,0 +1,8 @@
+00:00:00 Speaker 1: Welcome to our technical discussion today.
+00:00:05 Speaker 2: Thanks for organizing this meeting.
+00:00:10 Speaker 1: Let's dive into the architecture patterns we've been exploring.
+00:00:15 Speaker 2: I think microservices would be a good fit for our use case.
+00:00:20 Speaker 1: Can you elaborate on the benefits you see?
+00:00:25 Speaker 2: Sure, it offers better scalability and independent deployment.
+00:00:30 Speaker 1: What about the added complexity?
+00:00:35 Speaker 2: That's a valid concern we need to address.

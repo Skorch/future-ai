@@ -27,7 +27,8 @@
     "pinecone:delete": "tsx scripts/setup-pinecone.ts delete-index",
     "pinecone:reset": "tsx scripts/setup-pinecone.ts reset-index",
     "pinecone:stats": "tsx scripts/setup-pinecone.ts stats",
-    "rag": "tsx scripts/setup-pinecone.ts"
+    "rag": "tsx scripts/setup-pinecone.ts",
+    "rag:test": "tsx scripts/rag-cli.ts"
   },
   "dependencies": {
     "@ai-sdk/gateway": "^1.0.15",

@@ -72,19 +72,59 @@ export class PineconeClient {
           Math.min(i + batchSize, documents.length),
         );
 
-        // For integrated embeddings, we pass text content directly
-        // The 'content' field is mapped to text embedding via fieldMap configuration
-        const records = batch.map((doc) => ({
-          id: doc.id,
-          metadata: {
-            ...doc.metadata,
-            content: doc.content, // This field is mapped for embedding generation
-          } as RecordMetadata,
-        }));
-
         try {
-          await index.namespace(namespace).upsert(records);
-          written += records.length;
+          // For integrated embeddings with Pinecone's data plane API
+          // The field configured in fieldMap (content) will be auto-embedded
+          // Check if we have the upsertRecords method (newer SDK) or need to use upsert
+          const ns = index.namespace(namespace);
+
+          if (
+            'upsertRecords' in ns &&
+            typeof (ns as unknown as { upsertRecords?: unknown })
+              .upsertRecords === 'function'
+          ) {
+            // Use newer upsertRecords API for integrated embeddings
+            const records = batch.map((doc) => ({
+              _id: doc.id,
+              content: doc.content, // This matches our fieldMap configuration
+              ...doc.metadata, // Spread metadata as top-level fields
+            }));
+            await (
+              ns as unknown as {
+                upsertRecords: (records: unknown[]) => Promise<void>;
+              }
+            ).upsertRecords(records);
+          } else {
+            // Fallback to standard upsert with pre-computed embeddings
+            // Generate embeddings using Pinecone's inference API
+            const texts = batch.map((doc) => doc.content);
+            const embedResponse = await this.client.inference.embed(
+              'llama-text-embed-v2',
+              texts,
+              { inputType: 'passage' },
+            );
+
+            const records = batch.map((doc, idx) => {
+              const embedding = embedResponse.data[idx];
+              const vector =
+                'values' in embedding
+                  ? embedding.values
+                  : (embedding as { data?: number[] }).data || [];
+
+              return {
+                id: doc.id,
+                values: vector as number[],
+                metadata: {
+                  ...doc.metadata,
+                  content: doc.content,
+                } as RecordMetadata,
+              };
+            });
+
+            await ns.upsert(records);
+          }
+
+          written += batch.length;
 
           // Report progress
           if (progressCallback) {
@@ -204,8 +244,11 @@ export class PineconeClient {
       );
 
       const embedding = embedResponse.data[0];
-      const vector = 'values' in embedding ? embedding.values : embedding.data;
-      
+      const vector =
+        'values' in embedding
+          ? embedding.values
+          : (embedding as { data?: number[] }).data;
+
       const response = await index.namespace(namespace).query({
         vector: vector as number[],
         topK,

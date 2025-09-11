@@ -1,0 +1,7 @@
+This is a plain text document for testing purposes.
+
+It contains multiple paragraphs to test the document parsing functionality.
+
+Each paragraph should be treated as a separate section when parsed.
+
+The parser should handle plain text files gracefully and split them appropriately.

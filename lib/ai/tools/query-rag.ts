@@ -1,8 +1,10 @@
-import { tool } from 'ai';
+import { tool, type UIMessageStreamWriter } from 'ai';
 import { z } from 'zod';
 import { PineconeClient } from '../../rag/pinecone-client';
 import { createReranker } from '../../rag/reranker';
 import type { QueryResult, QueryMatch, RAGMetadata } from '../../rag/types';
+import type { Session } from 'next-auth';
+import type { ChatMessage } from '@/lib/types';
 
 // Tool parameter schema
 const queryRAGSchema = z.object({
@@ -119,8 +121,9 @@ async function expandChunkContext(
 
     // If this is a chunked document, try to fetch adjacent chunks
     if (match.metadata.chunkIndex !== undefined && match.metadata.fileHash) {
-      const prevChunkId = `${match.metadata.fileHash}-chunk-${match.metadata.chunkIndex - 1}`;
-      const nextChunkId = `${match.metadata.fileHash}-chunk-${match.metadata.chunkIndex + 1}`;
+      // These IDs would be used for fetching specific chunks if needed
+      // const prevChunkId = `${match.metadata.fileHash}-chunk-${match.metadata.chunkIndex - 1}`;
+      // const nextChunkId = `${match.metadata.fileHash}-chunk-${match.metadata.chunkIndex + 1}`;
 
       // Fetch adjacent chunks if they exist
       const adjacentFilter = {
@@ -212,14 +215,12 @@ function formatResultsForLLM(matches: QueryMatch[]): string {
  * Query-RAG Tool
  * Searches the vector database for relevant content
  */
-interface ToolContext {
-  session?: unknown;
-  dataStream?: {
-    write: (data: unknown) => void;
-  };
+interface QueryRAGProps {
+  session: Session;
+  dataStream: UIMessageStreamWriter<ChatMessage>;
 }
 
-export const queryRAG = ({ session, dataStream }: ToolContext) =>
+export const queryRAG = (_props: QueryRAGProps) =>
   tool({
     description:
       'Search the RAG system for relevant content using semantic search',
@@ -310,28 +311,10 @@ export const queryRAG = ({ session, dataStream }: ToolContext) =>
         // Cache the result
         queryCache.set(cacheKey, { result, timestamp: Date.now() });
 
-        // Stream results to UI if available
-        if (dataStream) {
-          dataStream.write({
-            type: 'rag-query-result',
-            data: {
-              matchCount: matches.length,
-              topResult: `${matches[0]?.content.substring(0, 100)}...`,
-            },
-          });
-        }
-
         return result;
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : 'Unknown error';
-
-        if (dataStream) {
-          dataStream.write({
-            type: 'rag-query-error',
-            data: { error: errorMessage },
-          });
-        }
 
         return {
           success: false,

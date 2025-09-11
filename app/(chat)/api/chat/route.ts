@@ -23,6 +23,8 @@ import { createDocument } from '@/lib/ai/tools/create-document';
 import { updateDocument } from '@/lib/ai/tools/update-document';
 import { requestSuggestions } from '@/lib/ai/tools/request-suggestions';
 import { getWeather } from '@/lib/ai/tools/get-weather';
+import { writeToRAG } from '@/lib/ai/tools/write-to-rag';
+import { queryRAG } from '@/lib/ai/tools/query-rag';
 import { isProductionEnvironment } from '@/lib/constants';
 import { myProvider } from '@/lib/ai/providers';
 import { entitlementsByUserType } from '@/lib/ai/entitlements';
@@ -191,6 +193,8 @@ export async function POST(request: Request) {
                   'createDocument',
                   'updateDocument',
                   'requestSuggestions',
+                  'writeToRAG',
+                  'queryRAG',
                 ],
             experimental_transform: smoothStream({ chunking: 'word' }),
             tools: {
@@ -201,6 +205,8 @@ export async function POST(request: Request) {
                 session,
                 dataStream,
               }),
+              writeToRAG: writeToRAG({ session, dataStream }),
+              queryRAG: queryRAG({ session, dataStream }),
             },
             experimental_telemetry: {
               isEnabled: isProductionEnvironment,

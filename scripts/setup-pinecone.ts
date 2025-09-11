@@ -14,7 +14,7 @@ if (existsSync(envPath)) {
 
 // Configuration
 const INDEX_NAME = 'rag-agent-poc';
-const DIMENSION = 768; // llama-text-embed-v2 dimension
+const DIMENSION = 1024; // llama-text-embed-v2 dimension
 const METRIC = 'cosine';
 const EMBEDDING_MODEL = 'llama-text-embed-v2';
 

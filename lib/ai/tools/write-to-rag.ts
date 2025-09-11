@@ -1,4 +1,4 @@
-import { tool } from 'ai';
+import { tool, type UIMessageStreamWriter } from 'ai';
 import { z } from 'zod';
 import crypto from 'node:crypto';
 import { PineconeClient } from '../../rag/pinecone-client';
@@ -10,6 +10,8 @@ import type {
   ChunkResult,
   WriteResult,
 } from '../../rag/types';
+import type { Session } from 'next-auth';
+import type { ChatMessage } from '@/lib/types';
 
 // Tool parameter schema
 const writeToRAGSchema = z.object({
@@ -179,14 +181,12 @@ async function processContent(
  * Write-to-RAG Tool
  * Processes and stores various content types in the vector database
  */
-interface ToolContext {
-  session?: unknown;
-  dataStream?: {
-    write: (data: unknown) => void;
-  };
+interface WriteToRAGProps {
+  session: Session;
+  dataStream: UIMessageStreamWriter<ChatMessage>;
 }
 
-export const writeToRAG = ({ session, dataStream }: ToolContext) =>
+export const writeToRAG = (_props: WriteToRAGProps) =>
   tool({
     description:
       'Store transcript, document, or chat content in the RAG system for later retrieval',
@@ -195,61 +195,30 @@ export const writeToRAG = ({ session, dataStream }: ToolContext) =>
       const startTime = Date.now();
 
       try {
-        // Stream progress updates to UI
-        const streamProgress = (event: ProgressEvent) => {
-          if (dataStream) {
-            dataStream.write({
-              type: 'rag-progress',
-              data: event,
-            });
-          }
-        };
-
-        // Process content into RAG documents
-        const documents = await processContent(params, streamProgress);
+        // Process content into RAG documents (progress tracking disabled for now)
+        const documents = await processContent(params);
 
         if (documents.length === 0) {
-          streamProgress({
-            type: 'error',
-            message: 'No content to store after processing',
-          });
           return {
             success: false,
             error: 'No content to store after processing',
           };
         }
 
-        streamProgress({
-          type: 'storing',
-          message: `Storing ${documents.length} documents in Pinecone...`,
-        });
-
         // Initialize Pinecone client
         const pineconeClient = new PineconeClient({
           indexName: process.env.PINECONE_INDEX_NAME || 'rag-agent-poc',
         });
 
-        // Write documents to Pinecone with progress tracking
+        // Write documents to Pinecone
         const result: WriteResult = await pineconeClient.writeDocuments(
           documents,
           {
             namespace: params.namespace,
-            progressCallback: (progress: number) => {
-              streamProgress({
-                type: 'storing',
-                message: `Uploading to vector database...`,
-                progress,
-              });
-            },
           },
         );
 
         const duration = Date.now() - startTime;
-
-        streamProgress({
-          type: 'complete',
-          documentsWritten: result.documentsWritten,
-        });
 
         return {
           success: result.success,
@@ -263,13 +232,6 @@ export const writeToRAG = ({ session, dataStream }: ToolContext) =>
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : 'Unknown error';
-
-        if (dataStream) {
-          dataStream.write({
-            type: 'rag-progress',
-            data: { type: 'error', message: errorMessage },
-          });
-        }
 
         return {
           success: false,
