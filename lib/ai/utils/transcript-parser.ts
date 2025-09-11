@@ -1,8 +1,4 @@
-export interface TranscriptItem {
-  timecode: number; // seconds from start
-  speaker: string;
-  text: string;
-}
+import type { TranscriptItem } from '../../rag/types';
 
 export function parseTranscript(content: string): TranscriptItem[] {
   if (content.includes('WEBVTT')) {

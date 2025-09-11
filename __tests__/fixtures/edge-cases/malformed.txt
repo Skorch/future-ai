@@ -1,0 +1,10 @@
+This is not a valid transcript format.
+It doesn't follow WebVTT or Fathom conventions.
+Random text without proper structure.
+
+Some more text here:
+- No timestamps
+- No speaker identification
+- Just plain text
+
+This should trigger a parsing error.

@@ -19,7 +19,13 @@
     "test": "export PLAYWRIGHT=True && pnpm exec playwright test",
     "test:unit": "echo 'No unit tests configured yet'",
     "type-check": "tsc --noEmit",
-    "prepare": "husky"
+    "prepare": "husky",
+    "pinecone:setup": "tsx scripts/setup-pinecone.ts",
+    "pinecone:create": "tsx scripts/setup-pinecone.ts create-index",
+    "pinecone:delete": "tsx scripts/setup-pinecone.ts delete-index",
+    "pinecone:reset": "tsx scripts/setup-pinecone.ts reset-index",
+    "pinecone:stats": "tsx scripts/setup-pinecone.ts stats",
+    "rag": "tsx scripts/setup-pinecone.ts"
   },
   "dependencies": {
     "@ai-sdk/gateway": "^1.0.15",

@@ -1,30 +1,11 @@
 import { generateObject } from 'ai';
-import { z } from 'zod';
-import type { TranscriptItem } from './transcript-parser';
+import type {
+  TranscriptItem,
+  ChunkResult,
+  ChunkOptions,
+} from '../../rag/types';
+import { chunkSchema } from '../../rag/types';
 import { myProvider } from '../providers';
-
-export interface ChunkResult {
-  topic: string;
-  startIdx: number;
-  endIdx: number;
-  content: string;
-  metadata: {
-    startTime: number;
-    endTime: number;
-    speakers: string[];
-  };
-}
-
-export interface ChunkOptions {
-  chunkSize?: number;
-  model?: string;
-  dryRun?: boolean;
-}
-
-const chunkSchema = z.object({
-  topic: z.string(),
-  summary: z.string().optional(),
-});
 
 export async function chunkTranscriptItems(
   items: TranscriptItem[],
