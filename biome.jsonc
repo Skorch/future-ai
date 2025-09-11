@@ -130,6 +130,17 @@
           }
         }
       }
+    },
+    // Allow 'any' types in test files for mocking complex external libraries
+    {
+      "include": ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noExplicitAny": "off"
+          }
+        }
+      }
     }
   ]
 }
