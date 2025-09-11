@@ -173,12 +173,23 @@ export class PineconeClient {
     try {
       const index = this.client.index(this.indexName);
 
-      const response = await index.namespace(namespace).query({
+      // Build query params, only include filter if it has keys
+      const queryParams: {
+        vector: number[];
+        topK: number;
+        includeMetadata: boolean;
+        filter?: Record<string, unknown>;
+      } = {
         vector: queryVector,
         topK,
-        filter,
         includeMetadata,
-      });
+      };
+
+      if (filter && Object.keys(filter).length > 0) {
+        queryParams.filter = filter;
+      }
+
+      const response = await index.namespace(namespace).query(queryParams);
 
       // Convert Pinecone matches to our format
       const matches: QueryMatch[] = (response.matches || [])
@@ -249,12 +260,23 @@ export class PineconeClient {
           ? embedding.values
           : (embedding as { data?: number[] }).data;
 
-      const response = await index.namespace(namespace).query({
+      // Build query params, only include filter if it has keys
+      const queryParams: {
+        vector: number[];
+        topK: number;
+        includeMetadata: boolean;
+        filter?: Record<string, unknown>;
+      } = {
         vector: vector as number[],
         topK,
-        filter,
         includeMetadata,
-      });
+      };
+
+      if (filter && Object.keys(filter).length > 0) {
+        queryParams.filter = filter;
+      }
+
+      const response = await index.namespace(namespace).query(queryParams);
 
       // Convert Pinecone matches to our format
       const matches: QueryMatch[] = (response.matches || [])

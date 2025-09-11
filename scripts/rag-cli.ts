@@ -462,7 +462,9 @@ async function testQuery() {
     const client = new PineconeClient({ indexName: INDEX_NAME });
 
     const queries = [
-      { text: 'What is the main topic?', filters: {} },
+      { text: 'What is the main topic?', filters: undefined },
+      { text: 'test', filters: undefined }, // Simple query
+      { text: 'hello', filters: undefined }, // Another simple query
       {
         text: 'Technical implementation details',
         filters: { type: 'transcript' },
@@ -474,7 +476,7 @@ async function testQuery() {
 
     for (const query of queries) {
       info(`\nQuery: "${query.text}"`);
-      if (Object.keys(query.filters).length > 0) {
+      if (query.filters && Object.keys(query.filters).length > 0) {
         info(`Filters: ${JSON.stringify(query.filters)}`);
       }
 
@@ -482,6 +484,7 @@ async function testQuery() {
         topK: 3,
         namespace: 'test',
         filter: query.filters,
+        minScore: 0.0, // No threshold for testing - show all results
       });
 
       success(`Found ${result.matches.length} matches`);
