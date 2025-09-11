@@ -15,7 +15,11 @@ import {
 } from '../lib/ai/utils/transcript-parser';
 import { chunkTranscriptItems } from '../lib/ai/utils/rag-chunker';
 import { createReranker } from '../lib/rag/reranker';
-import type { RAGDocument, TranscriptItem } from '../lib/rag/types';
+import type {
+  RAGDocument,
+  TranscriptItem,
+  ChunkResult,
+} from '../lib/rag/types';
 
 // Load environment variables
 const envPath = join(process.cwd(), '.env.local');
@@ -172,6 +176,55 @@ async function testFileLoading() {
   return results;
 }
 
+// Wrapper for chunking with progress feedback
+async function chunkWithFeedback(
+  items: TranscriptItem[],
+  topics: string[],
+  options: { model: string; dryRun: boolean },
+  description: string,
+) {
+  info(`  Preparing to chunk ${items.length} items...`);
+
+  // Create a timeout promise
+  const timeoutPromise = new Promise((_, reject) => {
+    setTimeout(() => {
+      reject(
+        new Error(`Chunking timeout after 30 seconds for: ${description}`),
+      );
+    }, 30000); // 30 second timeout
+  });
+
+  // Create the chunking promise
+  const chunkPromise = (async () => {
+    try {
+      info(`  Calling AI model: ${options.model}`);
+      const result = await chunkTranscriptItems(items, topics, options);
+      return result;
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+      error(`  Chunking error: ${errorMsg}`);
+      throw err;
+    }
+  })();
+
+  // Race between timeout and actual work
+  try {
+    const result = await Promise.race([chunkPromise, timeoutPromise]);
+    return result as ChunkResult[];
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('timeout')) {
+      warning(`  ${err.message}`);
+      warning(`  Falling back to dry run mode...`);
+      // Fallback to dry run
+      return await chunkTranscriptItems(items, topics, {
+        ...options,
+        dryRun: true,
+      });
+    }
+    throw err;
+  }
+}
+
 // Test chunking behavior
 async function testChunking() {
   header('Testing Chunking Behavior');
@@ -200,13 +253,25 @@ async function testChunking() {
 
     for (const testCase of testCases) {
       info(`\nTesting: ${testCase.description}`);
+      info(`  Items to chunk: ${items.length}`);
+      info(
+        `  Topics: ${testCase.topics.length === 0 ? 'Auto-detect' : testCase.topics.join(', ')}`,
+      );
 
-      const chunks = await chunkTranscriptItems(items, testCase.topics, {
-        model: 'claude-sonnet-4',
-        dryRun: false,
-      });
+      const startTime = Date.now();
 
-      success(`Generated ${chunks.length} chunks`);
+      const chunks = await chunkWithFeedback(
+        items,
+        testCase.topics,
+        {
+          model: 'claude-sonnet-4',
+          dryRun: false,
+        },
+        testCase.description,
+      );
+
+      const duration = Date.now() - startTime;
+      success(`  Generated ${chunks.length} chunks in ${duration}ms`);
 
       // Analyze chunk characteristics
       const avgSize =
