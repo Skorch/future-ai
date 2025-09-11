@@ -39,6 +39,7 @@ export class PineconeClient {
 
   /**
    * Write documents to Pinecone in batches
+   * For indexes with integrated embeddings, text content is automatically converted to vectors
    */
   async writeDocuments(
     documents: RAGDocument[],
@@ -71,27 +72,19 @@ export class PineconeClient {
           Math.min(i + batchSize, documents.length),
         );
 
-        // Convert documents to Pinecone records
+        // For integrated embeddings, we pass text content directly
+        // The 'content' field is mapped to text embedding via fieldMap configuration
         const records = batch.map((doc) => ({
           id: doc.id,
-          values: doc.embedding || [], // Embedding should be generated before calling this
           metadata: {
             ...doc.metadata,
-            content: doc.content, // Store content in metadata for retrieval
+            content: doc.content, // This field is mapped for embedding generation
           } as RecordMetadata,
         }));
 
-        // Filter out records without embeddings
-        const validRecords = records.filter((r) => r.values.length > 0);
-
-        if (validRecords.length === 0) {
-          errors.push(`Batch ${i / batchSize + 1}: No valid embeddings`);
-          continue;
-        }
-
         try {
-          await index.namespace(namespace).upsert(validRecords);
-          written += validRecords.length;
+          await index.namespace(namespace).upsert(records);
+          written += records.length;
 
           // Report progress
           if (progressCallback) {
@@ -184,16 +177,70 @@ export class PineconeClient {
   }
 
   /**
-   * Query using text (requires embedding generation)
+   * Query using text (for indexes with integrated embeddings)
+   * The index automatically converts text to vectors
    */
   async queryByText(
     text: string,
-    embedder: (text: string) => Promise<number[]>,
     options: QueryOptions = {},
   ): Promise<QueryResult> {
+    const {
+      namespace = DEFAULT_NAMESPACE,
+      topK = DEFAULT_TOP_K,
+      filter,
+      includeMetadata = true,
+      minScore = MIN_SCORE_THRESHOLD,
+    } = options;
+
     try {
-      const queryVector = await embedder(text);
-      return this.query(queryVector, options);
+      const index = this.client.index(this.indexName);
+
+      // For indexes with integrated embeddings, we need to use the inference API
+      // to generate embeddings first
+      const embedResponse = await this.client.inference.embed(
+        'llama-text-embed-v2',
+        [text],
+        { inputType: 'query' },
+      );
+
+      const embedding = embedResponse.data[0];
+      const vector = 'values' in embedding ? embedding.values : embedding.data;
+      
+      const response = await index.namespace(namespace).query({
+        vector: vector as number[],
+        topK,
+        filter,
+        includeMetadata,
+      });
+
+      // Convert Pinecone matches to our format
+      const matches: QueryMatch[] = (response.matches || [])
+        .filter((match) => (match.score || 0) >= minScore)
+        .map((match) => ({
+          id: match.id,
+          score: match.score || 0,
+          content: (match.metadata?.content as string) || '',
+          metadata: {
+            source: (match.metadata?.source as string) || '',
+            type:
+              (match.metadata?.type as 'transcript' | 'document' | 'chat') ||
+              'document',
+            topic: match.metadata?.topic as string | undefined,
+            speakers: match.metadata?.speakers as string[] | undefined,
+            startTime: match.metadata?.startTime as number | undefined,
+            endTime: match.metadata?.endTime as number | undefined,
+            chunkIndex: match.metadata?.chunkIndex as number | undefined,
+            totalChunks: match.metadata?.totalChunks as number | undefined,
+            createdAt:
+              (match.metadata?.createdAt as string) || new Date().toISOString(),
+            fileHash: match.metadata?.fileHash as string | undefined,
+          },
+        }));
+
+      return {
+        matches,
+        namespace,
+      };
     } catch (error) {
       throw new PineconeError(
         `Text query failed: ${error instanceof Error ? error.message : 'Unknown error'}`,

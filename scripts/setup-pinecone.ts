@@ -14,8 +14,9 @@ if (existsSync(envPath)) {
 
 // Configuration
 const INDEX_NAME = 'rag-agent-poc';
-const DIMENSION = 1536; // OpenAI embedding dimension
+const DIMENSION = 768; // llama-text-embed-v2 dimension
 const METRIC = 'cosine';
+const EMBEDDING_MODEL = 'llama-text-embed-v2';
 
 // Color codes for console output
 const colors = {
@@ -87,25 +88,31 @@ async function checkIndexExists(pinecone: Pinecone, indexName: string) {
 }
 
 async function createIndex(pinecone: Pinecone) {
-  log(`\n🚀 Creating index '${INDEX_NAME}'...`, colors.bright);
+  log(
+    `\n🚀 Creating index '${INDEX_NAME}' with integrated embeddings...`,
+    colors.bright,
+  );
 
   try {
-    await pinecone.createIndex({
+    // Use createIndexForModel for integrated embeddings
+    await pinecone.createIndexForModel({
       name: INDEX_NAME,
-      dimension: DIMENSION,
-      metric: METRIC,
-      spec: {
-        serverless: {
-          cloud: 'aws',
-          region: 'us-east-1',
+      cloud: 'aws',
+      region: 'us-east-1',
+      embed: {
+        model: EMBEDDING_MODEL,
+        fieldMap: {
+          text: 'content', // Map 'content' field to text for embedding
         },
       },
-      deletionProtection: 'disabled',
     });
 
-    success(`Index '${INDEX_NAME}' created successfully`);
-    info(`Dimension: ${DIMENSION}`);
+    success(
+      `Index '${INDEX_NAME}' created successfully with integrated embeddings`,
+    );
+    info(`Embedding Model: ${EMBEDDING_MODEL} (${DIMENSION} dimensions)`);
     info(`Metric: ${METRIC}`);
+    info(`Field Mapping: content → text`);
     info(`Type: Serverless (AWS us-east-1)`);
   } catch (err) {
     const errorObj = err as Error;

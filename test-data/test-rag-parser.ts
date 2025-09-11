@@ -1,8 +1,8 @@
 import {
   parseTranscript,
   parseDocument,
-} from '../lib/ai/utils/transcript-parser';
-import { chunkTranscriptItems } from '../lib/ai/utils/rag-chunker';
+} from '../lib/ai/utils/transcript-parser.js';
+import { chunkTranscriptItems } from '../lib/ai/utils/rag-chunker.js';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 

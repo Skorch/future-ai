@@ -40,14 +40,12 @@ Always turn this workflow into a task list using the `TodoWrite` tool. You never
    - [ ] State what 'complete' means for the whole workflow so that you know when to keep working on the task and don't give up when you cannot finish unit test failures
    - [ ] Spend time to THINK about the request and the strategy to find the right context to load
    - [ ] Assess complexity and potential challenges
+   - [ ] Use `code-searcher` subagent to find the possible files to load into context
    - [ ] THINK DEEPLY about the requirements and the scope of changes needed
    - [ ] Have `jenny` validate your thoughts
-   - [ ] Use `code-searcher` subagent to find the possible files to load into context
    - [ ] Generate a CUSTOM CHECKLIST based on the task
 
-- [ ] Review - IMPORTANT: Never start implementation until you have asked the user and they have explicitly asked you to proceed
-   - [ ] Consider the current Issue and how it relates to UX and/or program flow
-   - [ ] Consider the ideal UX of program flow
+- [ ] If `jenny` had suggested changes then summarize and Review - IMPORTANT: Never start implementation until you have asked the user and they have explicitly asked you to proceed
    - [ ] Restate the problem
    - [ ] You will think and report on your proposed solution
    - [ ] You ALWAYS ask the User to review and approve your proposed solution
