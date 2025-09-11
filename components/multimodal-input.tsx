@@ -28,7 +28,7 @@ import {
   PromptInputModelSelectTrigger,
   PromptInputModelSelectContent,
 } from './elements/prompt-input';
-import { SelectItem, } from '@/components/ui/select';
+import { SelectItem } from '@/components/ui/select';
 import equal from 'fast-deep-equal';
 import type { UseChatHelpers } from '@ai-sdk/react';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -161,6 +161,7 @@ function PureMultimodalInput({
   const uploadFile = async (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('chatId', chatId);
 
     try {
       const response = await fetch('/api/files/upload', {
@@ -262,6 +263,7 @@ function PureMultimodalInput({
         ref={fileInputRef}
         multiple
         onChange={handleFileChange}
+        accept="image/jpeg,image/png,text/plain,text/vtt,text/markdown,application/pdf,application/json,.txt,.vtt,.md,.pdf,.json"
         tabIndex={-1}
       />
 
@@ -326,7 +328,10 @@ function PureMultimodalInput({
         <PromptInputToolbar className="px-4 py-2 !border-t-0 !border-top-0 shadow-none dark:!border-transparent dark:border-0">
           <PromptInputTools className="gap-2">
             <AttachmentsButton fileInputRef={fileInputRef} status={status} />
-            <ModelSelectorCompact selectedModelId={selectedModelId} onModelChange={onModelChange} />
+            <ModelSelectorCompact
+              selectedModelId={selectedModelId}
+              onModelChange={onModelChange}
+            />
           </PromptInputTools>
           {status === 'submitted' ? (
             <StopButton stop={stop} setMessages={setMessages} />
@@ -376,6 +381,8 @@ function PureAttachmentsButton({
       }}
       disabled={status !== 'ready'}
       variant="ghost"
+      aria-label="Attach files (images, text, transcripts, PDFs)"
+      title="Attach files (images, text, transcripts, PDFs)"
     >
       <PaperclipIcon size={14} />
     </Button>
