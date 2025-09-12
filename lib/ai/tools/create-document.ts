@@ -93,19 +93,20 @@ export const createDocument = ({ session, dataStream }: CreateDocumentProps) =>
 
       // If we have pre-generated content (meeting summary), write it directly
       if (finalContent) {
+        // Send clean content to UI (without metadata comments)
         dataStream.write({
           type: 'data-textDelta',
-          data: finalContent,
+          data: content || '', // Send original content without metadata
           transient: true,
         });
 
-        // Save the document
+        // Save the document with metadata
         if (session?.user?.id) {
           const { saveDocument } = await import('@/lib/db/queries');
           await saveDocument({
             id,
             title,
-            content: finalContent,
+            content: finalContent, // Save with metadata
             kind: 'text', // Meeting summaries are stored as text
             userId: session.user.id,
           });

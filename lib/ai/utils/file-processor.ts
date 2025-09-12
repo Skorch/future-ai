@@ -23,8 +23,17 @@ export async function processMessageFiles(
 ): Promise<ChatMessage[]> {
   return Promise.all(
     messages.map(async (message) => {
-      if (!message.parts || message.parts.length === 0) {
+      // Skip tool messages and assistant messages - only process user messages
+      if (message.role !== 'user') {
         return message;
+      }
+
+      if (!message.parts || message.parts.length === 0) {
+        // Ensure user messages always have at least an empty text part
+        return {
+          ...message,
+          parts: [{ type: 'text', text: '' }],
+        };
       }
 
       const processedParts = await Promise.all(
@@ -65,9 +74,19 @@ export async function processMessageFiles(
         }),
       );
 
+      // Filter out any undefined or null parts
+      const validParts = processedParts.filter(
+        (part) => part !== null && part !== undefined,
+      );
+
+      // Ensure at least one valid part exists
+      if (validParts.length === 0) {
+        validParts.push({ type: 'text' as const, text: '' });
+      }
+
       return {
         ...message,
-        parts: processedParts as typeof message.parts, // Cast to the original parts type
+        parts: validParts as typeof message.parts, // Cast to the original parts type
       };
     }),
   );
