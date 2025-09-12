@@ -46,8 +46,21 @@ export const createDocument = ({ session, dataStream }: CreateDocumentProps) =>
       let topicsFound: string[] = [];
 
       // Handle meeting summaries specially
+      let displayContent = content; // Content to show in UI
+      let storageContent = content; // Content to save in DB
+
       if (documentType === 'meeting-summary' && content) {
-        const validation = validateSummaryStructure(content);
+        // First, strip any existing metadata comments from the content
+        // This ensures we start with clean content
+        const metadataRegex =
+          /<!-- METADATA START -->[\s\S]*?<!-- METADATA END -->\n*/g;
+        const cleanContent = content.replace(metadataRegex, '');
+
+        // Now work with clean content
+        displayContent = cleanContent;
+        storageContent = cleanContent;
+
+        const validation = validateSummaryStructure(cleanContent);
         topicsFound = validation.topics;
 
         // Add validation warnings if structure is invalid
@@ -55,16 +68,20 @@ export const createDocument = ({ session, dataStream }: CreateDocumentProps) =>
           const warnings = validation.errors
             .map((e) => `<!-- Warning: ${e} -->`)
             .join('\n');
-          finalContent = `${warnings}\n\n${content}`;
+          displayContent = `${warnings}\n\n${cleanContent}`;
+          storageContent = `${warnings}\n\n${cleanContent}`;
         }
 
-        // Embed metadata as HTML comments
-        finalContent = embedMetadataInContent(
-          finalContent || content,
+        // Only add metadata to storage version, not display version
+        storageContent = embedMetadataInContent(
+          storageContent,
           documentType,
           metadata || {},
           topicsFound,
         );
+
+        // Set finalContent to the storage version
+        finalContent = storageContent;
       }
 
       dataStream.write({
@@ -92,24 +109,28 @@ export const createDocument = ({ session, dataStream }: CreateDocumentProps) =>
       });
 
       // If we have pre-generated content (meeting summary), write it directly
-      if (finalContent) {
+      if (documentType === 'meeting-summary' && displayContent) {
         // Send clean content to UI (without metadata comments)
         dataStream.write({
           type: 'data-textDelta',
-          data: content || '', // Send original content without metadata
+          data: displayContent, // Send display version without metadata
           transient: true,
         });
 
         // Save the document with metadata
-        if (session?.user?.id) {
-          const { saveDocument } = await import('@/lib/db/queries');
-          await saveDocument({
-            id,
-            title,
-            content: finalContent, // Save with metadata
-            kind: 'text', // Meeting summaries are stored as text
-            userId: session.user.id,
-          });
+        try {
+          if (session?.user?.id && finalContent) {
+            const { saveDocument } = await import('@/lib/db/queries');
+            await saveDocument({
+              id,
+              title,
+              content: finalContent, // Save storage version with metadata
+              kind: 'text', // Meeting summaries are stored as text
+              userId: session.user.id,
+            });
+          }
+        } catch (error) {
+          console.error('Failed to save meeting summary document:', error);
         }
       } else {
         // Use the existing document handler system for dynamic generation
