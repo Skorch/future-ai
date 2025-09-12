@@ -39,6 +39,7 @@ import { ChatSDKError } from '@/lib/errors';
 import type { ChatMessage } from '@/lib/types';
 import { chatModels, type ChatModel } from '@/lib/ai/models';
 import type { VisibilityType } from '@/components/visibility-selector';
+import { processMessageFiles } from '@/lib/ai/utils/file-processor';
 
 export const maxDuration = 60;
 
@@ -178,12 +179,15 @@ export async function POST(request: Request) {
       : undefined;
 
     const stream = createUIMessageStream({
-      execute: ({ writer: dataStream }) => {
+      execute: async ({ writer: dataStream }) => {
         try {
+          // Process file attachments to extract text content
+          const processedMessages = await processMessageFiles(uiMessages);
+
           const result = streamText({
             model: myProvider.languageModel(selectedChatModel),
             system: systemPrompt({ selectedChatModel, requestHints }),
-            messages: convertToModelMessages(uiMessages),
+            messages: convertToModelMessages(processedMessages),
             providerOptions, // Add provider options for thinking models
             stopWhen: stepCountIs(5),
             experimental_activeTools: shouldDisableTools
