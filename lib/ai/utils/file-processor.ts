@@ -1,10 +1,11 @@
 import type { ChatMessage } from '@/lib/types';
 
+// Match the schema from app/(chat)/api/chat/schema.ts
 interface FilePart {
   type: 'file';
   mediaType: string;
+  name: string;  // Schema uses 'name', not 'filename'
   url: string;
-  name: string;
 }
 
 interface TextPart {
@@ -15,79 +16,81 @@ interface TextPart {
 type MessagePart = FilePart | TextPart;
 
 /**
- * Process file attachments in messages to extract text content for non-image files
- * This prevents "File URL data functionality not supported" errors
+ * Process file attachments in messages to preserve file metadata for lazy loading
+ * Phase 2: Don't fetch content, just add references for the LLM to understand
  */
 export async function processMessageFiles(
   messages: ChatMessage[],
 ): Promise<ChatMessage[]> {
-  return Promise.all(
-    messages.map(async (message) => {
-      // Skip tool messages and assistant messages - only process user messages
-      if (message.role !== 'user') {
-        return message;
-      }
+  console.log('[FileProcessor] Processing messages', {
+    messageCount: messages.length,
+    hasFileParts: messages.some(m => m.parts?.some((p: any) => p.type === 'file')),
+  });
 
-      if (!message.parts || message.parts.length === 0) {
-        // Ensure user messages always have at least an empty text part
-        return {
-          ...message,
-          parts: [{ type: 'text', text: '' }],
-        };
-      }
+  return messages.map((message) => {
+    // Skip tool messages and assistant messages - only process user messages
+    if (message.role !== 'user') {
+      return message;
+    }
 
-      const processedParts = await Promise.all(
-        message.parts.map(async (part): Promise<MessagePart> => {
-          // Type guard for file parts
-          if (part.type === 'file') {
-            const filePart = part as FilePart;
-
-            // Only process text-based media types
-            if (
-              filePart.mediaType === 'text/plain' ||
-              filePart.mediaType === 'text/vtt' ||
-              filePart.mediaType === 'application/pdf'
-            ) {
-              try {
-                // Fetch the file content
-                const response = await fetch(filePart.url);
-                const content = await response.text();
-
-                // Convert to text part with file information
-                return {
-                  type: 'text' as const,
-                  text: `File: ${filePart.name}\n\nContent:\n${content}`,
-                };
-              } catch (error) {
-                console.error(`Failed to fetch file ${filePart.name}:`, error);
-                // Fallback to text description if fetch fails
-                return {
-                  type: 'text' as const,
-                  text: `[Unable to load file: ${filePart.name}]`,
-                };
-              }
-            }
-          }
-
-          // Keep image files and text parts as-is
-          return part as MessagePart;
-        }),
-      );
-
-      // Filter out any undefined or null parts
-      const validParts = processedParts.filter(
-        (part) => part !== null && part !== undefined,
-      );
-
-      // Ensure at least one valid part exists
-      if (validParts.length === 0) {
-        validParts.push({ type: 'text' as const, text: '' });
-      }
-
+    if (!message.parts || message.parts.length === 0) {
+      // Ensure user messages always have at least an empty text part
       return {
         ...message,
-        parts: validParts as typeof message.parts, // Cast to the original parts type
+        parts: [{ type: 'text', text: '' }],
       };
-    }),
-  );
+    }
+
+    // Type-safe filtering of parts
+    const fileParts = message.parts.filter(
+      (p): p is FilePart => p.type === 'file'
+    );
+    const textParts = message.parts.filter(
+      (p): p is TextPart => p.type === 'text'
+    );
+
+    // If there are file parts, embed URL info as structured text markers
+    if (fileParts.length > 0) {
+      console.log(`[FileProcessor] Converting ${fileParts.length} file(s) to structured text markers`);
+      
+      // Create structured text markers for file information (Option 1)
+      const fileInfo = fileParts.map(f => {
+        return [
+          `FILE_URL: ${f.url}`,
+          `FILENAME: ${f.name}`,
+          `TYPE: ${f.mediaType}`
+        ].join('\n');
+      }).join('\n---\n');
+      
+      // Combine user text with file information
+      const userText = textParts.map(p => p.text).filter(t => t.trim()).join(' ');
+      const enhancedText = userText 
+        ? `${userText}\n\n${fileInfo}`
+        : fileInfo;
+      
+      console.log('[FileProcessor] Created structured text markers:', enhancedText.substring(0, 200));
+      
+      // Return message with ONLY text parts (no file parts to avoid model errors)
+      return {
+        ...message,
+        parts: [
+          { type: 'text' as const, text: enhancedText }
+          // NO file parts - avoiding 'File URL data' functionality not supported error
+        ],
+      };
+    }
+
+    // No files, return message as-is
+    return message;
+  });
+}
+
+// Helper functions for type-safe file handling
+export function hasFileAttachments(message: ChatMessage): boolean {
+  return message.parts?.some(p => p.type === 'file') || false;
+}
+
+export function getFileParts(message: ChatMessage): FilePart[] {
+  if (!message.parts) return [];
+  return message.parts.filter((p): p is FilePart => p.type === 'file');
 }

@@ -1,0 +1,42 @@
+#!/usr/bin/env node
+
+console.log('=== Debugging Stream Status Issue ===\n');
+
+console.log('ROOT CAUSE ANALYSIS:');
+console.log('');
+console.log('1. User uploads transcript and asks for summary');
+console.log('2. AI calls createDocument tool with meeting-summary type');
+console.log('3. Tool executes:');
+console.log('   - Writes data-kind, data-id, data-title, data-clear');
+console.log('   - Writes data-textDelta with full content (not streamed)');
+console.log('   - Saves document to database');
+console.log('   - Writes data-finish');
+console.log('   - Returns result object to AI');
+console.log('');
+console.log('4. EXPECTED: AI SDK marks stream as complete, status -> ready');
+console.log('5. ACTUAL: Status remains not ready, blocking new messages');
+console.log('');
+console.log('HYPOTHESIS 1: Synchronous vs Async Content');
+console.log('- Meeting summaries write all content at once');
+console.log('- Other documents stream content over time');
+console.log('- Maybe AI SDK expects gradual streaming?');
+console.log('');
+console.log('HYPOTHESIS 2: Tool Response Processing');
+console.log('- Tool returns "Meeting summary created with extracted topics."');
+console.log('- AI should echo this and complete');
+console.log('- Maybe AI is waiting for something else?');
+console.log('');
+console.log('HYPOTHESIS 3: Data Stream vs Message Stream');
+console.log('- data-finish only marks artifact as idle');
+console.log('- Main message stream controlled by AI SDK');
+console.log('- Tool completion should trigger stream end');
+console.log('');
+console.log('MOST LIKELY CAUSE:');
+console.log('The issue is that the AI SDK\'s useChat hook is not properly');
+console.log('detecting that the tool call has completed when the content');
+console.log('is written all at once instead of streamed gradually.');
+console.log('');
+console.log('POTENTIAL FIX:');
+console.log('Stream the meeting summary content character by character');
+console.log('instead of writing it all at once, to match the behavior');
+console.log('of other document types.');

@@ -1,6 +1,7 @@
 import { codeDocumentHandler } from '@/artifacts/code/server';
 import { sheetDocumentHandler } from '@/artifacts/sheet/server';
 import { textDocumentHandler } from '@/artifacts/text/server';
+import { meetingSummaryHandler } from '@/artifacts/meeting-summary/server';
 import type { ArtifactKind } from '@/components/artifact';
 import type { Document } from '../db/schema';
 import { saveDocument } from '../db/queries';
@@ -21,6 +22,7 @@ export interface CreateDocumentCallbackProps {
   title: string;
   dataStream: UIMessageStreamWriter<ChatMessage>;
   session: Session;
+  metadata?: Record<string, any>;
 }
 
 export interface UpdateDocumentCallbackProps {
@@ -49,6 +51,7 @@ export function createDocumentHandler<T extends ArtifactKind>(config: {
         title: args.title,
         dataStream: args.dataStream,
         session: args.session,
+        metadata: args.metadata,
       });
 
       if (args.session?.user?.id) {
@@ -93,6 +96,7 @@ export const documentHandlersByArtifactKind: Array<DocumentHandler> = [
   textDocumentHandler,
   codeDocumentHandler,
   sheetDocumentHandler,
+  meetingSummaryHandler,
 ];
 
 export const artifactKinds = ['text', 'code', 'sheet'] as const;
