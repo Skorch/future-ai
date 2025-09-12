@@ -1,0 +1,335 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+// Mock dependencies before importing the route
+vi.mock('@/app/(auth)/auth', () => ({
+  auth: vi.fn(),
+}));
+
+vi.mock('@vercel/blob', () => ({
+  put: vi.fn(),
+}));
+
+vi.mock('@/lib/utils/file-storage', () => ({
+  generateStoragePath: vi.fn(({ userId, chatId, filename }) => {
+    const ext = filename.split('.').pop();
+    return `${userId}/${chatId}/generated-uuid.${ext}`;
+  }),
+}));
+
+// Mock NextResponse to avoid Next.js server imports
+vi.mock('next/server', () => ({
+  NextResponse: {
+    json: (data: any, init?: ResponseInit) => {
+      const response = new Response(JSON.stringify(data), {
+        ...init,
+        headers: {
+          'content-type': 'application/json',
+          ...(init?.headers || {}),
+        },
+      });
+      response.json = async () => data;
+      return response;
+    },
+  },
+}));
+
+// Now import after mocks are set up
+const { POST } = await import('@/app/(chat)/api/files/upload/route');
+const { auth } = await import('@/app/(auth)/auth');
+const { put } = await import('@vercel/blob');
+
+describe('File Upload API', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should accept text files', async () => {
+    vi.mocked(auth).mockResolvedValue({
+      user: { id: 'user123', email: 'test@example.com', type: 'regular' }
+    } as any);
+    vi.mocked(put).mockResolvedValue({
+      url: 'https://blob.vercel-storage.com/file.txt',
+      pathname: 'user123/chat456/file789.txt',
+    } as any);
+
+    const formData = new FormData();
+    const textFile = new File(['transcript content'], 'meeting.txt', {
+      type: 'text/plain',
+    });
+    formData.append('file', textFile);
+    formData.append('chatId', 'chat456');
+
+    const request = new Request('http://localhost/api/files/upload', {
+      method: 'POST',
+      body: formData,
+    });
+
+    const response = await POST(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.contentType).toBe('text/plain');
+    expect(data.extractable).toBe(true);
+  });
+
+  it('should accept VTT transcript files', async () => {
+    vi.mocked(auth).mockResolvedValue({
+      user: { id: 'user123', email: 'test@example.com', type: 'regular' }
+    } as any);
+    vi.mocked(put).mockResolvedValue({
+      url: 'https://blob.vercel-storage.com/file.vtt',
+      pathname: 'user123/chat456/file789.vtt',
+    } as any);
+
+    const formData = new FormData();
+    const vttFile = new File(['WEBVTT\n\n00:00:00.000 --> 00:00:05.000\nHello'], 'meeting.vtt', {
+      type: 'text/vtt',
+    });
+    formData.append('file', vttFile);
+    formData.append('chatId', 'chat456');
+
+    const request = new Request('http://localhost/api/files/upload', {
+      method: 'POST',
+      body: formData,
+    });
+
+    const response = await POST(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.contentType).toBe('text/vtt');
+    expect(data.extractable).toBe(true);
+  });
+
+  it('should accept markdown files', async () => {
+    vi.mocked(auth).mockResolvedValue({
+      user: { id: 'user123', email: 'test@example.com', type: 'regular' }
+    } as any);
+    vi.mocked(put).mockResolvedValue({
+      url: 'https://blob.vercel-storage.com/file.md',
+      pathname: 'user123/chat456/file789.md',
+    } as any);
+
+    const formData = new FormData();
+    const mdFile = new File(['# Meeting Notes\n\n## Topic 1'], 'notes.md', {
+      type: 'text/markdown',
+    });
+    formData.append('file', mdFile);
+    formData.append('chatId', 'chat456');
+
+    const request = new Request('http://localhost/api/files/upload', {
+      method: 'POST',
+      body: formData,
+    });
+
+    const response = await POST(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.contentType).toBe('text/markdown');
+    expect(data.extractable).toBe(true);
+  });
+
+  it('should accept JSON files', async () => {
+    vi.mocked(auth).mockResolvedValue({
+      user: { id: 'user123', email: 'test@example.com', type: 'regular' }
+    } as any);
+    vi.mocked(put).mockResolvedValue({
+      url: 'https://blob.vercel-storage.com/file.json',
+      pathname: 'user123/chat456/file789.json',
+    } as any);
+
+    const formData = new FormData();
+    const jsonFile = new File(['{"meeting": "data"}'], 'data.json', {
+      type: 'application/json',
+    });
+    formData.append('file', jsonFile);
+    formData.append('chatId', 'chat456');
+
+    const request = new Request('http://localhost/api/files/upload', {
+      method: 'POST',
+      body: formData,
+    });
+
+    const response = await POST(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.contentType).toBe('application/json');
+    expect(data.extractable).toBe(true);
+  });
+
+  it('should accept PDF files', async () => {
+    vi.mocked(auth).mockResolvedValue({
+      user: { id: 'user123', email: 'test@example.com', type: 'regular' }
+    } as any);
+    vi.mocked(put).mockResolvedValue({
+      url: 'https://blob.vercel-storage.com/file.pdf',
+      pathname: 'user123/chat456/file789.pdf',
+    } as any);
+
+    const formData = new FormData();
+    const pdfFile = new File(['%PDF-1.4'], 'document.pdf', {
+      type: 'application/pdf',
+    });
+    formData.append('file', pdfFile);
+    formData.append('chatId', 'chat456');
+
+    const request = new Request('http://localhost/api/files/upload', {
+      method: 'POST',
+      body: formData,
+    });
+
+    const response = await POST(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.contentType).toBe('application/pdf');
+    expect(data.extractable).toBe(true);
+  });
+
+  it('should reject unsupported file types', async () => {
+    vi.mocked(auth).mockResolvedValue({
+      user: { id: 'user123', email: 'test@example.com', type: 'regular' }
+    } as any);
+
+    const formData = new FormData();
+    const exeFile = new File(['binary'], 'app.exe', {
+      type: 'application/x-msdownload',
+    });
+    formData.append('file', exeFile);
+
+    const request = new Request('http://localhost/api/files/upload', {
+      method: 'POST',
+      body: formData,
+    });
+
+    const response = await POST(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(data.error).toContain('File type not supported');
+  });
+
+  it('should enforce size limits by file type', async () => {
+    vi.mocked(auth).mockResolvedValue({
+      user: { id: 'user123', email: 'test@example.com', type: 'regular' }
+    } as any);
+
+    const formData = new FormData();
+    // Create 11MB text file (exceeds 10MB limit)
+    const largeContent = 'x'.repeat(11 * 1024 * 1024);
+    const largeFile = new File([largeContent], 'large.txt', {
+      type: 'text/plain',
+    });
+    formData.append('file', largeFile);
+
+    const request = new Request('http://localhost/api/files/upload', {
+      method: 'POST',
+      body: formData,
+    });
+
+    const response = await POST(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(data.error).toContain('File size exceeds maximum allowed');
+  });
+
+  it('should enforce different size limits for images', async () => {
+    vi.mocked(auth).mockResolvedValue({
+      user: { id: 'user123', email: 'test@example.com', type: 'regular' }
+    } as any);
+
+    const formData = new FormData();
+    // Create 6MB image file (exceeds 5MB limit)
+    const largeContent = 'x'.repeat(6 * 1024 * 1024);
+    const largeFile = new File([largeContent], 'large.jpg', {
+      type: 'image/jpeg',
+    });
+    formData.append('file', largeFile);
+
+    const request = new Request('http://localhost/api/files/upload', {
+      method: 'POST',
+      body: formData,
+    });
+
+    const response = await POST(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(data.error).toContain('File size exceeds maximum allowed');
+  });
+
+  it('should generate correct storage path', async () => {
+    vi.mocked(auth).mockResolvedValue({
+      user: { id: 'user123', email: 'test@example.com', type: 'regular' }
+    } as any);
+    vi.mocked(put).mockResolvedValue({
+      url: 'https://blob.vercel-storage.com/path',
+      pathname: 'user123/chat456/generated-uuid.txt',
+    } as any);
+
+    const formData = new FormData();
+    const file = new File(['content'], 'document.txt', {
+      type: 'text/plain',
+    });
+    formData.append('file', file);
+    formData.append('chatId', 'chat456');
+
+    const request = new Request('http://localhost/api/files/upload', {
+      method: 'POST',
+      body: formData,
+    });
+
+    await POST(request);
+
+    expect(put).toHaveBeenCalledWith(
+      expect.stringMatching(/^user123\/chat456\/generated-uuid\.txt$/),
+      expect.any(ArrayBuffer),
+      expect.objectContaining({
+        access: 'public',
+        contentType: 'text/plain',
+      })
+    );
+  });
+
+  it('should return unauthorized without session', async () => {
+    vi.mocked(auth).mockResolvedValue(null);
+
+    const formData = new FormData();
+    const file = new File(['content'], 'test.txt', { type: 'text/plain' });
+    formData.append('file', file);
+
+    const request = new Request('http://localhost/api/files/upload', {
+      method: 'POST',
+      body: formData,
+    });
+
+    const response = await POST(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(401);
+    expect(data.error).toBe('Unauthorized');
+  });
+
+  it('should handle missing file', async () => {
+    vi.mocked(auth).mockResolvedValue({
+      user: { id: 'user123', email: 'test@example.com', type: 'regular' }
+    } as any);
+
+    const formData = new FormData();
+    // No file appended
+
+    const request = new Request('http://localhost/api/files/upload', {
+      method: 'POST',
+      body: formData,
+    });
+
+    const response = await POST(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(data.error).toBe('No file uploaded');
+  });
+});
