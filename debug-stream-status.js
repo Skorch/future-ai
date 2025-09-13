@@ -32,7 +32,7 @@ console.log('- Main message stream controlled by AI SDK');
 console.log('- Tool completion should trigger stream end');
 console.log('');
 console.log('MOST LIKELY CAUSE:');
-console.log('The issue is that the AI SDK\'s useChat hook is not properly');
+console.log("The issue is that the AI SDK's useChat hook is not properly");
 console.log('detecting that the tool call has completed when the content');
 console.log('is written all at once instead of streamed gradually.');
 console.log('');

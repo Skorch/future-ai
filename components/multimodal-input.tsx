@@ -1,6 +1,6 @@
 'use client';
 
-import type { UIMessage, FileUIPart, TextUIPart } from 'ai';
+import type { UIMessage } from 'ai';
 import {
   useRef,
   useEffect,
@@ -129,7 +129,7 @@ function PureMultimodalInput({
         ...attachments.map((attachment) => ({
           type: 'file' as const,
           url: attachment.url,
-          name: attachment.name,  // Using 'name' to match backend schema
+          name: attachment.name, // Using 'name' to match backend schema
           mediaType: attachment.contentType,
         })),
         {

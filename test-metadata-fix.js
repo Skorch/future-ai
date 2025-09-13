@@ -28,7 +28,10 @@ const aiProvidedMetadata = {
 };
 
 console.log('1. AI generates clean content (no HTML comments):');
-console.log('   ✓ Content has no metadata:', !aiGeneratedContent.includes('<!-- METADATA'));
+console.log(
+  '   ✓ Content has no metadata:',
+  !aiGeneratedContent.includes('<!-- METADATA'),
+);
 console.log('');
 
 console.log('2. AI provides metadata separately in metadata field:');
@@ -62,4 +65,4 @@ console.log('✓ UI displays exactly what AI generates (clean markdown)');
 console.log('✓ Storage adds metadata only for database/RAG purposes');
 console.log('');
 console.log('The root cause was the AI trying to be "helpful" by embedding');
-console.log('metadata as HTML comments. Now it\'s explicitly told not to.');
+console.log("metadata as HTML comments. Now it's explicitly told not to.");

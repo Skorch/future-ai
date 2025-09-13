@@ -100,13 +100,13 @@ export function sanitizeText(text: string) {
 export function convertToUIMessages(messages: DBMessage[]): ChatMessage[] {
   return messages.map((message) => {
     let parts = message.parts as UIMessagePart<CustomUIDataTypes, ChatTools>[];
-    
+
     // Ensure messages have valid parts arrays
     if (!parts || parts.length === 0) {
       // Add a minimal text part if the message has no parts
       parts = [{ type: 'text', text: '' }];
     }
-    
+
     return {
       id: message.id,
       role: message.role as 'user' | 'assistant' | 'system',

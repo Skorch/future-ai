@@ -4,7 +4,7 @@ import type { ChatMessage } from '@/lib/types';
 interface FilePart {
   type: 'file';
   mediaType: string;
-  name: string;  // Schema uses 'name', not 'filename'
+  name: string; // Schema uses 'name', not 'filename'
   url: string;
 }
 
@@ -24,7 +24,9 @@ export async function processMessageFiles(
 ): Promise<ChatMessage[]> {
   console.log('[FileProcessor] Processing messages', {
     messageCount: messages.length,
-    hasFileParts: messages.some(m => m.parts?.some((p: any) => p.type === 'file')),
+    hasFileParts: messages.some((m) =>
+      m.parts?.some((p: any) => p.type === 'file'),
+    ),
   });
 
   return messages.map((message) => {
@@ -43,38 +45,46 @@ export async function processMessageFiles(
 
     // Type-safe filtering of parts
     const fileParts = message.parts.filter(
-      (p): p is FilePart => p.type === 'file'
+      (p): p is FilePart => p.type === 'file',
     );
     const textParts = message.parts.filter(
-      (p): p is TextPart => p.type === 'text'
+      (p): p is TextPart => p.type === 'text',
     );
 
     // If there are file parts, embed URL info as structured text markers
     if (fileParts.length > 0) {
-      console.log(`[FileProcessor] Converting ${fileParts.length} file(s) to structured text markers`);
-      
+      console.log(
+        `[FileProcessor] Converting ${fileParts.length} file(s) to structured text markers`,
+      );
+
       // Create structured text markers for file information (Option 1)
-      const fileInfo = fileParts.map(f => {
-        return [
-          `FILE_URL: ${f.url}`,
-          `FILENAME: ${f.name}`,
-          `TYPE: ${f.mediaType}`
-        ].join('\n');
-      }).join('\n---\n');
-      
+      const fileInfo = fileParts
+        .map((f) => {
+          return [
+            `FILE_URL: ${f.url}`,
+            `FILENAME: ${f.name}`,
+            `TYPE: ${f.mediaType}`,
+          ].join('\n');
+        })
+        .join('\n---\n');
+
       // Combine user text with file information
-      const userText = textParts.map(p => p.text).filter(t => t.trim()).join(' ');
-      const enhancedText = userText 
-        ? `${userText}\n\n${fileInfo}`
-        : fileInfo;
-      
-      console.log('[FileProcessor] Created structured text markers:', enhancedText.substring(0, 200));
-      
+      const userText = textParts
+        .map((p) => p.text)
+        .filter((t) => t.trim())
+        .join(' ');
+      const enhancedText = userText ? `${userText}\n\n${fileInfo}` : fileInfo;
+
+      console.log(
+        '[FileProcessor] Created structured text markers:',
+        enhancedText.substring(0, 200),
+      );
+
       // Return message with ONLY text parts (no file parts to avoid model errors)
       return {
         ...message,
         parts: [
-          { type: 'text' as const, text: enhancedText }
+          { type: 'text' as const, text: enhancedText },
           // NO file parts - avoiding 'File URL data' functionality not supported error
         ],
       };
@@ -87,7 +97,7 @@ export async function processMessageFiles(
 
 // Helper functions for type-safe file handling
 export function hasFileAttachments(message: ChatMessage): boolean {
-  return message.parts?.some(p => p.type === 'file') || false;
+  return message.parts?.some((p) => p.type === 'file') || false;
 }
 
 export function getFileParts(message: ChatMessage): FilePart[] {

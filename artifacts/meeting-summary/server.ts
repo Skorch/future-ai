@@ -17,10 +17,13 @@ export const meetingSummaryHandler = createDocumentHandler<'text'>({
 
     // Extract transcript from metadata
     const transcript = metadata?.transcript || '';
-    const meetingDate = metadata?.meetingDate || new Date().toISOString().split('T')[0];
+    const meetingDate =
+      metadata?.meetingDate || new Date().toISOString().split('T')[0];
     const participants = metadata?.participants || [];
 
-    console.log('[MeetingSummaryHandler] Preparing to stream with artifact-model');
+    console.log(
+      '[MeetingSummaryHandler] Preparing to stream with artifact-model',
+    );
 
     const { fullStream } = streamText({
       model: myProvider.languageModel('artifact-model'),
@@ -74,7 +77,9 @@ Focus on extracting actionable insights and decisions. Use "## Topic:" format fo
 
         // Log every 10th chunk to avoid spam
         if (chunkCount % 10 === 0) {
-          console.log(`[MeetingSummaryHandler] Streamed ${chunkCount} chunks, ${draftContent.length} chars total`);
+          console.log(
+            `[MeetingSummaryHandler] Streamed ${chunkCount} chunks, ${draftContent.length} chars total`,
+          );
         }
       }
     }

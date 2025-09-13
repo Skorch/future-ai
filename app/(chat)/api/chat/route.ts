@@ -94,7 +94,7 @@ export async function POST(request: Request) {
       chatId: id,
       messageRole: message.role,
       partsCount: message.parts?.length || 0,
-      hasFileParts: message.parts?.some(p => p.type === 'file'),
+      hasFileParts: message.parts?.some((p) => p.type === 'file'),
       selectedModel: selectedChatModel,
     });
 
@@ -188,39 +188,45 @@ export async function POST(request: Request) {
 
     // Process messages BEFORE creating the stream so it's available in onFinish
     const processedMessages = await processMessageFiles(uiMessages);
-    
+
     const stream = createUIMessageStream({
       execute: async ({ writer: dataStream }) => {
         try {
           // Log details about processed messages
           const lastMessage = processedMessages[processedMessages.length - 1];
           const lastMessageParts = lastMessage?.parts || [];
-          const textPart = lastMessageParts.find((p): p is { type: 'text'; text: string } => 
-            p.type === 'text' && 'text' in p
+          const textPart = lastMessageParts.find(
+            (p): p is { type: 'text'; text: string } =>
+              p.type === 'text' && 'text' in p,
           );
-          
+
           console.log('[ChatRoute] Processed messages', {
             originalCount: uiMessages.length,
             processedCount: processedMessages.length,
             lastMessagePartsCount: lastMessageParts.length,
-            lastMessagePartTypes: lastMessageParts.map(p => p.type),
+            lastMessagePartTypes: lastMessageParts.map((p) => p.type),
             hasTextContent: !!textPart,
             textLength: textPart?.text?.length || 0,
             textPreview: textPart?.text?.substring(0, 200) || 'No text',
             startsWithFile: textPart?.text?.startsWith('File:') || false,
           });
 
-          const systemPromptText = systemPrompt({ selectedChatModel, requestHints });
-          
-          const activeTools = shouldDisableTools ? [] : [
-            'getWeather',
-            'createDocument',
-            'updateDocument',
-            'requestSuggestions',
-            'writeToRAG',
-            'queryRAG',
-          ];
-          
+          const systemPromptText = systemPrompt({
+            selectedChatModel,
+            requestHints,
+          });
+
+          const activeTools = shouldDisableTools
+            ? []
+            : [
+                'getWeather',
+                'createDocument',
+                'updateDocument',
+                'requestSuggestions',
+                'writeToRAG',
+                'queryRAG',
+              ];
+
           console.log('[ChatRoute] Starting streamText', {
             messagesCount: processedMessages.length,
             model: selectedChatModel,
@@ -229,44 +235,50 @@ export async function POST(request: Request) {
             systemPromptLength: systemPromptText.length,
             systemPromptPreview: systemPromptText.substring(0, 500),
             hasMeetingPrompt: systemPromptText.includes('Meeting Intelligence'),
-            hasCreateDocumentMention: systemPromptText.includes('createDocument'),
-            hasFileInstruction: systemPromptText.includes('When you see "File:"'),
+            hasCreateDocumentMention:
+              systemPromptText.includes('createDocument'),
+            hasFileInstruction: systemPromptText.includes(
+              'When you see "File:"',
+            ),
           });
-          
+
           // Log the actual content being sent to the AI
           const modelMessages = convertToModelMessages(processedMessages);
-          
+
           // Deep logging to understand message structure
-          const lastProcessedMsg = processedMessages[processedMessages.length - 1];
+          const lastProcessedMsg =
+            processedMessages[processedMessages.length - 1];
           const lastModelMsg = modelMessages[modelMessages.length - 1];
-          
+
           console.log('[ChatRoute] DETAILED Message Conversion Debug:', {
             // Before conversion
             processedMessage: {
               role: lastProcessedMsg?.role,
               partsCount: lastProcessedMsg?.parts?.length,
-              partTypes: lastProcessedMsg?.parts?.map((p: any) => ({ 
-                type: p.type, 
+              partTypes: lastProcessedMsg?.parts?.map((p: any) => ({
+                type: p.type,
                 hasText: !!p.text,
                 textLength: p.text?.length || 0,
-                textPreview: p.text?.substring(0, 50)
+                textPreview: p.text?.substring(0, 50),
               })),
-              fullParts: JSON.stringify(lastProcessedMsg?.parts, null, 2)
+              fullParts: JSON.stringify(lastProcessedMsg?.parts, null, 2),
             },
             // After conversion
             modelMessage: {
               role: lastModelMsg?.role,
               contentType: typeof lastModelMsg?.content,
-              contentLength: typeof lastModelMsg?.content === 'string' 
-                ? lastModelMsg.content.length 
-                : Array.isArray(lastModelMsg?.content) 
-                  ? lastModelMsg.content.length 
-                  : 0,
-              contentPreview: typeof lastModelMsg?.content === 'string'
-                ? lastModelMsg.content.substring(0, 100)
-                : JSON.stringify(lastModelMsg?.content).substring(0, 200),
-              fullContent: JSON.stringify(lastModelMsg, null, 2)
-            }
+              contentLength:
+                typeof lastModelMsg?.content === 'string'
+                  ? lastModelMsg.content.length
+                  : Array.isArray(lastModelMsg?.content)
+                    ? lastModelMsg.content.length
+                    : 0,
+              contentPreview:
+                typeof lastModelMsg?.content === 'string'
+                  ? lastModelMsg.content.substring(0, 100)
+                  : JSON.stringify(lastModelMsg?.content).substring(0, 200),
+              fullContent: JSON.stringify(lastModelMsg, null, 2),
+            },
           });
 
           const result = streamText({
@@ -277,17 +289,19 @@ export async function POST(request: Request) {
             stopWhen: stepCountIs(5),
             experimental_activeTools: activeTools,
             experimental_transform: smoothStream({ chunking: 'word' }),
-            tools: shouldDisableTools ? {} : {
-              getWeather,
-              createDocument: createDocument({ session, dataStream }),
-              updateDocument: updateDocument({ session, dataStream }),
-              requestSuggestions: requestSuggestions({
-                session,
-                dataStream,
-              }),
-              writeToRAG: writeToRAG({ session, dataStream }),
-              queryRAG: queryRAG({ session, dataStream }),
-            },
+            tools: shouldDisableTools
+              ? {}
+              : {
+                  getWeather,
+                  createDocument: createDocument({ session, dataStream }),
+                  updateDocument: updateDocument({ session, dataStream }),
+                  requestSuggestions: requestSuggestions({
+                    session,
+                    dataStream,
+                  }),
+                  writeToRAG: writeToRAG({ session, dataStream }),
+                  queryRAG: queryRAG({ session, dataStream }),
+                },
             experimental_telemetry: {
               isEnabled: isProductionEnvironment,
               functionId: 'stream-text',
@@ -295,10 +309,10 @@ export async function POST(request: Request) {
           });
 
           console.log('[ChatRoute] Starting stream consumption');
-          
-          // The AI SDK doesn't expose onStepFinish directly, 
+
+          // The AI SDK doesn't expose onStepFinish directly,
           // but we can log tool usage through the stream
-          
+
           result.consumeStream();
 
           dataStream.merge(
@@ -306,7 +320,7 @@ export async function POST(request: Request) {
               sendReasoning: true,
             }),
           );
-          
+
           console.log('[ChatRoute] Stream merged with UI');
         } catch (streamError) {
           console.error('[Chat API] Stream error:', streamError);
@@ -315,50 +329,69 @@ export async function POST(request: Request) {
       },
       generateId: generateUUID,
       onFinish: async ({ messages }) => {
-        const toolCalls = messages.filter(m => 
-          m.parts?.some((p: any) => p.type === 'tool-call')
+        const toolCalls = messages.filter((m) =>
+          m.parts?.some((p: any) => p.type === 'tool-call'),
         );
-        
+
         // Check BOTH the saved messages AND the original processed messages for file uploads
-        const lastUserMessage = messages.filter(m => m.role === 'user').pop();
-        const lastProcessedUserMessage = processedMessages?.filter(m => m.role === 'user').pop();
-        
-        const hasFileUpload = lastUserMessage?.parts?.some(p => 
-          p.type === 'text' && 'text' in p && (p as { text: string }).text?.startsWith('File:')
-        ) || lastProcessedUserMessage?.parts?.some(p => 
-          p.type === 'text' && 'text' in p && (p as { text: string }).text?.startsWith('File:')
-        );
-        
+        const lastUserMessage = messages.filter((m) => m.role === 'user').pop();
+        const lastProcessedUserMessage = processedMessages
+          ?.filter((m) => m.role === 'user')
+          .pop();
+
+        const hasFileUpload =
+          lastUserMessage?.parts?.some(
+            (p) =>
+              p.type === 'text' &&
+              'text' in p &&
+              (p as { text: string }).text?.startsWith('File:'),
+          ) ||
+          lastProcessedUserMessage?.parts?.some(
+            (p) =>
+              p.type === 'text' &&
+              'text' in p &&
+              (p as { text: string }).text?.startsWith('File:'),
+          );
+
         console.log('[ChatRoute] Stream finished', {
           totalMessages: messages.length,
           lastMessageRole: messages[messages.length - 1]?.role,
           hasToolCalls: toolCalls.length > 0,
           toolCallCount: toolCalls.length,
-          toolNames: toolCalls.flatMap(m => 
-            m.parts?.filter((p: any) => p.type === 'tool-call')
-              .map((p: any) => p.toolName) || []
+          toolNames: toolCalls.flatMap(
+            (m) =>
+              m.parts
+                ?.filter((p: any) => p.type === 'tool-call')
+                .map((p: any) => p.toolName) || [],
           ),
           hadFileUpload: hasFileUpload,
-          expectedToolCall: hasFileUpload && toolCalls.length === 0 ? 'WARNING: File uploaded but no tool called!' : 'OK',
+          expectedToolCall:
+            hasFileUpload && toolCalls.length === 0
+              ? 'WARNING: File uploaded but no tool called!'
+              : 'OK',
         });
-        
+
         // If a file was uploaded but no tool was called, log error and notify user
         if (hasFileUpload && toolCalls.length === 0) {
-          console.error('[ChatRoute] ERROR: File was uploaded but AI did not call createDocument tool');
-          
+          console.error(
+            '[ChatRoute] ERROR: File was uploaded but AI did not call createDocument tool',
+          );
+
           // Send an error message to the UI
           const errorMessage: ChatMessage = {
             id: generateUUID(),
             role: 'assistant',
-            parts: [{
-              type: 'text',
-              text: '⚠️ I noticed you uploaded a file but I didn\'t process it correctly. Please try again or type "summarize the uploaded file" to trigger processing.'
-            }],
+            parts: [
+              {
+                type: 'text',
+                text: '⚠️ I noticed you uploaded a file but I didn\'t process it correctly. Please try again or type "summarize the uploaded file" to trigger processing.',
+              },
+            ],
             metadata: {
               createdAt: new Date().toISOString(),
-            }
+            },
           };
-          
+
           // Add error message to saved messages
           messages.push(errorMessage);
         }
@@ -368,15 +401,15 @@ export async function POST(request: Request) {
             // Ensure assistant messages always have at least a text part
             // to prevent "empty content" errors when reloading conversations
             let parts = message.parts || [];
-            
+
             if (message.role === 'assistant') {
-              const hasTextPart = parts.some(part => part.type === 'text');
+              const hasTextPart = parts.some((part) => part.type === 'text');
               if (!hasTextPart) {
                 // Add a minimal text part if the assistant only has tool calls
                 parts = [{ type: 'text', text: '' }, ...parts];
               }
             }
-            
+
             return {
               id: message.id,
               role: message.role,
