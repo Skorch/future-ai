@@ -36,6 +36,11 @@ import { ArrowDown } from 'lucide-react';
 import { useScrollToBottom } from '@/hooks/use-scroll-to-bottom';
 import type { VisibilityType } from './visibility-selector';
 import type { Attachment, ChatMessage } from '@/lib/types';
+
+// Extended attachment type for transcript documents
+interface TranscriptAttachment extends Attachment {
+  transcriptMessage?: string;
+}
 import { chatModels } from '@/lib/ai/models';
 import { saveChatModelAsCookie } from '@/app/(chat)/actions';
 import { startTransition } from 'react';
@@ -123,10 +128,33 @@ function PureMultimodalInput({
   const submitForm = useCallback(() => {
     window.history.replaceState({}, '', `/chat/${chatId}`);
 
+    // Separate transcript attachments from regular file attachments
+    const transcriptAttachments = attachments.filter(
+      (a): a is TranscriptAttachment =>
+        a.contentType === 'application/transcript' &&
+        !!(a as TranscriptAttachment).transcriptMessage,
+    );
+    const regularAttachments = attachments.filter(
+      (a) => a.contentType !== 'application/transcript',
+    );
+
+    // Build the message text with transcript markers appended
+    let messageText = input;
+    if (transcriptAttachments.length > 0) {
+      const transcriptMarkers = transcriptAttachments
+        .map((a) => a.transcriptMessage || '')
+        .filter(Boolean)
+        .join('\n\n');
+      messageText = input
+        ? `${input}\n\n${transcriptMarkers}`
+        : transcriptMarkers;
+    }
+
     sendMessage({
       role: 'user',
       parts: [
-        ...attachments.map((attachment) => ({
+        // Only include regular file attachments as file parts
+        ...regularAttachments.map((attachment) => ({
           type: 'file' as const,
           url: attachment.url,
           name: attachment.name, // Using 'name' to match backend schema
@@ -134,7 +162,7 @@ function PureMultimodalInput({
         })),
         {
           type: 'text' as const,
-          text: input,
+          text: messageText,
         },
       ],
     });
@@ -158,7 +186,9 @@ function PureMultimodalInput({
     chatId,
   ]);
 
-  const uploadFile = async (file: File) => {
+  const uploadFile = async (
+    file: File,
+  ): Promise<TranscriptAttachment | Attachment | undefined> => {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('chatId', chatId);
@@ -171,8 +201,21 @@ function PureMultimodalInput({
 
       if (response.ok) {
         const data = await response.json();
-        const { url, pathname, contentType } = data;
 
+        // Handle transcript uploads (new direct document creation)
+        if (data.documentId && data.message) {
+          // For transcripts, we'll store the message to append to the text
+          const transcriptAttachment: TranscriptAttachment = {
+            url: `document://${data.documentId}`, // Special URL format for documents
+            name: data.fileName,
+            contentType: 'application/transcript',
+            transcriptMessage: data.message, // Store the TRANSCRIPT_DOCUMENT marker
+          };
+          return transcriptAttachment;
+        }
+
+        // Handle regular file uploads (legacy blob storage)
+        const { url, pathname, contentType } = data;
         return {
           url,
           name: pathname,
@@ -263,7 +306,7 @@ function PureMultimodalInput({
         ref={fileInputRef}
         multiple
         onChange={handleFileChange}
-        accept="image/jpeg,image/png,text/plain,text/vtt,text/markdown,application/pdf,application/json,.txt,.vtt,.md,.pdf,.json"
+        accept=".txt,.md,.vtt,.srt,.transcript"
         tabIndex={-1}
       />
 

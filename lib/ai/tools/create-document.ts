@@ -7,6 +7,7 @@ import {
   documentHandlersByArtifactKind,
 } from '@/lib/artifacts/server';
 import type { ChatMessage } from '@/lib/types';
+import { getDocumentById } from '@/lib/db/queries';
 
 interface CreateDocumentProps {
   session: Session;
@@ -14,29 +15,31 @@ interface CreateDocumentProps {
 }
 
 const createDocumentSchema = z.object({
-  title: z.string(),
-  kind: z.enum(artifactKinds),
+  title: z.string().describe('Title for the meeting summary document'),
+  kind: z.enum(artifactKinds).default('text'),
   documentType: z
-    .enum(['meeting-summary']) // Only summaries via tool, transcripts via direct upload
-    .optional()
-    .default('meeting-summary'),
+    .literal('meeting-summary') // ONLY summaries allowed, no transcripts
+    .default('meeting-summary')
+    .describe('Document type - only meeting-summary is allowed'),
   sourceDocumentIds: z
     .array(z.string().uuid())
-    .optional()
-    .describe('Array of document IDs to use as source for summary'),
+    .min(1, 'At least one source document ID is required for summaries')
+    .describe('Array of transcript document IDs to summarize from (required)'),
   metadata: z
     .object({
       meetingDate: z.string().optional(),
       participants: z.array(z.string()).optional(),
     })
-    .optional(),
+    .optional()
+    .describe('Optional metadata like meeting date and participants'),
 });
 
 export const createDocument = ({ session, dataStream }: CreateDocumentProps) =>
   tool({
-    description: `Create a meeting summary document from source transcript documents.
-When you see DOCUMENT_ID markers in the chat, use those IDs in sourceDocumentIds parameter.
-This tool creates summaries from uploaded transcripts.`,
+    description: `Create a meeting summary document from uploaded transcript documents.
+IMPORTANT: This tool ONLY creates summaries, not transcripts. Transcripts are created via file upload.
+When you see TRANSCRIPT_DOCUMENT markers in the chat, use those document IDs in the sourceDocumentIds parameter.
+The sourceDocumentIds parameter is REQUIRED - you must provide at least one transcript document ID.`,
     inputSchema: createDocumentSchema,
     execute: async ({
       title,
@@ -55,10 +58,7 @@ This tool creates summaries from uploaded transcripts.`,
 
       const id = generateUUID();
 
-      // For meeting summaries, sourceDocumentIds are required
-      if (documentType === 'meeting-summary' && (!sourceDocumentIds || sourceDocumentIds.length === 0)) {
-        throw new Error('Meeting summaries require sourceDocumentIds (transcript document IDs)');
-      }
+      // sourceDocumentIds is now enforced by schema, no need for runtime check
 
       dataStream.write({
         type: 'data-kind',
@@ -87,6 +87,27 @@ This tool creates summaries from uploaded transcripts.`,
       // Use document handlers for all document types
       if (documentType === 'meeting-summary') {
         console.log('[CreateDocument] Using meeting-summary handler');
+
+        // Fetch transcript content from source documents
+        console.log(
+          '[CreateDocument] Fetching transcript content from documents:',
+          sourceDocumentIds,
+        );
+        const transcriptDocuments = await Promise.all(
+          sourceDocumentIds.map((docId) => getDocumentById({ id: docId })),
+        );
+
+        // Combine transcript content from all source documents
+        const combinedTranscript = transcriptDocuments
+          .filter((doc) => doc?.content) // Only include documents with content
+          .map((doc) => doc.content)
+          .join('\n\n---\n\n'); // Separate multiple transcripts with divider
+
+        console.log(
+          '[CreateDocument] Combined transcript length:',
+          combinedTranscript.length,
+        );
+
         // Import the meeting summary handler directly
         const { meetingSummaryHandler } = await import(
           '@/artifacts/meeting-summary/server'
@@ -99,6 +120,7 @@ This tool creates summaries from uploaded transcripts.`,
           session,
           metadata: {
             sourceDocumentIds: sourceDocumentIds || [],
+            transcript: combinedTranscript, // Pass actual transcript content!
             meetingDate: metadata?.meetingDate,
             participants: metadata?.participants,
           },

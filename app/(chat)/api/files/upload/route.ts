@@ -1,49 +1,21 @@
-import { put } from '@vercel/blob';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { auth } from '@/app/(auth)/auth';
-import { generateStoragePath } from '@/lib/utils/file-storage';
+import { saveDocument } from '@/lib/db/queries';
+import { generateUUID } from '@/lib/utils';
 
-const ALLOWED_FILE_TYPES = [
-  // Images (existing)
-  'image/jpeg',
-  'image/png',
-  // Text formats
-  'text/plain',
-  'text/vtt',
-  'text/markdown',
-  'text/csv',
-  // Documents
-  'application/pdf',
-  'application/json',
-];
+// Only transcript-related file extensions
+const ALLOWED_EXTENSIONS = ['.txt', '.md', '.vtt', '.srt', '.transcript'];
 
-const MAX_FILE_SIZE: Record<string, number> = {
-  'image/': 5 * 1024 * 1024, // 5MB for images
-  'text/': 10 * 1024 * 1024, // 10MB for text
-  'application/': 20 * 1024 * 1024, // 20MB for documents
-};
+// 10MB max file size for transcripts
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 const FileSchema = z.object({
-  file: z
-    .instanceof(Blob)
-    .refine(
-      (file) => {
-        const category = Object.keys(MAX_FILE_SIZE).find((cat) =>
-          file.type.startsWith(cat),
-        );
-        const maxSize = category ? MAX_FILE_SIZE[category] : 5 * 1024 * 1024;
-        return file.size <= maxSize;
-      },
-      {
-        message: 'File size exceeds maximum allowed',
-      },
-    )
-    .refine((file) => ALLOWED_FILE_TYPES.includes(file.type), {
-      message:
-        'File type not supported. Supported types: images (JPEG, PNG), text (TXT, VTT, MD), documents (PDF, JSON)',
-    }),
+  file: z.instanceof(Blob).refine((file) => file.size <= MAX_FILE_SIZE, {
+    message: `File size exceeds maximum allowed (${MAX_FILE_SIZE / 1024 / 1024}MB)`,
+  }),
+  filename: z.string(),
 });
 
 export async function POST(request: Request) {
@@ -60,13 +32,31 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData();
     const file = formData.get('file') as Blob;
-    const chatId = formData.get('chatId') as string;
 
     if (!file) {
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
     }
 
-    const validatedFile = FileSchema.safeParse({ file });
+    // Get filename from formData since Blob doesn't have name property
+    const filename = (formData.get('file') as File).name;
+    const filenameLower = filename.toLowerCase();
+
+    // Validate file extension
+    const hasValidExtension = ALLOWED_EXTENSIONS.some((ext) =>
+      filenameLower.endsWith(ext),
+    );
+
+    if (!hasValidExtension) {
+      return NextResponse.json(
+        {
+          error: `Unsupported file type. Allowed extensions: ${ALLOWED_EXTENSIONS.join(', ')}`,
+        },
+        { status: 400 },
+      );
+    }
+
+    // Validate file size and structure
+    const validatedFile = FileSchema.safeParse({ file, filename });
 
     if (!validatedFile.success) {
       const errorMessage = validatedFile.error.errors
@@ -76,41 +66,46 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
 
-    // Get filename from formData since Blob doesn't have name property
-    const filename = (formData.get('file') as File).name;
+    // Read file content as text
+    const content = await file.text();
 
-    // Generate storage path: user_id/chat_id/file_id.ext
-    const storagePath = generateStoragePath({
+    // Generate document ID
+    const documentId = generateUUID();
+
+    // Create transcript document directly in database
+    await saveDocument({
+      id: documentId,
+      title: filename,
+      content: content,
+      kind: 'text',
       userId: session.user.id,
-      chatId: chatId || 'default',
-      filename,
+      metadata: {
+        documentType: 'transcript',
+        fileName: filename,
+        fileSize: file.size,
+        uploadedAt: new Date().toISOString(),
+      },
     });
 
-    const fileBuffer = await file.arrayBuffer();
+    console.log('[Upload] Created transcript document', {
+      documentId,
+      fileName: filename,
+      fileSize: file.size,
+      userId: session.user.id,
+    });
 
-    try {
-      const data = await put(storagePath, fileBuffer, {
-        access: 'public',
-        contentType: file.type,
-      });
-
-      return NextResponse.json({
-        url: data.url,
-        pathname: storagePath,
-        contentType: file.type,
-        extractable:
-          file.type.startsWith('text/') ||
-          file.type === 'application/json' ||
-          file.type === 'application/pdf',
-      });
-    } catch (error) {
-      console.error('[File Upload] Error:', error);
-      return NextResponse.json({ error: 'Upload failed' }, { status: 500 });
-    }
+    // Return document ID with explicit transcript marker for chat
+    return NextResponse.json({
+      success: true,
+      documentId,
+      fileName: filename,
+      // This message appears in the chat and triggers AI processing
+      message: `TRANSCRIPT_DOCUMENT: ${documentId}\nFILENAME: ${filename}`,
+    });
   } catch (error) {
     console.error('[File Upload] Error:', error);
     return NextResponse.json(
-      { error: 'Failed to process request' },
+      { error: 'Failed to process transcript upload' },
       { status: 500 },
     );
   }
