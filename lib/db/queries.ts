@@ -311,13 +311,16 @@ export async function saveDocument({
       })
       .returning();
   } catch (error) {
+    console.error('[saveDocument] Database error:', error);
     throw new ChatSDKError('bad_request:database', 'Failed to save document');
   }
 }
 
 export async function updateDocument(
   id: string,
-  updates: Partial<Omit<typeof document.$inferSelect, 'id' | 'createdAt' | 'userId'>>
+  updates: Partial<
+    Omit<typeof document.$inferSelect, 'id' | 'createdAt' | 'userId'>
+  >,
 ) {
   try {
     const result = await db
@@ -335,9 +338,7 @@ export async function updateDocument(
 export async function deleteDocument(id: string) {
   try {
     // First delete related suggestions
-    await db
-      .delete(suggestion)
-      .where(eq(suggestion.documentId, id));
+    await db.delete(suggestion).where(eq(suggestion.documentId, id));
 
     // Then delete the document
     const result = await db

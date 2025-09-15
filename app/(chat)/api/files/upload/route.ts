@@ -72,6 +72,20 @@ export async function POST(request: Request) {
     // Generate document ID
     const documentId = generateUUID();
 
+    console.log('[Upload] Attempting to save document:', {
+      id: documentId,
+      title: filename,
+      contentLength: content.length,
+      kind: 'text',
+      userId: session.user.id,
+      metadata: {
+        documentType: 'transcript',
+        fileName: filename,
+        fileSize: file.size,
+        uploadedAt: new Date().toISOString(),
+      },
+    });
+
     // Create transcript document directly in database
     await saveDocument({
       id: documentId,
