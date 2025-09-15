@@ -10,15 +10,10 @@ import type { ChatMessage } from '@/lib/types';
 const queryRAGSchema = z.object({
   query: z.string().describe('Search query to find relevant content'),
   contentType: z
-    .enum(['transcript', 'summary', 'all'])
+    .enum(['transcript', 'meeting-summary', 'document', 'all'])
     .optional()
     .default('all')
-    .describe('Filter results by content type'),
-  namespace: z
-    .string()
-    .optional()
-    .default('default')
-    .describe('Namespace to search within'),
+    .describe('Filter results by content type (transcript for raw transcripts, meeting-summary for AI-generated summaries, document for other text)'),
   topK: z
     .number()
     .min(1)
@@ -70,9 +65,9 @@ function buildPineconeFilter(
 ): Record<string, unknown> | undefined {
   const filters: Record<string, unknown> = {};
 
-  // Content type filter
+  // Content type filter - use documentType field directly
   if (params.contentType && params.contentType !== 'all') {
-    filters.type = params.contentType;
+    filters.documentType = params.contentType;
   }
 
   // Source filter
@@ -220,12 +215,19 @@ interface QueryRAGProps {
   dataStream: UIMessageStreamWriter<ChatMessage>;
 }
 
-export const queryRAG = (_props: QueryRAGProps) =>
-  tool({
+export const queryRAG = (props: QueryRAGProps) => {
+  console.log(
+    '[queryRAG] Creating tool with session user:',
+    props.session?.user?.id,
+  );
+
+  return tool({
     description:
       'Search the RAG system for relevant content using semantic search',
     inputSchema: queryRAGSchema,
     execute: async (params) => {
+      console.log('[queryRAG] Tool invoked with params:', params);
+      console.log('[queryRAG] Session user:', props.session?.user?.id);
       const startTime = Date.now();
 
       try {
@@ -233,27 +235,50 @@ export const queryRAG = (_props: QueryRAGProps) =>
         const cacheKey = JSON.stringify(params);
         const cached = queryCache.get(cacheKey);
         if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+          console.log('[queryRAG] Returning cached result');
           return cached.result;
         }
 
         // Initialize Pinecone client
+        console.log('[queryRAG] Initializing Pinecone client');
         const pineconeClient = new PineconeClient({
           indexName: process.env.PINECONE_INDEX_NAME || 'rag-agent-poc',
         });
 
         // Build filter from parameters
         const filter = buildPineconeFilter(params);
+        console.log('[queryRAG] Built filter:', filter);
+
+        // Always use userId as namespace for proper isolation
+        const namespace = props.session?.user?.id;
+        if (!namespace) {
+          throw new Error('User session required for RAG queries');
+        }
+        console.log('[queryRAG] Using namespace:', namespace);
 
         // Query Pinecone with text (integrated embeddings handle conversion)
+        console.log('[queryRAG] Querying Pinecone with:', {
+          query: params.query,
+          namespace,
+          topK: params.topK * 2,
+          filter,
+        });
+
         const queryResult: QueryResult = await pineconeClient.queryByText(
           params.query,
           {
-            namespace: params.namespace,
+            namespace,
             topK: params.topK * 2, // Get more results for reranking
             filter,
             includeMetadata: true,
             minScore: 0.5, // Minimum relevance threshold
           },
+        );
+
+        console.log(
+          '[queryRAG] Query returned',
+          queryResult.matches.length,
+          'matches',
         );
 
         let matches = queryResult.matches;
@@ -281,10 +306,15 @@ export const queryRAG = (_props: QueryRAGProps) =>
 
         // Expand context if requested
         if (params.expandContext && matches.length > 0) {
+          console.log(
+            '[queryRAG] Expanding context for',
+            matches.length,
+            'matches',
+          );
           matches = await expandChunkContext(
             matches,
             pineconeClient,
-            params.namespace,
+            namespace,
           );
         }
 
@@ -297,7 +327,7 @@ export const queryRAG = (_props: QueryRAGProps) =>
           success: true,
           query: params.query,
           matchCount: matches.length,
-          namespace: params.namespace,
+          namespace,
           duration: `${duration}ms`,
           content: formattedContent,
           matches: matches.map((m) => ({
@@ -313,6 +343,7 @@ export const queryRAG = (_props: QueryRAGProps) =>
 
         return result;
       } catch (error) {
+        console.error('[queryRAG] Error during execution:', error);
         const errorMessage =
           error instanceof Error ? error.message : 'Unknown error';
 
@@ -320,7 +351,9 @@ export const queryRAG = (_props: QueryRAGProps) =>
           success: false,
           error: errorMessage,
           query: params.query,
+          details: error instanceof Error ? error.stack : undefined,
         };
       }
     },
   });
+};

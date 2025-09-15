@@ -28,6 +28,7 @@ import {
   type Chat,
   stream,
 } from './schema';
+import { syncDocumentToRAG, deleteFromRAG } from '@/lib/rag/sync';
 import type { ArtifactKind } from '@/components/artifact';
 import { generateUUID } from '../utils';
 import { generateHashedPassword } from './utils';
@@ -297,7 +298,7 @@ export async function saveDocument({
   try {
     const documentId = id || generateUUID();
 
-    return await db
+    const result = await db
       .insert(document)
       .values({
         id: documentId,
@@ -310,6 +311,13 @@ export async function saveDocument({
         sourceDocumentIds: sourceDocumentIds || [],
       })
       .returning();
+
+    // Automatically sync to RAG (async, don't await)
+    syncDocumentToRAG(documentId).catch((err) =>
+      console.error('[saveDocument] RAG sync failed:', err),
+    );
+
+    return result;
   } catch (error) {
     console.error('[saveDocument] Database error:', error);
     throw new ChatSDKError('bad_request:database', 'Failed to save document');
@@ -329,6 +337,11 @@ export async function updateDocument(
       .where(eq(document.id, id))
       .returning();
 
+    // Automatically sync to RAG (async, don't await)
+    syncDocumentToRAG(id).catch((err) =>
+      console.error('[updateDocument] RAG sync failed:', err),
+    );
+
     return result[0];
   } catch (error) {
     throw new ChatSDKError('bad_request:database', 'Failed to update document');
@@ -337,10 +350,13 @@ export async function updateDocument(
 
 export async function deleteDocument(id: string) {
   try {
-    // First delete related suggestions
+    // Delete from RAG first (before document is gone)
+    await deleteFromRAG(id);
+
+    // Then delete related suggestions
     await db.delete(suggestion).where(eq(suggestion.documentId, id));
 
-    // Then delete the document
+    // Finally delete the document
     const result = await db
       .delete(document)
       .where(eq(document.id, id))

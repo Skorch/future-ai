@@ -64,17 +64,27 @@ async function getTopicChunks(
   }
 
   try {
+    console.log(
+      `[RAG Chunker] Attempting AI chunking with model: ${model}, items: ${items.length}, topics: ${topics.length}`,
+    );
     const result = await generateObject({
       model: myProvider.languageModel(model),
       schema: chunkingSchema,
       prompt: buildChunkingPrompt(items, topics),
     });
 
+    console.log(
+      `[RAG Chunker] AI chunking successful, got ${result.object.chunks.length} chunks`,
+    );
     // Validate and fix if needed
     return validateAndFixChunks(result.object.chunks, items.length);
   } catch (error) {
-    console.error('AI chunking failed, using fallback:', error);
-    return createFallbackChunks(items, topics);
+    console.error('[RAG Chunker] AI chunking failed, using fallback:', error);
+    const fallbackChunks = createFallbackChunks(items, topics);
+    console.log(
+      `[RAG Chunker] Fallback generated ${fallbackChunks.length} chunks`,
+    );
+    return fallbackChunks;
   }
 }
 
@@ -228,10 +238,13 @@ function createFallbackChunks(
 ): TopicChunk[] {
   if (items.length === 0) return [];
 
+  // Use default topics if none provided
+  const effectiveTopics = topics.length > 0 ? topics : ['General Discussion'];
+
   const chunks: TopicChunk[] = [];
   const targetSize = Math.min(
     30,
-    Math.max(5, Math.ceil(items.length / topics.length)),
+    Math.max(5, Math.ceil(items.length / effectiveTopics.length)),
   );
 
   let currentIdx = 0;
@@ -254,7 +267,9 @@ function createFallbackChunks(
     }
 
     chunks.push({
-      topic: topics[topicIdx % topics.length],
+      topic:
+        effectiveTopics[topicIdx % effectiveTopics.length] ||
+        'General Discussion',
       startIdx: currentIdx,
       endIdx: endIdx,
     });

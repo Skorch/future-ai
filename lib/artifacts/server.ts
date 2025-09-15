@@ -53,12 +53,39 @@ export function createDocumentHandler<T extends ArtifactKind>(config: {
       });
 
       if (args.session?.user?.id) {
+        // Ensure metadata includes documentType based on the handler kind
+        let documentType = config.kind;
+
+        // Special handling for meeting-summary handler
+        if (config.kind === 'text') {
+          // Check if this is coming from the meeting-summary handler
+          if (args.metadata?.sourceDocumentIds?.length > 0) {
+            documentType = 'meeting-summary';
+          } else if (args.title?.toLowerCase().includes('summary')) {
+            documentType = 'meeting-summary';
+          } else {
+            // Default text documents to 'document' type
+            documentType = 'document';
+          }
+        }
+
+        const documentMetadata = {
+          ...args.metadata,
+          documentType,
+          artifactId: args.id,
+          artifactTitle: args.title,
+          artifactType: config.kind,
+          artifactCreatedAt: new Date().toISOString(),
+        };
+
         await saveDocument({
           id: args.id,
           title: args.title,
           content: draftContent,
           kind: config.kind,
           userId: args.session.user.id,
+          metadata: documentMetadata,
+          sourceDocumentIds: args.metadata?.sourceDocumentIds || [],
         });
       }
 

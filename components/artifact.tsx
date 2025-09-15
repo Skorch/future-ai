@@ -26,9 +26,7 @@ import type { UseChatHelpers } from '@ai-sdk/react';
 import type { VisibilityType } from './visibility-selector';
 import type { Attachment, ChatMessage } from '@/lib/types';
 
-export const artifactDefinitions = [
-  textArtifact,
-];
+export const artifactDefinitions = [textArtifact];
 export type ArtifactKind = (typeof artifactDefinitions)[number]['kind'];
 
 export interface UIArtifact {

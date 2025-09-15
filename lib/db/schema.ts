@@ -116,15 +116,17 @@ export const document = pgTable(
       .notNull()
       .references(() => user.id),
     // NEW FIELDS for RAG simplification
-    metadata: json('metadata').$type<{
-      documentType?: 'transcript' | 'meeting-summary';
-      fileName?: string;
-      fileSize?: number;
-      uploadedAt?: string;
-      meetingDate?: string;
-      participants?: string[];
-      [key: string]: any;
-    }>().default({}),
+    metadata: json('metadata')
+      .$type<{
+        documentType?: 'transcript' | 'meeting-summary';
+        fileName?: string;
+        fileSize?: number;
+        uploadedAt?: string;
+        meetingDate?: string;
+        participants?: string[];
+        [key: string]: any;
+      }>()
+      .default({}),
     sourceDocumentIds: json('sourceDocumentIds').$type<string[]>().default([]),
   },
   (table) => {

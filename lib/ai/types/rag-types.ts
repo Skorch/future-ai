@@ -35,16 +35,52 @@ export interface RAGDocument {
 }
 
 export interface RAGMetadata {
-  source: string;
-  type: 'transcript' | 'document' | 'chat';
-  topic?: string;
-  speakers?: string[];
+  // Core identifiers (always present)
+  documentId: string;
+  documentType: 'transcript' | 'meeting-summary' | 'document' | string;
+  userId: string;
+
+  // Document info (always present)
+  title: string;
+  kind: string;
+  createdAt: string | Date;
+
+  // Chunk specifics (always present)
+  chunkIndex: number;
+  totalChunks: number;
+  fileHash: string;
+  contentSource: 'transcript' | 'artifact' | 'unknown';
+
+  // Content-specific fields (conditional)
+  topic?: string; // For transcript chunks
+  sectionTitle?: string; // For document sections
+  speakers?: string[]; // For transcript chunks
   startTime?: number;
   endTime?: number;
-  chunkIndex?: number;
-  totalChunks?: number;
-  createdAt: string;
-  fileHash?: string;
+
+  // Timestamps
+  transcriptTimestamp?: string;
+  meetingDate?: string;
+
+  // Artifact tracking
+  artifactId?: string;
+  artifactTitle?: string;
+  artifactType?: string;
+  artifactCreatedAt?: string;
+
+  // Meeting-specific
+  participants?: string[];
+  meetingDuration?: string;
+  sourceTranscriptIds?: string[];
+
+  // File metadata
+  fileName?: string;
+  fileSize?: number;
+  uploadedAt?: string;
+
+  // Legacy fields for backward compatibility
+  source?: string;
+  type?: 'transcript' | 'document' | 'chat';
 }
 
 // Write operation types

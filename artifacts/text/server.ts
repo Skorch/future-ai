@@ -5,7 +5,7 @@ import { updateDocumentPrompt } from '@/lib/ai/prompts';
 
 export const textDocumentHandler = createDocumentHandler<'text'>({
   kind: 'text',
-  onCreateDocument: async ({ title, dataStream }) => {
+  onCreateDocument: async ({ title, dataStream, metadata }) => {
     let draftContent = '';
 
     const { fullStream } = streamText({

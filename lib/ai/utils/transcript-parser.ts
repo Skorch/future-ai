@@ -1,13 +1,31 @@
 import type { TranscriptItem } from '../../rag/types';
 
 export function parseTranscript(content: string): TranscriptItem[] {
+  // Debug logging to understand what content we're receiving
+  console.log('[parseTranscript] Content length:', content.length);
+  console.log('[parseTranscript] First 500 chars:', content.substring(0, 500));
+  console.log(
+    '[parseTranscript] Has VIEW RECORDING:',
+    content.includes('VIEW RECORDING'),
+  );
+  console.log(
+    '[parseTranscript] Has timestamp pattern:',
+    /^\d+:\d+/m.test(content),
+  );
+
   if (content.includes('WEBVTT')) {
     return parseWebVTT(content);
   } else if (
     content.includes('VIEW RECORDING') ||
     /^\d{2}:\d{2}:\d{2}\s+\w+/m.test(content)
   ) {
-    return parseFathom(content);
+    const result = parseFathom(content);
+    console.log(
+      '[parseTranscript] parseFathom returned',
+      result.length,
+      'items',
+    );
+    return result;
   } else {
     throw new Error('Unsupported format. Expected WebVTT or Fathom.');
   }
@@ -52,12 +70,13 @@ function parseFathom(content: string): TranscriptItem[] {
   const items: TranscriptItem[] = [];
   const lines = content.split('\n');
 
-  for (const line of lines) {
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
     if (!line.trim()) continue;
 
     // Try two patterns:
-    // 1. "HH:MM:SS Speaker: Text" (simple format)
-    // 2. "HH:MM:SS - Speaker (Role)" with text on next line (complex format)
+    // 1. "HH:MM:SS Speaker: Text" (simple format with text on same line)
+    // 2. "M:SS - Speaker (Role)" with text on NEXT line (actual Fathom format)
 
     // Pattern 1: Simple format like "00:00:00 Speaker 1: Welcome"
     const simpleMatch = line.match(/^(\d{2}:\d{2}:\d{2})\s+([^:]+):\s*(.+)$/);
@@ -69,21 +88,34 @@ function parseFathom(content: string): TranscriptItem[] {
       continue;
     }
 
-    // Pattern 2: Complex format with dash
-    const complexMatch = line.match(
+    // Pattern 2: Fathom format with dash "M:SS - Speaker (Company)"
+    const fathomMatch = line.match(
       /^(\d+:\d+(?::\d+)?)\s*-\s*([^(]+)(?:\([^)]+\))?/,
     );
-    if (complexMatch) {
-      const timecode = timeToSeconds(complexMatch[1]);
-      const speaker = complexMatch[2].trim();
-      // For complex format, text might be on the same line after a colon or on next line
-      const colonIndex = line.indexOf(
-        ':',
-        line.indexOf(speaker) + speaker.length,
-      );
-      const text = colonIndex > -1 ? line.substring(colonIndex + 1).trim() : '';
+    if (fathomMatch) {
+      const timecode = timeToSeconds(fathomMatch[1]);
+      const speaker = fathomMatch[2].trim();
+
+      // Look for text on the NEXT line(s) until we hit another timestamp or empty line
+      let text = '';
+      let j = i + 1;
+      while (j < lines.length) {
+        const nextLine = lines[j].trim();
+
+        // Stop if we hit an empty line or another timestamp
+        if (!nextLine || /^\d+:\d+/.test(nextLine)) {
+          break;
+        }
+
+        // Add this line to the text
+        text += (text ? ' ' : '') + nextLine;
+        j++;
+      }
+
       if (text) {
         items.push({ timecode, speaker, text });
+        // Skip the lines we've already processed
+        i = j - 1;
       }
     }
   }
@@ -103,10 +135,48 @@ function timeToSeconds(time: string): number {
 
 // For documents
 export function parseDocument(content: string): TranscriptItem[] {
-  const sections = content.split(/^#{1,3}\s+/m).filter(Boolean);
-  return sections.map((section, idx) => ({
-    timecode: idx,
-    speaker: 'document',
-    text: section.trim(),
-  }));
+  // Match headers and their content
+  const headerRegex = /^(#{1,3})\s+(.+)$/gm;
+  const sections: TranscriptItem[] = [];
+  const lastIndex = 0;
+  let match;
+  let sectionIndex = 0;
+
+  // Find all headers and their positions
+  const matches: Array<{ start: number; title: string }> = [];
+  while ((match = headerRegex.exec(content)) !== null) {
+    matches.push({ start: match.index, title: match[2] });
+  }
+
+  // Extract sections between headers
+  matches.forEach((current, i) => {
+    const nextStart = matches[i + 1]?.start || content.length;
+    const sectionContent = content.substring(current.start, nextStart).trim();
+
+    // Remove the header line itself from content
+    const contentWithoutHeader = sectionContent
+      .replace(/^#{1,3}\s+.+$/m, '')
+      .trim();
+
+    if (contentWithoutHeader) {
+      sections.push({
+        timecode: sectionIndex++,
+        speaker: current.title,
+        text: contentWithoutHeader,
+      });
+    }
+  });
+
+  // If no headers found, treat the entire content as one section
+  if (sections.length === 0 && content.trim()) {
+    return [
+      {
+        timecode: 0,
+        speaker: 'document',
+        text: content.trim(),
+      },
+    ];
+  }
+
+  return sections;
 }

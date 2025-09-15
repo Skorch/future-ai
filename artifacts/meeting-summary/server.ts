@@ -1,6 +1,7 @@
 import { smoothStream, streamText } from 'ai';
 import { myProvider } from '@/lib/ai/providers';
 import { createDocumentHandler } from '@/lib/artifacts/server';
+import { getDocumentById } from '@/lib/db/queries';
 
 export const meetingSummaryHandler = createDocumentHandler<'text'>({
   kind: 'text',
@@ -9,14 +10,57 @@ export const meetingSummaryHandler = createDocumentHandler<'text'>({
       title,
       hasTranscript: !!metadata?.transcript,
       transcriptLength: metadata?.transcript?.length || 0,
+      sourceDocumentIds: metadata?.sourceDocumentIds,
       meetingDate: metadata?.meetingDate,
       participants: metadata?.participants,
     });
 
     let draftContent = '';
+    let transcript = '';
 
-    // Extract transcript from metadata
-    const transcript = metadata?.transcript || '';
+    // Check if we have sourceDocumentIds to fetch from
+    if (
+      metadata?.sourceDocumentIds?.length &&
+      metadata.sourceDocumentIds.length > 0
+    ) {
+      console.log(
+        '[MeetingSummaryHandler] Fetching source documents:',
+        metadata.sourceDocumentIds,
+      );
+
+      // Fetch source documents
+      const sourceDocuments = await Promise.all(
+        metadata.sourceDocumentIds.map((docId: string) =>
+          getDocumentById({ id: docId }),
+        ),
+      );
+
+      // Validate all documents exist and have content
+      const validDocuments = sourceDocuments.filter((doc) => doc?.content);
+      if (validDocuments.length === 0) {
+        throw new Error('No valid source documents found');
+      }
+
+      // Combine transcripts from source documents
+      transcript = validDocuments
+        .map((doc) => `\n--- ${doc.title} ---\n${doc.content}\n`)
+        .join('\n');
+
+      console.log(
+        '[MeetingSummaryHandler] Combined transcripts from',
+        validDocuments.length,
+        'documents',
+      );
+    } else if (metadata?.transcript) {
+      // Fallback to direct transcript in metadata
+      transcript = metadata.transcript;
+    } else {
+      // Summaries MUST have source documents or transcript
+      throw new Error(
+        'Meeting summaries require sourceDocumentIds or transcript',
+      );
+    }
+
     const meetingDate =
       metadata?.meetingDate || new Date().toISOString().split('T')[0];
     const participants = metadata?.participants || [];
