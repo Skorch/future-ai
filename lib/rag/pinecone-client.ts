@@ -350,6 +350,45 @@ export class PineconeClient {
   }
 
   /**
+   * Delete vectors by metadata filter
+   * Used for UPSERT pattern when updating documents
+   */
+  async deleteByMetadata(
+    filter: Record<string, any>,
+    namespace: string = DEFAULT_NAMESPACE
+  ): Promise<void> {
+    try {
+      const index = this.client.index(this.indexName);
+
+      // Query to find IDs matching the filter
+      const queryResponse = await index.namespace(namespace).query({
+        filter,
+        topK: 10000, // Max vectors to delete in one operation
+        includeValues: false,
+        includeMetadata: false,
+        vector: new Array(1536).fill(0), // Dummy vector for query
+      });
+
+      if (queryResponse.matches && queryResponse.matches.length > 0) {
+        const idsToDelete = queryResponse.matches.map(match => match.id);
+
+        // Delete the vectors
+        await index.namespace(namespace).deleteMany(idsToDelete);
+
+        console.log(`[Pinecone] Deleted ${idsToDelete.length} vectors with filter:`, filter);
+      } else {
+        console.log('[Pinecone] No vectors found to delete with filter:', filter);
+      }
+    } catch (error) {
+      console.error('[Pinecone] Delete by metadata failed:', error);
+      throw new PineconeError(
+        `Delete by metadata failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        error
+      );
+    }
+  }
+
+  /**
    * Get index statistics
    */
   async getStats(): Promise<PineconeIndexStats> {

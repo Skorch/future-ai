@@ -8,43 +8,7 @@ Execute this workflow when you need to plan, design, or strategize before implem
 
 **Context**: $ARGUMENTS
 
-## Workflow Structure
 
-The workflow you will always enforce:
-- Always favor small iterative `atomic plans` that add up to a larger milestone
-- Define the milestone, but break that up into the `atomic plans` of work
-- Write detailed step-by-step plans for each `atomic unit` in `docs/plans/{issue_name}/{milestone_name}/{subtask_name}.md`
-
-Example structure:
-```
-docs/
-└── plans/
-    └── issue01-authentication/
-        ├── m01-research/
-        │   ├── s01-oauth_providers.md
-        │   ├── s02-security_protocols.md
-        ├── m02-implementation/
-        │   ├── s01-database_schema.md
-        │   ├── s02-api_endpoints.md
-        │   └── s03-integration_tests.md
-        └── m03-deployment/
-            └── s01-staging_setup.md
-```
-
-### Issues, Milestones, and Subtasks
-
-**Issues** are defined by the Project Manager with large, high-level goals.
-
-**Milestones** are larger units of work that can be handed over to end-to-end testing. Favor end-to-end (vertical) milestones vs broad (horizontal) milestones because the former can be end-to-end tested. If there is no clear way, ask for direction.
-
-**Subtask Workflow:**
-- In each subtask file, create a step-by-step checklist for the subtask to follow:
-  - [ ] Make code edit
-  - [ ] Add/update necessary unit tests
-  - [ ] Update mermaid flows
-  - [ ] Run and fix unit tests - repeat until all pass
-  - [ ] Verify checklist in plan file
-  - [ ] Git commit
 
 ## Architecture Specification Process
 
@@ -54,7 +18,7 @@ docs/
 - [ ] Spend time to THINK about the request and strategy to find the right context to load
 - [ ] Review attached screenshots (if provided), paying close attention to all displayed data fields, especially for related entities
 - [ ] **Existing Code / Code Reuse / Good Architecture**
-  - [ ] Search existing codebase (`src/app`) for matching components
+  - [ ] always use the `code-searcher` agent to create parallel subagent tasks to search existing codebase (`src/app`) for matching components
   - [ ] Consider whether the change required is a UI change, Data change, or both
   - [ ] Evaluate whether existing components satisfy the required function
     - [ ] If it does, add it to the list of components to be used
@@ -117,7 +81,7 @@ docs/
 1. **Use `TodoWrite` tool** to track your progress through the workflow steps
 2. **CRITICAL**: Always ask user to review and approve your proposed architecture before proceeding
 3. **Exit Planning**: Use `ExitPlanMode` tool when ready to begin implementation
-4. **File Organization**: Save plans in `docs/plans/{issue_name}/{milestone_name}/{subtask_name}.md`
+4. **File Organization**: Save plans in `specs/{initiative_name}/architecture_spec_{initiative_name}.md`
 
 
 ---
@@ -156,39 +120,3 @@ When creating architecture specifications, use the following template structure:
 [Next.js 15+ specific considerations]
 ```
 
-### Atomic Subtask Template
-
-```markdown
-# Subtask: [Title]
-
-**Issue:** [Issue Name]
-**Milestone:** [Milestone Name] 
-**Status:** To Do
-**Depends On:** [Dependencies]
-
-## 1. Goal
-[Primary objective]
-
-## 2. File Tree & Affected Files
-[Specific files to create/modify]
-
-## 3. Key Data Points / Interface
-[Data structures and types]
-
-## 4. Visual Reference / Layout
-[UI wireframes or specifications]
-
-## 5. Component Hierarchy (Task Specific)
-[Mermaid diagram for this task]
-
-## 6. Technical Implementation Details
-[Step-by-step implementation]
-
-## 7. Coder Workflow Checklist
-[Comprehensive verification checklist]
-
-## 8. Notes / TODOs
-[Additional considerations]
-```
-
-Use `$ARGUMENTS` if you need to pass specific requirements or context to this architect workflow.

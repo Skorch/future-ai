@@ -299,3 +299,4 @@ If your architectural plan adds >40 lines of code for what could be done in <10,
 Remember: The best code is code that doesn't exist. Every line you write is a line that must be maintained, tested, and understood by others.
 - The current version of Next.js 15's App Router where all
   dynamic route parameters are now async - parameters must be declared as Promise<>
+- when testing always use pnpm and the testing framework is vitest

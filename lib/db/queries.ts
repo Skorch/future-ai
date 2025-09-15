@@ -283,27 +283,71 @@ export async function saveDocument({
   kind,
   content,
   userId,
+  metadata,
+  sourceDocumentIds,
 }: {
-  id: string;
+  id?: string;
   title: string;
   kind: ArtifactKind;
   content: string;
   userId: string;
+  metadata?: Record<string, any>;
+  sourceDocumentIds?: string[];
 }) {
   try {
+    const documentId = id || generateUUID();
+
     return await db
       .insert(document)
       .values({
-        id,
+        id: documentId,
         title,
         kind,
         content,
         userId,
         createdAt: new Date(),
+        metadata: metadata || {},
+        sourceDocumentIds: sourceDocumentIds || [],
       })
       .returning();
   } catch (error) {
     throw new ChatSDKError('bad_request:database', 'Failed to save document');
+  }
+}
+
+export async function updateDocument(
+  id: string,
+  updates: Partial<Omit<typeof document.$inferSelect, 'id' | 'createdAt' | 'userId'>>
+) {
+  try {
+    const result = await db
+      .update(document)
+      .set(updates)
+      .where(eq(document.id, id))
+      .returning();
+
+    return result[0];
+  } catch (error) {
+    throw new ChatSDKError('bad_request:database', 'Failed to update document');
+  }
+}
+
+export async function deleteDocument(id: string) {
+  try {
+    // First delete related suggestions
+    await db
+      .delete(suggestion)
+      .where(eq(suggestion.documentId, id));
+
+    // Then delete the document
+    const result = await db
+      .delete(document)
+      .where(eq(document.id, id))
+      .returning();
+
+    return result[0];
+  } catch (error) {
+    throw new ChatSDKError('bad_request:database', 'Failed to delete document');
   }
 }
 

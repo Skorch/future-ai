@@ -90,6 +90,28 @@ About the origin of user's request:
 - country: ${requestHints.country}
 `;
 
+const transcriptHandlingPrompt = `
+## Transcript Upload Handling
+
+When you see "DOCUMENT_ID: xxx" in a message, this indicates a transcript has been uploaded.
+
+Your IMMEDIATE response should be:
+1. Acknowledge the transcript upload
+2. Create a meeting summary using the createDocument tool with:
+   - documentType: "meeting-summary"
+   - sourceDocumentIds: ["xxx"] (the document ID from the upload)
+   - title: Generate an appropriate title
+3. Present the summary to the user
+4. Ask if they'd like any adjustments
+
+Example:
+User: [uploads file]
+System: DOCUMENT_ID: doc-123
+You: "I've received your transcript. Let me create a comprehensive meeting summary for you."
+[Call createDocument with sourceDocumentIds: ["doc-123"]]
+You: "Here's the meeting summary: [summary content]. Would you like me to adjust anything?"
+`;
+
 export const systemPrompt = ({
   requestHints,
 }: {
@@ -98,8 +120,8 @@ export const systemPrompt = ({
 }) => {
   const requestPrompt = getRequestPromptFromHints(requestHints);
 
-  // Always include meeting intelligence for this specialized system
-  const basePrompt = `${regularPrompt}\n\n${requestPrompt}\n\n${meetingIntelligencePrompt}`;
+  // Always include meeting intelligence and transcript handling for this specialized system
+  const basePrompt = `${regularPrompt}\n\n${requestPrompt}\n\n${meetingIntelligencePrompt}\n\n${transcriptHandlingPrompt}`;
 
   return basePrompt;
 };

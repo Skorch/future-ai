@@ -10,7 +10,7 @@ import type { ChatMessage } from '@/lib/types';
 const queryRAGSchema = z.object({
   query: z.string().describe('Search query to find relevant content'),
   contentType: z
-    .enum(['transcript', 'document', 'chat', 'all'])
+    .enum(['transcript', 'summary', 'all'])
     .optional()
     .default('all')
     .describe('Filter results by content type'),
