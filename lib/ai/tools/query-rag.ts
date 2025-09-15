@@ -6,7 +6,7 @@ import type { QueryResult, QueryMatch, RAGMetadata } from '../../rag/types';
 import type { Session } from 'next-auth';
 import type { ChatMessage } from '@/lib/types';
 
-// Tool parameter schema
+// Tool parameter schema - only expose what LLM needs to control
 const queryRAGSchema = z.object({
   query: z.string().describe('Search query to find relevant content'),
   contentType: z
@@ -14,16 +14,8 @@ const queryRAGSchema = z.object({
     .optional()
     .default('all')
     .describe('Filter results by content type (transcript for raw transcripts, meeting-summary for AI-generated summaries, document for other text)'),
-  topK: z
-    .number()
-    .min(1)
-    .max(20)
-    .optional()
-    .default(5)
-    .describe('Number of results to return'),
   filter: z
     .object({
-      source: z.string().optional().describe('Filter by source identifier'),
       topics: z.array(z.string()).optional().describe('Filter by topics'),
       speakers: z
         .array(z.string())
@@ -39,16 +31,6 @@ const queryRAGSchema = z.object({
     })
     .optional()
     .describe('Additional filters for search'),
-  expandContext: z
-    .boolean()
-    .optional()
-    .default(false)
-    .describe('Include adjacent chunks for more context'),
-  useReranking: z
-    .boolean()
-    .optional()
-    .default(true)
-    .describe('Apply reranking to improve result relevance'),
 });
 
 type QueryRAGParams = z.infer<typeof queryRAGSchema>;
@@ -68,11 +50,6 @@ function buildPineconeFilter(
   // Content type filter - use documentType field directly
   if (params.contentType && params.contentType !== 'all') {
     filters.documentType = params.contentType;
-  }
-
-  // Source filter
-  if (params.filter?.source) {
-    filters.source = params.filter.source;
   }
 
   // Topics filter (using $in operator for array matching)
@@ -189,14 +166,17 @@ function formatResultsForLLM(matches: QueryMatch[]): string {
       const metadata = match.metadata;
       let header = `[Result ${index + 1}]`;
 
-      if (metadata.type === 'transcript' && metadata.speakers) {
+      if (metadata.documentType === 'transcript' && metadata.speakers) {
         header += ` (${metadata.speakers.join(', ')})`;
       }
       if (metadata.topic) {
         header += ` - Topic: ${metadata.topic}`;
       }
-      if (metadata.source) {
-        header += ` - Source: ${metadata.source}`;
+      if (metadata.sectionTitle) {
+        header += ` - Section: ${metadata.sectionTitle}`;
+      }
+      if (metadata.title) {
+        header += ` - From: ${metadata.title}`;
       }
 
       return `${header}\n${match.content}\n`;
@@ -256,11 +236,16 @@ export const queryRAG = (props: QueryRAGProps) => {
         }
         console.log('[queryRAG] Using namespace:', namespace);
 
+        // Internal configuration (not exposed to LLM)
+        const topK = 10; // Fixed number of results to return
+        const useReranking = true; // Always use reranking for better quality
+        const expandContext = false; // Don't expand by default (can be slow)
+
         // Query Pinecone with text (integrated embeddings handle conversion)
         console.log('[queryRAG] Querying Pinecone with:', {
           query: params.query,
           namespace,
-          topK: params.topK * 2,
+          topK: topK * 2, // Get more for reranking
           filter,
         });
 
@@ -268,7 +253,7 @@ export const queryRAG = (props: QueryRAGProps) => {
           params.query,
           {
             namespace,
-            topK: params.topK * 2, // Get more results for reranking
+            topK: topK * 2, // Get more results for reranking
             filter,
             includeMetadata: true,
             minScore: 0.5, // Minimum relevance threshold
@@ -284,11 +269,11 @@ export const queryRAG = (props: QueryRAGProps) => {
         let matches = queryResult.matches;
 
         // Apply reranking if enabled and we have results
-        if (params.useReranking && matches.length > 0) {
+        if (useReranking && matches.length > 0) {
           const reranker = createReranker();
           const rerankedResults = await reranker.rerank(params.query, matches, {
             model: 'cohere-rerank-3.5',
-            topN: params.topK,
+            topN: topK,
             returnDocuments: true,
           });
 
@@ -301,11 +286,11 @@ export const queryRAG = (props: QueryRAGProps) => {
           }));
         } else {
           // Just take the top K without reranking
-          matches = matches.slice(0, params.topK);
+          matches = matches.slice(0, topK);
         }
 
         // Expand context if requested
-        if (params.expandContext && matches.length > 0) {
+        if (expandContext && matches.length > 0) {
           console.log(
             '[queryRAG] Expanding context for',
             matches.length,
