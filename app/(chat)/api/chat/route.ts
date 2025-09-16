@@ -161,16 +161,25 @@ export async function POST(request: Request) {
     const shouldDisableTools = false;
 
     // Only add provider options for models with native reasoning support
+    // Thinking budget must be subtracted from the model's max output capacity
+    const thinkingBudget = 2000; // 6k tokens for thinking
     const providerOptions = modelConfig?.supportsReasoning
       ? {
           anthropic: {
             thinking: {
               type: 'enabled' as const,
-              budgetTokens: 12000, // 12k tokens for thinking process
+              budgetTokens: thinkingBudget,
             },
           },
         }
       : undefined;
+
+    console.log('[ChatRoute] Provider options for thinking model:', {
+      isReasoningModel,
+      providerOptions: JSON.stringify(providerOptions, null, 2),
+      modelConfig: modelConfig?.id,
+      supportsReasoning: modelConfig?.supportsReasoning,
+    });
 
     // Process messages BEFORE creating the stream so it's available in onFinish
     const processedMessages = await processMessageFiles(uiMessages);
@@ -232,6 +241,103 @@ export async function POST(request: Request) {
 
           // Log the actual content being sent to the AI
           const modelMessages = convertToModelMessages(processedMessages);
+
+          // Calculate approximate token counts (rough estimate: 1 token ≈ 4 characters)
+          const estimateTokens = (text: string): number => {
+            return Math.ceil(text.length / 4);
+          };
+
+          // Calculate total context size
+          let totalCharacters = 0;
+          let totalEstimatedTokens = 0;
+
+          // Add system prompt
+          totalCharacters += systemPromptText.length;
+          totalEstimatedTokens += estimateTokens(systemPromptText);
+
+          // Add all messages
+          const messageStats = modelMessages.map((msg, idx) => {
+            let msgChars = 0;
+            let msgContent = '';
+
+            if (typeof msg.content === 'string') {
+              msgChars = msg.content.length;
+              msgContent = msg.content;
+            } else if (Array.isArray(msg.content)) {
+              msg.content.forEach((part) => {
+                if (part.type === 'text' && part.text) {
+                  msgChars += part.text.length;
+                  msgContent += part.text;
+                } else if (part.type === 'image' && part.image) {
+                  // Images can be very large when base64 encoded
+                  const imageSize =
+                    typeof part.image === 'string'
+                      ? part.image.length
+                      : JSON.stringify(part.image).length;
+                  msgChars += imageSize;
+                  msgContent += `[IMAGE: ${imageSize} chars]`;
+                }
+              });
+            }
+
+            totalCharacters += msgChars;
+            const msgTokens = estimateTokens(msgContent);
+            totalEstimatedTokens += msgTokens;
+
+            return {
+              index: idx,
+              role: msg.role,
+              characters: msgChars,
+              estimatedTokens: msgTokens,
+              preview: msgContent.substring(0, 100),
+            };
+          });
+
+          console.log('[ChatRoute] CONTEXT SIZE ANALYSIS:', {
+            systemPrompt: {
+              characters: systemPromptText.length,
+              estimatedTokens: estimateTokens(systemPromptText),
+            },
+            messages: {
+              count: modelMessages.length,
+              totalCharacters: totalCharacters - systemPromptText.length,
+              totalEstimatedTokens:
+                totalEstimatedTokens - estimateTokens(systemPromptText),
+              details: messageStats,
+            },
+            total: {
+              characters: totalCharacters,
+              estimatedTokens: totalEstimatedTokens,
+              estimatedWithBudget:
+                totalEstimatedTokens + (isReasoningModel ? 12000 : 0),
+            },
+            modelInfo: {
+              isReasoningModel,
+              thinkingBudget: isReasoningModel ? 12000 : 0,
+              contextLimit: 200000,
+              remainingTokens:
+                200000 - totalEstimatedTokens - (isReasoningModel ? 12000 : 0),
+            },
+          });
+
+          // Log full content if context seems unexpectedly large
+          if (totalEstimatedTokens > 50000) {
+            console.log(
+              '[ChatRoute] WARNING: Large context detected! Full message dump:',
+            );
+            modelMessages.forEach((msg, idx) => {
+              console.log(`[Message ${idx}] Role: ${msg.role}`);
+              if (typeof msg.content === 'string') {
+                console.log(
+                  `Content (first 500 chars): ${msg.content.substring(0, 500)}`,
+                );
+              } else {
+                console.log(
+                  `Content parts: ${JSON.stringify(msg.content).substring(0, 1000)}`,
+                );
+              }
+            });
+          }
 
           // Deep logging to understand message structure
           const lastProcessedMsg =
@@ -299,12 +405,38 @@ export async function POST(request: Request) {
             keys: modelInstance ? Object.keys(modelInstance) : 'null',
           });
 
+          // Calculate max output tokens based on model capacity
+          let maxOutputTokens: number | undefined = undefined;
+
+          if (isReasoningModel) {
+            // For thinking models, we need to subtract the thinking budget from max capacity
+            // Opus 4.1: 32k total capacity
+            // Sonnet 4: 64k total capacity (though we'll be conservative)
+            const isOpus = selectedChatModel.includes('opus');
+            const modelMaxCapacity = isOpus ? 25000 : 50000;
+
+            // Max output = total capacity - thinking budget
+            maxOutputTokens = modelMaxCapacity - thinkingBudget;
+
+            console.log(
+              '[ChatRoute] Thinking model output token calculation:',
+              {
+                model: selectedChatModel,
+                isOpus,
+                totalCapacity: modelMaxCapacity,
+                thinkingBudget: thinkingBudget,
+                maxOutputTokens: maxOutputTokens,
+              },
+            );
+          }
+
           let result: ReturnType<typeof streamText>;
           try {
-            result = streamText({
+            const streamOptions: Parameters<typeof streamText>[0] = {
               model: modelInstance,
               system: systemPromptText,
               messages: modelMessages,
+              // ...(maxOutputTokens && { maxOutputTokens }), // Set explicit max tokens for thinking models
               providerOptions, // Add provider options for thinking models
               stopWhen: stepCountIs(5),
               experimental_activeTools: activeTools,
@@ -328,9 +460,70 @@ export async function POST(request: Request) {
                 isEnabled: isProductionEnvironment,
                 functionId: 'stream-text',
               },
+            };
+
+            // Log the actual request being sent
+            console.log('[ChatRoute] Full streamText options being sent:', {
+              modelType: typeof streamOptions.model,
+              systemLength: streamOptions.system?.length,
+              messagesCount: streamOptions.messages.length,
+              messages: streamOptions.messages.map((m) => ({
+                role: m.role,
+                contentLength:
+                  typeof m.content === 'string'
+                    ? m.content.length
+                    : Array.isArray(m.content)
+                      ? JSON.stringify(m.content).length
+                      : 0,
+                contentPreview:
+                  typeof m.content === 'string'
+                    ? m.content.substring(0, 100)
+                    : JSON.stringify(m.content).substring(0, 100),
+              })),
+              maxOutputTokens: (streamOptions as Record<string, unknown>)
+                .maxOutputTokens,
+              providerOptions: JSON.stringify(streamOptions.providerOptions),
+              tools: Object.keys(streamOptions.tools || {}),
             });
-          } catch (streamError) {
+
+            result = streamText(streamOptions);
+          } catch (streamError: unknown) {
             console.error('[ChatRoute] Error calling streamText:', streamError);
+
+            // Log detailed error information for debugging
+            const error = streamError as {
+              responseBody?: string;
+              statusCode?: number;
+            };
+            if (error?.responseBody) {
+              try {
+                const errorBody = JSON.parse(error.responseBody);
+                console.error('[ChatRoute] Anthropic API Error Details:', {
+                  type: errorBody?.error?.type,
+                  message: errorBody?.error?.message,
+                  requestId: errorBody?.request_id,
+                  statusCode: error?.statusCode,
+                  // Log what we actually sent
+                  requestDetails: {
+                    modelId: selectedChatModel,
+                    messagesCount: modelMessages.length,
+                    systemPromptLength: systemPromptText.length,
+                    estimatedInputTokens: totalEstimatedTokens,
+                    thinkingBudget: (
+                      providerOptions as {
+                        anthropic?: { thinking?: { budgetTokens?: number } };
+                      }
+                    )?.anthropic?.thinking?.budgetTokens,
+                  },
+                });
+              } catch (parseError) {
+                console.error(
+                  '[ChatRoute] Could not parse error body:',
+                  error?.responseBody,
+                );
+              }
+            }
+
             throw streamError;
           }
 

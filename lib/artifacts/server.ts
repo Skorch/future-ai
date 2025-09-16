@@ -63,7 +63,10 @@ export function createDocumentHandler<T extends ArtifactKind>(config: {
         // Special handling for meeting-summary handler
         if (config.kind === 'text') {
           // Check if this is coming from the meeting-summary handler
-          if (args.metadata?.sourceDocumentIds?.length > 0) {
+          const sourceDocIds = args.metadata?.sourceDocumentIds as
+            | string[]
+            | undefined;
+          if (sourceDocIds && sourceDocIds.length > 0) {
             documentType = 'meeting-summary';
           } else if (args.title?.toLowerCase().includes('summary')) {
             documentType = 'meeting-summary';
@@ -92,7 +95,8 @@ export function createDocumentHandler<T extends ArtifactKind>(config: {
           kind: config.kind,
           userId: args.session.user.id,
           metadata: documentMetadata,
-          sourceDocumentIds: args.metadata?.sourceDocumentIds || [],
+          sourceDocumentIds:
+            (args.metadata?.sourceDocumentIds as string[] | undefined) || [],
         });
       }
 

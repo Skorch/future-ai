@@ -3,16 +3,26 @@ import { myProvider } from '@/lib/ai/providers';
 import { createDocumentHandler } from '@/lib/artifacts/server';
 import { getDocumentById } from '@/lib/db/queries';
 
+// Type definitions for meeting summary metadata
+interface MeetingSummaryMetadata {
+  transcript?: string;
+  sourceDocumentIds?: string[];
+  meetingDate?: string;
+  participants?: string[];
+}
+
 export const meetingSummaryHandler = createDocumentHandler<'text'>({
   kind: 'text',
   onCreateDocument: async ({ title, dataStream, metadata }) => {
+    // Cast metadata to our expected type
+    const typedMetadata = metadata as MeetingSummaryMetadata | undefined;
     console.log('[MeetingSummaryHandler] Starting document creation', {
       title,
-      hasTranscript: !!metadata?.transcript,
-      transcriptLength: metadata?.transcript?.length || 0,
-      sourceDocumentIds: metadata?.sourceDocumentIds,
-      meetingDate: metadata?.meetingDate,
-      participants: metadata?.participants,
+      hasTranscript: !!typedMetadata?.transcript,
+      transcriptLength: typedMetadata?.transcript?.length || 0,
+      sourceDocumentIds: typedMetadata?.sourceDocumentIds,
+      meetingDate: typedMetadata?.meetingDate,
+      participants: typedMetadata?.participants,
     });
 
     let draftContent = '';
@@ -20,23 +30,26 @@ export const meetingSummaryHandler = createDocumentHandler<'text'>({
 
     // Check if we have sourceDocumentIds to fetch from
     if (
-      metadata?.sourceDocumentIds?.length &&
-      metadata.sourceDocumentIds.length > 0
+      typedMetadata?.sourceDocumentIds?.length &&
+      typedMetadata.sourceDocumentIds.length > 0
     ) {
       console.log(
         '[MeetingSummaryHandler] Fetching source documents:',
-        metadata.sourceDocumentIds,
+        typedMetadata.sourceDocumentIds,
       );
 
       // Fetch source documents
       const sourceDocuments = await Promise.all(
-        metadata.sourceDocumentIds.map((docId: string) =>
+        typedMetadata.sourceDocumentIds.map((docId) =>
           getDocumentById({ id: docId }),
         ),
       );
 
       // Validate all documents exist and have content
-      const validDocuments = sourceDocuments.filter((doc) => doc?.content);
+      const validDocuments = sourceDocuments.filter(
+        (doc): doc is NonNullable<typeof doc> =>
+          doc?.content !== null && doc?.content !== undefined,
+      );
       if (validDocuments.length === 0) {
         throw new Error('No valid source documents found');
       }
@@ -51,9 +64,9 @@ export const meetingSummaryHandler = createDocumentHandler<'text'>({
         validDocuments.length,
         'documents',
       );
-    } else if (metadata?.transcript) {
+    } else if (typedMetadata?.transcript) {
       // Fallback to direct transcript in metadata
-      transcript = metadata.transcript;
+      transcript = typedMetadata.transcript;
     } else {
       // Summaries MUST have source documents or transcript
       throw new Error(
@@ -62,8 +75,8 @@ export const meetingSummaryHandler = createDocumentHandler<'text'>({
     }
 
     const meetingDate =
-      metadata?.meetingDate || new Date().toISOString().split('T')[0];
-    const participants = metadata?.participants || [];
+      typedMetadata?.meetingDate || new Date().toISOString().split('T')[0];
+    const participants = typedMetadata?.participants || [];
 
     console.log(
       '[MeetingSummaryHandler] Preparing to stream with artifact-model',

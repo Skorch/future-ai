@@ -173,7 +173,7 @@ async function chunkDocument(
 
     const topicChunks = await chunkTranscriptItems(
       items,
-      metadata?.topics || [],
+      (metadata?.topics as string[]) || [],
       {
         model: 'claude-sonnet-4',
         dryRun: false,
@@ -189,12 +189,12 @@ async function chunkDocument(
         // Core identifiers (always present)
         documentId,
         documentType: 'transcript',
-        userId: metadata.userId,
+        userId: metadata.userId as string,
 
         // Document info (always present)
-        title: metadata.title,
-        kind: metadata.kind,
-        createdAt: metadata.createdAt,
+        title: metadata.title as string,
+        kind: metadata.kind as string,
+        createdAt: metadata.createdAt as string | Date,
 
         // Chunk specifics (always present)
         chunkIndex: index,
@@ -209,20 +209,24 @@ async function chunkDocument(
         endTime: chunk.metadata.endTime,
 
         // Meeting date - convert to ISO string if needed
-        meetingDate: parseMeetingDate(metadata?.meetingDate),
+        meetingDate: parseMeetingDate(
+          metadata?.meetingDate as string | undefined,
+        ),
 
         // Optional timestamps
-        transcriptTimestamp: metadata?.transcriptTimestamp,
+        transcriptTimestamp: metadata?.transcriptTimestamp as
+          | string
+          | undefined,
 
         // Preserve artifact info if present
-        artifactId: metadata?.artifactId,
-        artifactTitle: metadata?.artifactTitle,
-        artifactType: metadata?.artifactType,
+        artifactId: metadata?.artifactId as string | undefined,
+        artifactTitle: metadata?.artifactTitle as string | undefined,
+        artifactType: metadata?.artifactType as string | undefined,
 
         // File metadata if present
-        fileName: metadata?.fileName,
-        fileSize: metadata?.fileSize,
-        uploadedAt: metadata?.uploadedAt,
+        fileName: metadata?.fileName as string | undefined,
+        fileSize: metadata?.fileSize as number | undefined,
+        uploadedAt: metadata?.uploadedAt as string | undefined,
       };
 
       chunks.push({
@@ -245,12 +249,12 @@ async function chunkDocument(
         documentId,
         documentType:
           documentType === 'meeting-summary' ? 'meeting-summary' : 'document',
-        userId: metadata.userId,
+        userId: metadata.userId as string,
 
         // Document info (always present)
-        title: metadata.title,
-        kind: metadata.kind,
-        createdAt: metadata.createdAt,
+        title: metadata.title as string,
+        kind: metadata.kind as string,
+        createdAt: metadata.createdAt as string | Date,
 
         // Chunk specifics (always present)
         chunkIndex: index,
@@ -262,16 +266,23 @@ async function chunkDocument(
         sectionTitle: section.speaker || `Section ${index + 1}`,
 
         // Meeting-specific fields
-        sourceTranscriptIds: metadata?.sourceDocumentIds || [],
-        meetingDate: parseMeetingDate(metadata?.meetingDate),
-        participants: metadata?.participants,
-        meetingDuration: metadata?.meetingDuration,
+        sourceTranscriptIds: (metadata?.sourceDocumentIds as string[]) || [],
+        meetingDate: parseMeetingDate(
+          metadata?.meetingDate as string | undefined,
+        ),
+        participants: metadata?.participants as string[] | undefined,
+        meetingDuration: metadata?.meetingDuration as string | undefined,
 
         // Preserve artifact metadata
-        artifactId: metadata?.artifactId,
-        artifactTitle: metadata?.artifactTitle || metadata?.title,
-        artifactType: metadata?.artifactType || metadata?.kind,
-        artifactCreatedAt: metadata?.artifactCreatedAt || metadata?.createdAt,
+        artifactId: metadata?.artifactId as string | undefined,
+        artifactTitle: (metadata?.artifactTitle || metadata?.title) as
+          | string
+          | undefined,
+        artifactType: (metadata?.artifactType || metadata?.kind) as
+          | string
+          | undefined,
+        artifactCreatedAt: (metadata?.artifactCreatedAt ||
+          metadata?.createdAt) as string | undefined,
       };
 
       chunks.push({
@@ -292,12 +303,12 @@ async function chunkDocument(
         // Core identifiers (always present)
         documentId,
         documentType,
-        userId: metadata.userId,
+        userId: metadata.userId as string,
 
         // Document info (always present)
-        title: metadata.title,
-        kind: metadata.kind,
-        createdAt: metadata.createdAt,
+        title: metadata.title as string,
+        kind: metadata.kind as string,
+        createdAt: metadata.createdAt as string | Date,
 
         // Chunk specifics (always present)
         chunkIndex: index,
@@ -309,10 +320,15 @@ async function chunkDocument(
         sectionTitle: section.speaker || `Section ${index + 1}`,
 
         // Preserve any existing metadata
-        artifactId: metadata?.artifactId,
-        artifactTitle: metadata?.artifactTitle || metadata?.title,
-        artifactType: metadata?.artifactType || metadata?.kind,
-        artifactCreatedAt: metadata?.artifactCreatedAt || metadata?.createdAt,
+        artifactId: metadata?.artifactId as string | undefined,
+        artifactTitle: (metadata?.artifactTitle || metadata?.title) as
+          | string
+          | undefined,
+        artifactType: (metadata?.artifactType || metadata?.kind) as
+          | string
+          | undefined,
+        artifactCreatedAt: (metadata?.artifactCreatedAt ||
+          metadata?.createdAt) as string | undefined,
       };
 
       chunks.push({
