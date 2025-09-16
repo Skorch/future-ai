@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Next.js AI chatbot application built with the AI SDK, featuring modern React patterns, authentication, and database persistence. It's based on Vercel's AI Chatbot template with xAI (Grok) models as the default provider.
+This is a Next.js AI chatbot application built with the AI SDK, featuring modern React patterns, authentication, and database persistence. It's based on Vercel's AI Chatbot template with Anthropic Claude models.
 
 ## Development Commands
 
@@ -40,8 +40,8 @@ This is a Next.js AI chatbot application built with the AI SDK, featuring modern
 
 ### AI Integration
 - **AI SDK (ai)** v5.0 for LLM interactions
-- **xAI Gateway** integration with automatic OIDC authentication on Vercel
-- Model configuration in `lib/ai/models.ts` with Grok Vision and Grok Reasoning models
+- **Anthropic** direct integration with Claude models
+- Model configuration in `lib/ai/models.ts` with Claude Sonnet 4 and Opus 4.1 (with and without reasoning)
 - AI tools and providers in `lib/ai/` directory
 
 ### Authentication & Security
@@ -99,7 +99,7 @@ tests/                # Playwright test files
 ### Environment Requirements
 ```
 AUTH_SECRET=            # Authentication secret
-AI_GATEWAY_API_KEY=     # Required for non-Vercel deployments
+ANTHROPIC_API_KEY=      # Anthropic API key for Claude models
 BLOB_READ_WRITE_TOKEN=  # Vercel Blob storage
 POSTGRES_URL=           # Database connection
 REDIS_URL=              # Redis instance
@@ -118,9 +118,9 @@ Always run `pnpm db:migrate` before building to ensure schema is up-to-date. The
 
 ### AI Model Integration
 - Models are configured in `lib/ai/models.ts`
-- Default model is 'chat-model' (Grok Vision)
+- Default model is 'claude-sonnet-4'
 - AI tools are modular and located in `lib/ai/tools/`
-- Multi-LLM support via Vercel AI Gateway (Anthropic, OpenAI, Google, xAI)
+- Direct Anthropic integration for Claude Sonnet 4 and Opus 4.1 models
 - Model selection updates tracked in component state with callbacks
 
 ### Authentication Flow
@@ -143,8 +143,8 @@ The AI SDK v5 is the foundation for all LLM interactions in this project. When w
   - Located in route handlers for real-time streaming to frontend
 - **customProvider()** - Creates provider instances with multiple models
   - See `lib/ai/providers.ts` for implementation pattern
-- **gateway** from `@ai-sdk/gateway` - Unified multi-provider access
-  - Format: `provider/model-id` (e.g., `anthropic/claude-3-5-sonnet-20241022`)
+- **anthropic** from `@ai-sdk/anthropic` - Direct Anthropic provider
+  - Used for all Claude models in this application
 
 #### Message Handling
 - **convertToModelMessages()** - Transforms UI messages to model format

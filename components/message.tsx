@@ -1,6 +1,6 @@
 'use client';
 import { AnimatePresence, motion } from 'framer-motion';
-import { memo, useState } from 'react';
+import { memo, useState, useEffect } from 'react';
 import type { Vote } from '@/lib/db/schema';
 import { DocumentToolResult } from './document';
 import { PencilEditIcon, SparklesIcon } from './icons';
@@ -26,9 +26,371 @@ import { MessageReasoning } from './message-reasoning';
 import type { UseChatHelpers } from '@ai-sdk/react';
 import type { ChatMessage } from '@/lib/types';
 import { useDataStream } from './data-stream-provider';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from './ui/collapsible';
+import { SearchIcon, ChevronDownIcon } from 'lucide-react';
+import { Badge } from './ui/badge';
 
 // Type narrowing is handled by TypeScript's control flow analysis
 // The AI SDK provides proper discriminated unions for tool calls
+
+// Helper function to format timecodes from seconds or [HHMMss] format
+const formatTimecode = (text: string): string => {
+  // Match patterns like [2822s] or [283.7s]
+  const secondsPattern = /\[(\d+(?:\.\d+)?)s\]/g;
+
+  return text.replace(secondsPattern, (match, seconds) => {
+    const totalSeconds = Number.parseFloat(seconds);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const secs = Math.floor(totalSeconds % 60);
+
+    if (hours > 0) {
+      return `[${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}]`;
+    } else {
+      return `[${minutes}:${secs.toString().padStart(2, '0')}]`;
+    }
+  });
+};
+
+// Helper to get meaningful document title
+const getDocumentTitle = (
+  metadata: Record<string, unknown> | undefined,
+): string => {
+  if (!metadata) return 'Untitled Document';
+
+  // Priority order for title
+  if (metadata.title && metadata.title !== 'Document') {
+    return String(metadata.title);
+  }
+  if (metadata.meeting_name) {
+    return String(metadata.meeting_name);
+  }
+  if (metadata.artifactTitle) {
+    return String(metadata.artifactTitle);
+  }
+  if (metadata.document_name) {
+    return String(metadata.document_name);
+  }
+  if (metadata.fileName) {
+    // Clean up file name - remove extension and make readable
+    return String(metadata.fileName)
+      .replace(/\.[^/.]+$/, '')
+      .replace(/[-_]/g, ' ');
+  }
+  if (metadata.topic) {
+    return String(metadata.topic);
+  }
+
+  return 'Untitled Document';
+};
+
+// Helper to format document type
+const getDocumentType = (
+  metadata: Record<string, unknown> | undefined,
+): string | null => {
+  if (!metadata) return null;
+
+  // Check both 'type' and 'documentType' fields
+  const docType = metadata.type || metadata.documentType;
+  if (!docType) return null;
+
+  const docTypeStr = String(docType);
+  const typeMap: Record<string, string> = {
+    transcript: 'Transcript',
+    'meeting-summary': 'Meeting Summary',
+    document: 'Document',
+    artifact: 'Artifact',
+  };
+
+  return typeMap[docTypeStr] || docTypeStr;
+};
+
+// RAG Query Result Component - defined outside to prevent re-creation on every render
+const RAGQueryResult = memo(function RAGQueryResult({
+  state,
+  output,
+  input,
+}: {
+  state: string;
+  output: {
+    result?: {
+      matches: Array<{
+        content?: string;
+        metadata?: Record<string, unknown>;
+        score?: number;
+      }>;
+    };
+    matches?: Array<{
+      content?: string;
+      metadata?: Record<string, unknown>;
+      score?: number;
+    }>;
+    matchCount?: number;
+  };
+  input: {
+    query?: string;
+  };
+}) {
+  const [isOpen, setIsOpen] = useState(
+    state === 'input-streaming' || state === 'input-available',
+  );
+  const [hasAutoClosedRef, setHasAutoClosedRef] = useState(false);
+  const [startTime, setStartTime] = useState<number | null>(null);
+  const [duration, setDuration] = useState(0);
+  const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
+
+  const isStreaming =
+    state === 'input-streaming' || state === 'input-available';
+  const AUTO_CLOSE_DELAY = 1000;
+  const MS_IN_S = 1000;
+
+  const toggleItemExpansion = (idx: number) => {
+    setExpandedItems((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(idx)) {
+        newSet.delete(idx);
+      } else {
+        newSet.add(idx);
+      }
+      return newSet;
+    });
+  };
+
+  // Track duration when streaming starts and ends
+  useEffect(() => {
+    if (isStreaming) {
+      if (startTime === null) {
+        setStartTime(Date.now());
+      }
+    } else if (startTime !== null) {
+      setDuration(Math.round((Date.now() - startTime) / MS_IN_S));
+      setStartTime(null);
+    }
+  }, [isStreaming, startTime]);
+
+  // Auto-open when streaming starts, auto-close when streaming ends (once only)
+  useEffect(() => {
+    if (
+      !isStreaming &&
+      isOpen &&
+      !hasAutoClosedRef &&
+      state === 'output-available'
+    ) {
+      // Add a small delay before closing to allow user to see the content
+      const timer = setTimeout(() => {
+        setIsOpen(false);
+        setHasAutoClosedRef(true);
+      }, AUTO_CLOSE_DELAY);
+
+      return () => clearTimeout(timer);
+    }
+  }, [isStreaming, isOpen, hasAutoClosedRef, state]);
+
+  const result = state === 'output-available' && output ? output : null;
+  const queryInput =
+    (state === 'input-available' || state === 'output-available') && input
+      ? input
+      : null;
+
+  return (
+    <Collapsible
+      className="not-prose mb-4 w-full rounded-md border"
+      open={isOpen}
+      onOpenChange={setIsOpen}
+    >
+      <CollapsibleTrigger className="flex w-full items-center justify-between gap-2 p-3 min-w-0">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <SearchIcon className="size-4 text-muted-foreground shrink-0" />
+          <span className="font-medium text-sm truncate">
+            {isStreaming || duration === 0
+              ? 'Searching knowledge...'
+              : `Searched for ${duration} seconds`}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {result?.matchCount !== undefined && (
+            <Badge variant="secondary" className="rounded-full text-xs">
+              {result.matchCount}{' '}
+              {result.matchCount === 1 ? 'source' : 'sources'}
+            </Badge>
+          )}
+          <ChevronDownIcon
+            className={cn(
+              'size-4 text-muted-foreground transition-transform',
+              isOpen ? 'rotate-180' : 'rotate-0',
+            )}
+          />
+        </div>
+      </CollapsibleTrigger>
+
+      <CollapsibleContent className="data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2 text-popover-foreground outline-none data-[state=closed]:animate-out data-[state=open]:animate-in">
+        <div className="px-3 pb-3 space-y-3">
+          {/* Input query display */}
+          {queryInput && (
+            <div className="p-2 bg-muted/50 rounded-md">
+              <div className="text-xs font-medium text-muted-foreground mb-1">
+                Search Query
+              </div>
+              <div className="text-sm">{queryInput.query}</div>
+            </div>
+          )}
+
+          {/* RAG Results with source attribution */}
+          {(result?.matches || result?.result?.matches)?.length ? (
+            <div className="space-y-3">
+              <div className="text-xs font-medium text-muted-foreground">
+                Retrieved Sources
+              </div>
+
+              {(result.matches || result.result?.matches || []).map(
+                (
+                  match: {
+                    content?: string;
+                    metadata?: Record<string, unknown>;
+                    score?: number;
+                  },
+                  idx: number,
+                ) => {
+                  const isExpanded = expandedItems.has(idx);
+                  const hasLongContent =
+                    match.content && match.content.length > 200;
+
+                  // Debug: Log the actual structure
+                  if (idx === 0) {
+                    console.log('[RAGQueryResult] First match structure:', {
+                      match,
+                      metadata: match.metadata,
+                      hasArtifactId: !!match.metadata?.artifactId,
+                      hasDocumentType: !!match.metadata?.documentType,
+                      metadataKeys: match.metadata
+                        ? Object.keys(match.metadata)
+                        : [],
+                    });
+                  }
+
+                  return (
+                    <div
+                      key={`match-${idx}-${match.metadata?.documentId || ''}`}
+                      className="rounded-lg border bg-card/50 p-3 space-y-2 hover:bg-card/80 transition-colors"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0 space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                              [{idx + 1}]
+                            </span>
+                            <span className="text-sm font-medium">
+                              {getDocumentTitle(match.metadata)}
+                            </span>
+                            {getDocumentType(match.metadata) && (
+                              <Badge variant="outline" className="text-xs">
+                                {getDocumentType(match.metadata)}
+                              </Badge>
+                            )}
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                            {match.metadata?.meeting_date ? (
+                              <span className="flex items-center gap-1">
+                                📅{' '}
+                                {new Date(
+                                  String(match.metadata.meeting_date),
+                                ).toLocaleDateString()}
+                              </span>
+                            ) : null}
+                            {match.metadata?.speaker ? (
+                              <span className="flex items-center gap-1">
+                                👤 {String(match.metadata.speaker)}
+                              </span>
+                            ) : null}
+                            {match.metadata?.sectionTitle ? (
+                              <span className="flex items-center gap-1">
+                                📝 {String(match.metadata.sectionTitle)}
+                              </span>
+                            ) : null}
+                            {match.metadata?.chunkIndex !== undefined &&
+                            match.metadata?.totalChunks ? (
+                              <span className="flex items-center gap-1">
+                                📄 Chunk {Number(match.metadata.chunkIndex) + 1}
+                                /{String(match.metadata.totalChunks)}
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+
+                        {match.score !== undefined &&
+                          !Number.isNaN(match.score) && (
+                            <Badge
+                              variant={
+                                match.score > 0.8
+                                  ? 'default'
+                                  : match.score > 0.5
+                                    ? 'secondary'
+                                    : 'outline'
+                              }
+                              className="text-xs shrink-0"
+                            >
+                              {(match.score * 100).toFixed(0)}% match
+                            </Badge>
+                          )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <div
+                          className={cn(
+                            'text-sm text-foreground/80 whitespace-pre-wrap',
+                            !isExpanded && hasLongContent && 'line-clamp-3',
+                          )}
+                        >
+                          {formatTimecode(match.content || '')}
+                        </div>
+
+                        {hasLongContent && (
+                          <button
+                            type="button"
+                            onClick={() => toggleItemExpansion(idx)}
+                            className="text-xs text-primary hover:underline flex items-center gap-1"
+                          >
+                            {isExpanded ? <>▲ Show less</> : <>▼ Show more</>}
+                          </button>
+                        )}
+                      </div>
+
+                      {match.metadata?.file_path ||
+                      match.metadata?.artifactId ? (
+                        <div className="pt-2 border-t space-y-1">
+                          {match.metadata?.file_path ? (
+                            <div className="text-xs text-muted-foreground/70 font-mono truncate flex items-center gap-1">
+                              📁 {String(match.metadata.file_path)}
+                            </div>
+                          ) : null}
+                          {match.metadata?.artifactId ? (
+                            <div className="text-xs text-muted-foreground/50 font-mono flex items-center gap-1">
+                              🔗 Document ID:{' '}
+                              {String(match.metadata.artifactId)}
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                },
+              )}
+            </div>
+          ) : result && !(result.matches || result.result?.matches)?.length ? (
+            <div className="text-sm text-muted-foreground italic">
+              No relevant information found for this query.
+            </div>
+          ) : null}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+});
 
 const PurePreviewMessage = ({
   chatId,
@@ -277,6 +639,43 @@ const PurePreviewMessage = ({
                       )}
                     </ToolContent>
                   </Tool>
+                );
+              }
+
+              if ((type as string) === 'tool-queryRAG') {
+                const toolPart = part as {
+                  toolCallId?: string;
+                  state?: string;
+                  output?: {
+                    result?: {
+                      matches: Array<{
+                        content?: string;
+                        metadata?: Record<string, unknown>;
+                        score?: number;
+                      }>;
+                    };
+                  };
+                  input?: {
+                    query?: string;
+                  };
+                };
+                const { toolCallId, state } = toolPart;
+
+                console.log('[Message] Found queryRAG tool:', {
+                  state,
+                  hasOutput: !!toolPart.output,
+                  outputKeys: toolPart.output
+                    ? Object.keys(toolPart.output)
+                    : [],
+                });
+
+                return (
+                  <RAGQueryResult
+                    key={toolCallId || `rag-${index}`}
+                    state={state || 'idle'}
+                    output={toolPart.output || {}}
+                    input={toolPart.input || {}}
+                  />
                 );
               }
             })}

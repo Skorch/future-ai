@@ -7,11 +7,7 @@ export const DocumentSkeleton = ({
 }: {
   artifactKind: ArtifactKind;
 }) => {
-  return artifactKind === 'image' ? (
-    <div className="flex flex-col gap-4 w-full justify-center items-center h-[calc(100dvh-60px)]">
-      <div className="animate-pulse rounded-lg bg-muted-foreground/20 size-96" />
-    </div>
-  ) : (
+  return (
     <div className="flex flex-col gap-4 w-full">
       <div className="animate-pulse rounded-lg h-12 bg-muted-foreground/20 w-1/2" />
       <div className="animate-pulse rounded-lg h-5 bg-muted-foreground/20 w-full" />

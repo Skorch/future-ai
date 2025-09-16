@@ -20,7 +20,7 @@ export interface CreateDocumentCallbackProps {
   title: string;
   dataStream: UIMessageStreamWriter<ChatMessage>;
   session: Session;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface UpdateDocumentCallbackProps {
@@ -54,7 +54,11 @@ export function createDocumentHandler<T extends ArtifactKind>(config: {
 
       if (args.session?.user?.id) {
         // Ensure metadata includes documentType based on the handler kind
-        let documentType = config.kind;
+        let documentType:
+          | 'transcript'
+          | 'meeting-summary'
+          | 'document'
+          | undefined;
 
         // Special handling for meeting-summary handler
         if (config.kind === 'text') {
@@ -67,6 +71,9 @@ export function createDocumentHandler<T extends ArtifactKind>(config: {
             // Default text documents to 'document' type
             documentType = 'document';
           }
+        } else {
+          // For non-text kinds, use undefined (will be handled by database default)
+          documentType = undefined;
         }
 
         const documentMetadata = {

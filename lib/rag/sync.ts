@@ -8,6 +8,43 @@ import {
 import crypto from 'node:crypto';
 import type { TranscriptItem, RAGDocument, RAGMetadata } from './types';
 
+/**
+ * Parse meeting date string to ISO format
+ * Handles formats like "September 11", "2024-09-11", "9/11/2024", etc.
+ */
+function parseMeetingDate(dateStr?: string): string | undefined {
+  if (!dateStr) return undefined;
+
+  try {
+    // If already ISO format, return as is
+    if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
+      return new Date(dateStr).toISOString();
+    }
+
+    // Parse common date formats
+    const date = new Date(dateStr);
+
+    // Check if date is valid
+    if (Number.isNaN(date.getTime())) {
+      // Try adding current year if only month/day provided
+      const currentYear = new Date().getFullYear();
+      const dateWithYear = new Date(`${dateStr}, ${currentYear}`);
+
+      if (!Number.isNaN(dateWithYear.getTime())) {
+        return dateWithYear.toISOString();
+      }
+
+      console.warn(`[RAG Sync] Could not parse meeting date: ${dateStr}`);
+      return undefined;
+    }
+
+    return date.toISOString();
+  } catch (error) {
+    console.warn(`[RAG Sync] Error parsing meeting date: ${dateStr}`, error);
+    return undefined;
+  }
+}
+
 const pineconeClient = new PineconeClient({
   indexName: process.env.PINECONE_INDEX_NAME || 'rag-agent-poc',
 });
@@ -113,9 +150,9 @@ async function chunkDocument(
   content: string,
   documentId: string,
   documentType: string,
-  metadata: Record<string, any>,
+  metadata: Record<string, unknown>,
 ): Promise<RAGDocument[]> {
-  const chunks = [];
+  const chunks: RAGDocument[] = [];
   const fileHash = crypto.createHash('sha256').update(documentId).digest('hex');
 
   if (documentType === 'transcript') {
@@ -171,9 +208,11 @@ async function chunkDocument(
         startTime: chunk.metadata.startTime,
         endTime: chunk.metadata.endTime,
 
+        // Meeting date - convert to ISO string if needed
+        meetingDate: parseMeetingDate(metadata?.meetingDate),
+
         // Optional timestamps
-        transcriptTimestamp:
-          metadata?.transcriptTimestamp || metadata?.meetingDate,
+        transcriptTimestamp: metadata?.transcriptTimestamp,
 
         // Preserve artifact info if present
         artifactId: metadata?.artifactId,
@@ -224,7 +263,7 @@ async function chunkDocument(
 
         // Meeting-specific fields
         sourceTranscriptIds: metadata?.sourceDocumentIds || [],
-        meetingDate: metadata?.meetingDate,
+        meetingDate: parseMeetingDate(metadata?.meetingDate),
         participants: metadata?.participants,
         meetingDuration: metadata?.meetingDuration,
 

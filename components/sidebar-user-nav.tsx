@@ -1,10 +1,11 @@
 'use client';
 
-import { ChevronUp } from 'lucide-react';
+import { ChevronUp, Trash2 } from 'lucide-react';
 import Image from 'next/image';
 import type { User } from 'next-auth';
 import { signOut, useSession } from 'next-auth/react';
 import { useTheme } from 'next-themes';
+import { useState } from 'react';
 
 import {
   DropdownMenu,
@@ -18,6 +19,16 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useRouter } from 'next/navigation';
 import { toast } from './toast';
 import { LoaderIcon } from './icons';
@@ -27,8 +38,41 @@ export function SidebarUserNav({ user }: { user: User }) {
   const router = useRouter();
   const { data, status } = useSession();
   const { setTheme, resolvedTheme } = useTheme();
+  const [showResetDialog, setShowResetDialog] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
 
   const isGuest = guestRegex.test(data?.user?.email ?? '');
+
+  const handleResetUserData = async () => {
+    setIsResetting(true);
+    try {
+      const response = await fetch('/api/reset-user-data', {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to reset user data');
+      }
+
+      toast({
+        type: 'success',
+        description: 'All your data has been reset successfully',
+      });
+
+      // Redirect to home page after reset
+      router.push('/');
+      router.refresh();
+    } catch (error) {
+      console.error('Reset error:', error);
+      toast({
+        type: 'error',
+        description: 'Failed to reset user data. Please try again.',
+      });
+    } finally {
+      setIsResetting(false);
+      setShowResetDialog(false);
+    }
+  };
 
   return (
     <SidebarMenu>
@@ -81,6 +125,19 @@ export function SidebarUserNav({ user }: { user: User }) {
               {`Toggle ${resolvedTheme === 'light' ? 'dark' : 'light'} mode`}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
+            {!isGuest && (
+              <>
+                <DropdownMenuItem
+                  data-testid="user-nav-item-reset"
+                  className="cursor-pointer text-destructive focus:text-destructive"
+                  onSelect={() => setShowResetDialog(true)}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Reset All Data
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+              </>
+            )}
             <DropdownMenuItem asChild data-testid="user-nav-item-auth">
               <button
                 type="button"
@@ -111,6 +168,42 @@ export function SidebarUserNav({ user }: { user: User }) {
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
+
+      <AlertDialog open={showResetDialog} onOpenChange={setShowResetDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset All User Data</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete:
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>All your chat history</li>
+                <li>All your documents and artifacts</li>
+                <li>All your suggestions and votes</li>
+                <li>Your entire RAG index</li>
+              </ul>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isResetting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleResetUserData}
+              disabled={isResetting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isResetting ? (
+                <>
+                  <span className="mr-2 h-4 w-4 animate-spin">
+                    <LoaderIcon />
+                  </span>
+                  Resetting...
+                </>
+              ) : (
+                'Reset All Data'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </SidebarMenu>
   );
 }

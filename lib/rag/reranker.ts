@@ -5,7 +5,7 @@ import type { QueryMatch } from './types';
  * Reranking configuration options
  */
 export interface RerankOptions {
-  model?: 'cohere-rerank-3.5' | 'pinecone-rerank-v0';
+  model?: 'cohere-rerank-3.5' | 'pinecone-rerank-v0' | 'bge-reranker-v2-m3';
   topN?: number;
   returnDocuments?: boolean;
 }
@@ -129,7 +129,7 @@ export class Reranker {
    * Get available reranking models
    */
   getAvailableModels(): string[] {
-    return ['cohere-rerank-3.5', 'pinecone-rerank-v0'];
+    return ['cohere-rerank-3.5', 'pinecone-rerank-v0', 'bge-reranker-v2-m3'];
   }
 }
 

@@ -6,13 +6,12 @@ import {
   stepCountIs,
   streamText,
 } from 'ai';
-import { auth, type UserType } from '@/app/(auth)/auth';
+import { auth } from '@/app/(auth)/auth';
 import { type RequestHints, systemPrompt } from '@/lib/ai/prompts';
 import {
   createStreamId,
   deleteChatById,
   getChatById,
-  getMessageCountByUserId,
   getMessagesByChatId,
   saveChat,
   saveMessages,
@@ -26,7 +25,6 @@ import { getWeather } from '@/lib/ai/tools/get-weather';
 import { queryRAG } from '@/lib/ai/tools/query-rag';
 import { isProductionEnvironment } from '@/lib/constants';
 import { myProvider } from '@/lib/ai/providers';
-import { entitlementsByUserType } from '@/lib/ai/entitlements';
 import { postRequestBodySchema, type PostRequestBody } from './schema';
 import { geolocation } from '@vercel/functions';
 import {
@@ -103,16 +101,7 @@ export async function POST(request: Request) {
       return new ChatSDKError('unauthorized:chat').toResponse();
     }
 
-    const userType: UserType = session.user.type;
-
-    const messageCount = await getMessageCountByUserId({
-      id: session.user.id,
-      differenceInHours: 24,
-    });
-
-    if (messageCount > entitlementsByUserType[userType].maxMessagesPerDay) {
-      return new ChatSDKError('rate_limit:chat').toResponse();
-    }
+    // Rate limiting removed - no message limits
 
     const chat = await getChatById({ id });
 
@@ -163,15 +152,10 @@ export async function POST(request: Request) {
 
     // Get model configuration to check for reasoning capabilities
     const modelConfig = chatModels.find((m) => m.id === selectedChatModel);
-    const isReasoningModel =
-      modelConfig?.supportsReasoning || modelConfig?.outputsRawReasoningTag;
+    const isReasoningModel = modelConfig?.supportsReasoning;
 
-    // Anthropic models support tools with reasoning, other providers may have issues
-    // - Anthropic has "think" tool and interleaved thinking support
-    // - xAI/Grok has limitations with reasoning + tools (performance/cost issues)
-    // - Other providers untested with reasoning + tools
-    const shouldDisableTools =
-      isReasoningModel && modelConfig?.provider !== 'anthropic';
+    // All models are now Anthropic, which supports tools with reasoning
+    const shouldDisableTools = false;
 
     // Only add provider options for models with native reasoning support
     const providerOptions = modelConfig?.supportsReasoning
@@ -253,12 +237,14 @@ export async function POST(request: Request) {
             processedMessage: {
               role: lastProcessedMsg?.role,
               partsCount: lastProcessedMsg?.parts?.length,
-              partTypes: lastProcessedMsg?.parts?.map((p: any) => ({
-                type: p.type,
-                hasText: !!p.text,
-                textLength: p.text?.length || 0,
-                textPreview: p.text?.substring(0, 50),
-              })),
+              partTypes: lastProcessedMsg?.parts?.map(
+                (p: { type: string; text?: string }) => ({
+                  type: p.type,
+                  hasText: !!p.text,
+                  textLength: p.text?.length || 0,
+                  textPreview: p.text?.substring(0, 50),
+                }),
+              ),
               fullParts: JSON.stringify(lastProcessedMsg?.parts, null, 2),
             },
             // After conversion
@@ -279,31 +265,65 @@ export async function POST(request: Request) {
             },
           });
 
-          const result = streamText({
-            model: myProvider.languageModel(selectedChatModel),
-            system: systemPromptText,
-            messages: modelMessages,
-            providerOptions, // Add provider options for thinking models
-            stopWhen: stepCountIs(5),
-            experimental_activeTools: activeTools,
-            experimental_transform: smoothStream({ chunking: 'word' }),
-            tools: shouldDisableTools
-              ? {}
-              : {
-                  getWeather,
-                  createDocument: createDocument({ session, dataStream }),
-                  updateDocument: updateDocument({ session, dataStream }),
-                  requestSuggestions: requestSuggestions({
-                    session,
-                    dataStream,
-                  }),
-                  queryRAG: queryRAG({ session, dataStream }),
-                },
-            experimental_telemetry: {
-              isEnabled: isProductionEnvironment,
-              functionId: 'stream-text',
-            },
+          console.log(
+            '[ChatRoute] About to call streamText with model:',
+            selectedChatModel,
+          );
+          console.log(
+            '[ChatRoute] ANTHROPIC_API_KEY present:',
+            !!process.env.ANTHROPIC_API_KEY,
+          );
+
+          const modelInstance = myProvider.languageModel(selectedChatModel);
+          // Debug logging - these properties are internal to the AI SDK
+          const debugModel = modelInstance as unknown as {
+            constructor?: { name?: string };
+            doGenerate?: unknown;
+            doStream?: unknown;
+            modelId?: string;
+            provider?: string;
+          };
+          console.log('[ChatRoute] Model instance:', {
+            type: typeof modelInstance,
+            constructor: debugModel?.constructor?.name,
+            hasDoGenerate: typeof debugModel?.doGenerate,
+            hasDoStream: typeof debugModel?.doStream,
+            modelId: debugModel?.modelId,
+            provider: debugModel?.provider,
+            keys: modelInstance ? Object.keys(modelInstance) : 'null',
           });
+
+          let result: ReturnType<typeof streamText>;
+          try {
+            result = streamText({
+              model: modelInstance,
+              system: systemPromptText,
+              messages: modelMessages,
+              providerOptions, // Add provider options for thinking models
+              stopWhen: stepCountIs(5),
+              experimental_activeTools: activeTools,
+              experimental_transform: smoothStream({ chunking: 'word' }),
+              tools: shouldDisableTools
+                ? {}
+                : {
+                    getWeather,
+                    createDocument: createDocument({ session, dataStream }),
+                    updateDocument: updateDocument({ session, dataStream }),
+                    requestSuggestions: requestSuggestions({
+                      session,
+                      dataStream,
+                    }),
+                    queryRAG: queryRAG({ session, dataStream }),
+                  },
+              experimental_telemetry: {
+                isEnabled: isProductionEnvironment,
+                functionId: 'stream-text',
+              },
+            });
+          } catch (streamError) {
+            console.error('[ChatRoute] Error calling streamText:', streamError);
+            throw streamError;
+          }
 
           console.log('[ChatRoute] Starting stream consumption');
 
@@ -327,7 +347,7 @@ export async function POST(request: Request) {
       generateId: generateUUID,
       onFinish: async ({ messages }) => {
         const toolCalls = messages.filter((m) =>
-          m.parts?.some((p: any) => p.type === 'tool-call'),
+          m.parts?.some((p: { type: string }) => p.type === 'tool-call'),
         );
 
         // Check BOTH the saved messages AND the original processed messages for file uploads
@@ -358,8 +378,12 @@ export async function POST(request: Request) {
           toolNames: toolCalls.flatMap(
             (m) =>
               m.parts
-                ?.filter((p: any) => p.type === 'tool-call')
-                .map((p: any) => p.toolName) || [],
+                ?.filter(
+                  (p: { type: string; toolName?: string }) =>
+                    p.type === 'tool-call',
+                )
+                .map((p: { type: string; toolName?: string }) => p.toolName) ||
+              [],
           ),
           hadFileUpload: hasFileUpload,
           expectedToolCall:
@@ -420,7 +444,25 @@ export async function POST(request: Request) {
       },
       // biome-ignore lint/suspicious/noExplicitAny: Error type is unknown
       onError: (error: any) => {
-        console.error('[Chat API] Stream processing error:', error);
+        console.error('[Chat API] Stream processing error:', {
+          message: error?.message,
+          status: error?.status,
+          statusCode: error?.statusCode,
+          cause: error?.cause,
+          stack: error?.stack,
+        });
+
+        // Check for rate limit error
+        if (
+          error?.status === 429 ||
+          error?.statusCode === 429 ||
+          error?.message?.includes('429')
+        ) {
+          console.error(
+            '[Chat API] Rate limit error detected. Check your Anthropic API usage.',
+          );
+        }
+
         return (
           error?.message || 'An error occurred while processing your request'
         );

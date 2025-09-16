@@ -138,7 +138,7 @@ export async function getChatsByUserId({
   try {
     const extendedLimit = limit + 1;
 
-    const query = (whereCondition?: SQL<any>) =>
+    const query = (whereCondition?: SQL<unknown>) =>
       db
         .select()
         .from(chat)
@@ -292,7 +292,7 @@ export async function saveDocument({
   kind: ArtifactKind;
   content: string;
   userId: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   sourceDocumentIds?: string[];
 }) {
   try {
@@ -307,7 +307,7 @@ export async function saveDocument({
         content,
         userId,
         createdAt: new Date(),
-        metadata: metadata || {},
+        metadata: (metadata || {}) as Record<string, unknown>,
         sourceDocumentIds: sourceDocumentIds || [],
       })
       .returning();
@@ -594,6 +594,47 @@ export async function getStreamIdsByChatId({ chatId }: { chatId: string }) {
     throw new ChatSDKError(
       'bad_request:database',
       'Failed to get stream ids by chat id',
+    );
+  }
+}
+
+export async function deleteAllUserData(userId: string): Promise<void> {
+  try {
+    // Get all chats for this user first
+    const userChats = await db
+      .select({ id: chat.id })
+      .from(chat)
+      .where(eq(chat.userId, userId));
+    const chatIds = userChats.map((c) => c.id);
+
+    // Delete suggestions (references documents and user)
+    await db.delete(suggestion).where(eq(suggestion.userId, userId));
+
+    // Delete votes for user's chats
+    for (const chatId of chatIds) {
+      await db.delete(vote).where(eq(vote.chatId, chatId));
+    }
+
+    // Delete stream metadata for user's chats
+    for (const chatId of chatIds) {
+      await db.delete(stream).where(eq(stream.chatId, chatId));
+    }
+
+    // Delete messages for user's chats
+    for (const chatId of chatIds) {
+      await db.delete(message).where(eq(message.chatId, chatId));
+    }
+
+    // Delete chats
+    await db.delete(chat).where(eq(chat.userId, userId));
+
+    // Delete documents
+    await db.delete(document).where(eq(document.userId, userId));
+  } catch (error) {
+    console.error('[DAL] Error deleting user data:', error);
+    throw new ChatSDKError(
+      'internal_server_error:database',
+      'Failed to delete user data',
     );
   }
 }

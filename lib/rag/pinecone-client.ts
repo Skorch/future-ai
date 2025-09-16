@@ -199,19 +199,39 @@ export class PineconeClient {
           score: match.score || 0,
           content: (match.metadata?.content as string) || '',
           metadata: {
-            source: (match.metadata?.source as string) || '',
-            type:
-              (match.metadata?.type as 'transcript' | 'document' | 'chat') ||
-              'document',
+            // Core identifiers (required by RAGMetadata)
+            documentId: (match.metadata?.documentId as string) || match.id,
+            documentType:
+              (match.metadata?.documentType as string) || 'document',
+            userId: (match.metadata?.userId as string) || '',
+
+            // Document info (required)
+            title: (match.metadata?.title as string) || '',
+            kind: (match.metadata?.kind as string) || 'text',
+            createdAt:
+              (match.metadata?.createdAt as string) || new Date().toISOString(),
+
+            // Chunk specifics (required)
+            chunkIndex: (match.metadata?.chunkIndex as number) || 0,
+            totalChunks: (match.metadata?.totalChunks as number) || 1,
+            fileHash: (match.metadata?.fileHash as string) || '',
+            contentSource:
+              (match.metadata?.contentSource as
+                | 'transcript'
+                | 'artifact'
+                | 'unknown') || 'unknown',
+
+            // Optional fields
             topic: match.metadata?.topic as string | undefined,
             speakers: match.metadata?.speakers as string[] | undefined,
             startTime: match.metadata?.startTime as number | undefined,
             endTime: match.metadata?.endTime as number | undefined,
-            chunkIndex: match.metadata?.chunkIndex as number | undefined,
-            totalChunks: match.metadata?.totalChunks as number | undefined,
-            createdAt:
-              (match.metadata?.createdAt as string) || new Date().toISOString(),
-            fileHash: match.metadata?.fileHash as string | undefined,
+
+            // Legacy fields for backward compatibility
+            source: (match.metadata?.source as string) || '',
+            type:
+              (match.metadata?.type as 'transcript' | 'document' | 'chat') ||
+              'document',
           },
         }));
 
@@ -243,6 +263,14 @@ export class PineconeClient {
       minScore = MIN_SCORE_THRESHOLD,
     } = options;
 
+    console.log('[Pinecone] queryByText called with:', {
+      text: text.substring(0, 100),
+      namespace,
+      topK,
+      filter,
+      minScore,
+    });
+
     try {
       const index = this.client.index(this.indexName);
 
@@ -260,6 +288,8 @@ export class PineconeClient {
           ? embedding.values
           : (embedding as { data?: number[] }).data;
 
+      console.log('[Pinecone] Generated embedding dimensions:', vector?.length);
+
       // Build query params, only include filter if it has keys
       const queryParams: {
         vector: number[];
@@ -276,7 +306,20 @@ export class PineconeClient {
         queryParams.filter = filter;
       }
 
+      console.log('[Pinecone] Querying with params:', {
+        namespace,
+        topK: queryParams.topK,
+        hasFilter: !!queryParams.filter,
+        filterKeys: queryParams.filter ? Object.keys(queryParams.filter) : [],
+      });
+
       const response = await index.namespace(namespace).query(queryParams);
+
+      console.log('[Pinecone] Query response:', {
+        matchCount: response.matches?.length || 0,
+        firstMatchScore: response.matches?.[0]?.score,
+        namespace: response.namespace,
+      });
 
       // Convert Pinecone matches to our format
       const matches: QueryMatch[] = (response.matches || [])
@@ -286,19 +329,39 @@ export class PineconeClient {
           score: match.score || 0,
           content: (match.metadata?.content as string) || '',
           metadata: {
-            source: (match.metadata?.source as string) || '',
-            type:
-              (match.metadata?.type as 'transcript' | 'document' | 'chat') ||
-              'document',
+            // Core identifiers (required by RAGMetadata)
+            documentId: (match.metadata?.documentId as string) || match.id,
+            documentType:
+              (match.metadata?.documentType as string) || 'document',
+            userId: (match.metadata?.userId as string) || '',
+
+            // Document info (required)
+            title: (match.metadata?.title as string) || '',
+            kind: (match.metadata?.kind as string) || 'text',
+            createdAt:
+              (match.metadata?.createdAt as string) || new Date().toISOString(),
+
+            // Chunk specifics (required)
+            chunkIndex: (match.metadata?.chunkIndex as number) || 0,
+            totalChunks: (match.metadata?.totalChunks as number) || 1,
+            fileHash: (match.metadata?.fileHash as string) || '',
+            contentSource:
+              (match.metadata?.contentSource as
+                | 'transcript'
+                | 'artifact'
+                | 'unknown') || 'unknown',
+
+            // Optional fields
             topic: match.metadata?.topic as string | undefined,
             speakers: match.metadata?.speakers as string[] | undefined,
             startTime: match.metadata?.startTime as number | undefined,
             endTime: match.metadata?.endTime as number | undefined,
-            chunkIndex: match.metadata?.chunkIndex as number | undefined,
-            totalChunks: match.metadata?.totalChunks as number | undefined,
-            createdAt:
-              (match.metadata?.createdAt as string) || new Date().toISOString(),
-            fileHash: match.metadata?.fileHash as string | undefined,
+
+            // Legacy fields for backward compatibility
+            source: (match.metadata?.source as string) || '',
+            type:
+              (match.metadata?.type as 'transcript' | 'document' | 'chat') ||
+              'document',
           },
         }));
 
@@ -354,7 +417,7 @@ export class PineconeClient {
    * Used for UPSERT pattern when updating documents
    */
   async deleteByMetadata(
-    filter: Record<string, any>,
+    filter: Record<string, unknown>,
     namespace: string = DEFAULT_NAMESPACE,
   ): Promise<void> {
     try {

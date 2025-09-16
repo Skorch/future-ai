@@ -13,7 +13,9 @@ const queryRAGSchema = z.object({
     .enum(['transcript', 'meeting-summary', 'document', 'all'])
     .optional()
     .default('all')
-    .describe('Filter results by content type (transcript for raw transcripts, meeting-summary for AI-generated summaries, document for other text)'),
+    .describe(
+      'Filter results by content type (transcript for raw transcripts, meeting-summary for AI-generated summaries, document for other text)',
+    ),
   filter: z
     .object({
       topics: z.array(z.string()).optional().describe('Filter by topics'),
@@ -62,12 +64,19 @@ function buildPineconeFilter(
     filters.speakers = { $in: params.filter.speakers };
   }
 
-  // Date range filter
+  // Date range filter - use meetingDate field (stored as ISO string)
   if (params.filter?.dateRange) {
-    filters.createdAt = {
-      $gte: params.filter.dateRange.start,
-      $lte: params.filter.dateRange.end,
-    };
+    // Keep as ISO strings for Pinecone string comparison
+    const startDate = new Date(params.filter.dateRange.start).toISOString();
+    const endDate = new Date(params.filter.dateRange.end).toISOString();
+
+    // Only add filter if dates are valid
+    if (!startDate.includes('Invalid') && !endDate.includes('Invalid')) {
+      filters.meetingDate = {
+        $gte: startDate,
+        $lte: endDate,
+      };
+    }
   }
 
   return Object.keys(filters).length > 0 ? filters : undefined;
@@ -164,26 +173,44 @@ function formatResultsForLLM(matches: QueryMatch[]): string {
   const formatted = matches
     .map((match, index) => {
       const metadata = match.metadata;
-      let header = `[Result ${index + 1}]`;
 
-      if (metadata.documentType === 'transcript' && metadata.speakers) {
-        header += ` (${metadata.speakers.join(', ')})`;
-      }
-      if (metadata.topic) {
-        header += ` - Topic: ${metadata.topic}`;
-      }
-      if (metadata.sectionTitle) {
-        header += ` - Section: ${metadata.sectionTitle}`;
-      }
-      if (metadata.title) {
-        header += ` - From: ${metadata.title}`;
-      }
+      // Build source citation
+      const source = {
+        doc: metadata.title || 'Unknown Document',
+        type: metadata.documentType || 'document',
+        section:
+          metadata.sectionTitle ||
+          metadata.topic ||
+          `Chunk ${metadata.chunkIndex}`,
+        speakers: metadata.speakers,
+        date: metadata.meetingDate || metadata.createdAt,
+      };
 
-      return `${header}\n${match.content}\n`;
+      // Format as citation block
+      let citation = `📍 Source [${index + 1}]: ${source.doc}`;
+      if (source.type === 'transcript' && source.speakers) {
+        citation += ` | Speakers: ${source.speakers.join(', ')}`;
+      }
+      if (source.section) {
+        citation += ` | Section: ${source.section}`;
+      }
+      if (source.date) {
+        const dateStr =
+          typeof source.date === 'string'
+            ? source.date.split('T')[0]
+            : new Date(source.date).toISOString().split('T')[0];
+        citation += ` | Date: ${dateStr}`;
+      }
+      citation += ` | Relevance: ${(match.score * 100).toFixed(1)}%`;
+
+      return `${citation}\n\n${match.content}\n`;
     })
-    .join('\n---\n\n');
+    .join(`\n${'─'.repeat(80)}\n\n`);
 
-  return formatted;
+  // Add instructions for the LLM on how to cite sources
+  const instructions = `When using this information, cite sources using this format: [Source N] where N is the source number above.\n\n`;
+
+  return instructions + formatted;
 }
 
 /**
@@ -256,7 +283,7 @@ export const queryRAG = (props: QueryRAGProps) => {
             topK: topK * 2, // Get more results for reranking
             filter,
             includeMetadata: true,
-            minScore: 0.5, // Minimum relevance threshold
+            minScore: 0.0, // Temporarily lowered to debug - was filtering everything out
           },
         );
 
@@ -270,20 +297,76 @@ export const queryRAG = (props: QueryRAGProps) => {
 
         // Apply reranking if enabled and we have results
         if (useReranking && matches.length > 0) {
+          console.log('[queryRAG] Starting reranking process');
+
+          // Store original positions for comparison
+          const originalPositions = new Map(
+            matches.map((m, idx) => [m.id, idx + 1]),
+          );
+
           const reranker = createReranker();
-          const rerankedResults = await reranker.rerank(params.query, matches, {
-            model: 'cohere-rerank-3.5',
-            topN: topK,
-            returnDocuments: true,
-          });
+
+          // Truncate content to avoid token limit (roughly 4 chars per token)
+          // Keep it under 800 tokens to leave room for the query
+          const truncatedMatches = matches.map((match) => ({
+            ...match,
+            content: match.content.substring(0, 3000), // ~750 tokens
+          }));
+
+          const rerankedResults = await reranker.rerank(
+            params.query,
+            truncatedMatches,
+            {
+              model: 'bge-reranker-v2-m3',
+              topN: topK,
+              returnDocuments: true,
+            },
+          );
+
+          // Log reranking comparison
+          console.log('[queryRAG] Reranking Results Comparison:');
+          console.log('─'.repeat(100));
+          console.log(
+            '| New Pos | Old Pos | Change | RAG Score | Rerank Score | Doc ID',
+          );
+          console.log('─'.repeat(100));
 
           // Convert reranked results back to QueryMatch format
-          matches = rerankedResults.map((result) => ({
-            id: result.id,
-            score: result.score,
-            content: result.content,
-            metadata: result.metadata as RAGMetadata,
-          }));
+          // Restore original full content from the original matches
+          const originalMatchesMap = new Map(matches.map((m) => [m.id, m]));
+          matches = rerankedResults.map((result, newIdx) => {
+            const originalMatch = originalMatchesMap.get(result.id);
+            const oldPos = originalPositions.get(result.id) || 0;
+            const newPos = newIdx + 1;
+            const change = oldPos - newPos;
+            const changeSymbol =
+              change > 0
+                ? `↑${change}`
+                : change < 0
+                  ? `↓${Math.abs(change)}`
+                  : '─';
+
+            console.log(
+              `| ${String(newPos).padEnd(7)} | ${String(oldPos).padEnd(7)} | ${changeSymbol.padEnd(6)} | ${(
+                originalMatch?.score || 0
+              )
+                .toFixed(3)
+                .padEnd(
+                  9,
+                )} | ${result.score.toFixed(3).padEnd(12)} | ${result.id}`,
+            );
+
+            return {
+              id: result.id,
+              score: result.score,
+              content: originalMatch?.content || result.content, // Use original full content
+              metadata: result.metadata as RAGMetadata,
+            };
+          });
+          console.log('─'.repeat(100));
+          console.log(
+            `[queryRAG] Reranking complete: ${rerankedResults.length} results reordered`,
+          );
         } else {
           // Just take the top K without reranking
           matches = matches.slice(0, topK);
@@ -318,7 +401,7 @@ export const queryRAG = (props: QueryRAGProps) => {
           matches: matches.map((m) => ({
             id: m.id,
             score: m.score,
-            content: `${m.content.substring(0, 200)}...`, // Preview only
+            content: m.content, // Full content, let UI handle truncation
             metadata: m.metadata,
           })),
         };

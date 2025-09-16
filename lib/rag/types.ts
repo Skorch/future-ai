@@ -75,4 +75,4 @@ export const DEFAULT_TOP_K = 10;
 export const DEFAULT_NAMESPACE = 'default';
 export const DEFAULT_DIMENSION = 1536; // OpenAI embedding dimension
 export const MAX_BATCH_SIZE = 100;
-export const MIN_SCORE_THRESHOLD = 0.5; // Lowered from 0.7 for better recall
+export const MIN_SCORE_THRESHOLD = 0.0; // Set to 0 to see all results during debugging
