@@ -6,7 +6,10 @@ import {
   stepCountIs,
   streamText,
 } from 'ai';
-import { analyzeTokenUsage, logTokenStats, logTokenGrowth } from '@/lib/ai/utils/token-analyzer';
+import {
+  analyzeTokenUsage,
+  logTokenStats,
+} from '@/lib/ai/utils/token-analyzer';
 import { auth } from '@/app/(auth)/auth';
 import { type RequestHints, systemPrompt } from '@/lib/ai/prompts';
 import {
@@ -194,8 +197,14 @@ export async function POST(request: Request) {
     const modelMessages = convertToModelMessages(processedMessages);
 
     // Analyze token usage before streaming
-    const userMessageCount = modelMessages.filter(m => m.role === 'user').length;
-    const tokenStats = analyzeTokenUsage(systemPromptText, modelMessages, userMessageCount);
+    const userMessageCount = modelMessages.filter(
+      (m) => m.role === 'user',
+    ).length;
+    const tokenStats = analyzeTokenUsage(
+      systemPromptText,
+      modelMessages,
+      userMessageCount,
+    );
 
     // Log token stats for every call
     logTokenStats(tokenStats, userMessageCount);
@@ -216,7 +225,10 @@ export async function POST(request: Request) {
           );
 
           // Log iteration details
-          console.log('[ChatRoute] Processing iteration', modelMessages.filter(m => m.role === 'user').length);
+          console.log(
+            '[ChatRoute] Processing iteration',
+            modelMessages.filter((m) => m.role === 'user').length,
+          );
           console.log('[ChatRoute] Processed messages', {
             originalCount: uiMessages.length,
             processedCount: processedMessages.length,
@@ -280,11 +292,17 @@ export async function POST(request: Request) {
           // Additional detailed logging when approaching limits (tokenStats already logged above)
           if (tokenStats.isOverLimit) {
             console.error('[ChatRoute] ⚠️⚠️⚠️ CONTEXT EXCEEDS MODEL LIMIT ⚠️⚠️⚠️');
-            console.error('[ChatRoute] This request will likely fail with "prompt is too long" error');
-            console.error('[ChatRoute] Check the TOKEN USAGE STATS above for details');
+            console.error(
+              '[ChatRoute] This request will likely fail with "prompt is too long" error',
+            );
+            console.error(
+              '[ChatRoute] Check the TOKEN USAGE STATS above for details',
+            );
           } else if (tokenStats.isApproachingLimit) {
             console.warn('[ChatRoute] ⚠️ WARNING: Approaching context limit');
-            console.warn('[ChatRoute] Check the TOKEN USAGE STATS above for details');
+            console.warn(
+              '[ChatRoute] Check the TOKEN USAGE STATS above for details',
+            );
           }
 
           // Log detailed breakdown when large or over limit
@@ -292,7 +310,9 @@ export async function POST(request: Request) {
             console.log('[ChatRoute] HIGH TOKEN USAGE DETECTED');
             console.log('[ChatRoute] Top 5 largest messages:');
             tokenStats.largestMessages.forEach((msg, idx) => {
-              console.log(`  ${idx + 1}. Message #${msg.index} (${msg.role}): ${msg.tokens} tokens`);
+              console.log(
+                `  ${idx + 1}. Message #${msg.index} (${msg.role}): ${msg.tokens} tokens`,
+              );
             });
           }
 
@@ -424,15 +444,20 @@ export async function POST(request: Request) {
 
                 // Log what happened in this step
                 if (event.toolCalls && event.toolCalls.length > 0) {
-                  console.log('  Tools called:', event.toolCalls.map(t => t.toolName).join(', '));
+                  console.log(
+                    '  Tools called:',
+                    event.toolCalls.map((t) => t.toolName).join(', '),
+                  );
                 }
 
                 // Estimate token growth from tool results
                 if (event.toolResults && event.toolResults.length > 0) {
-                  event.toolResults.forEach(result => {
+                  event.toolResults.forEach((result) => {
                     const resultSize = JSON.stringify(result).length;
                     const resultTokens = Math.ceil(resultSize / 4);
-                    console.log(`  Tool result size: ${resultTokens.toLocaleString()} tokens`);
+                    console.log(
+                      `  Tool result size: ${resultTokens.toLocaleString()} tokens`,
+                    );
                     currentTokenCount += resultTokens;
                   });
                 }
@@ -441,15 +466,23 @@ export async function POST(request: Request) {
                 if (event.text) {
                   const textTokens = Math.ceil(event.text.length / 4);
                   currentTokenCount += textTokens;
-                  console.log(`  Generated text: ${textTokens.toLocaleString()} tokens`);
+                  console.log(
+                    `  Generated text: ${textTokens.toLocaleString()} tokens`,
+                  );
                 }
 
-                console.log(`  Current total: ${currentTokenCount.toLocaleString()} tokens`);
-                console.log(`  Remaining capacity: ${(200000 - currentTokenCount).toLocaleString()} tokens`);
+                console.log(
+                  `  Current total: ${currentTokenCount.toLocaleString()} tokens`,
+                );
+                console.log(
+                  `  Remaining capacity: ${(200000 - currentTokenCount).toLocaleString()} tokens`,
+                );
 
                 // Warn if approaching limit during execution
                 if (currentTokenCount > 180000) {
-                  console.warn('  ⚠️ WARNING: Approaching token limit during execution!');
+                  console.warn(
+                    '  ⚠️ WARNING: Approaching token limit during execution!',
+                  );
                 }
               },
             };
@@ -480,13 +513,24 @@ export async function POST(request: Request) {
 
             result = streamText(streamOptions);
           } catch (streamError: unknown) {
-            console.error('\n==================== STREAM ERROR ====================');
+            console.error(
+              '\n==================== STREAM ERROR ====================',
+            );
             console.error('[ChatRoute] Error calling streamText:', streamError);
             console.error('[ChatRoute] Error occurred AFTER context analysis');
-            console.error('[ChatRoute] Total tokens attempted:', tokenStats.totalTokens);
+            console.error(
+              '[ChatRoute] Total tokens attempted:',
+              tokenStats.totalTokens,
+            );
             console.error('[ChatRoute] Model limit: 200,000');
-            console.error('[ChatRoute] Over by:', tokenStats.totalTokens - 200000, 'tokens');
-            console.error('======================================================\n');
+            console.error(
+              '[ChatRoute] Over by:',
+              tokenStats.totalTokens - 200000,
+              'tokens',
+            );
+            console.error(
+              '======================================================\n',
+            );
 
             // Log detailed error information for debugging
             const error = streamError as {
@@ -496,7 +540,8 @@ export async function POST(request: Request) {
               message?: string;
             };
 
-            let userFriendlyError = 'An error occurred while processing your request.';
+            let userFriendlyError =
+              'An error occurred while processing your request.';
             let isPromptTooLong = false;
 
             if (error?.responseBody) {
@@ -523,20 +568,41 @@ export async function POST(request: Request) {
 
                 // Check for prompt too long error
                 // Check for exact error message format
-                if (errorBody?.error?.message?.includes('prompt is too long') ||
-                    errorBody?.error?.message?.includes('tokens') && errorBody?.error?.message?.includes('maximum') ||
-                    errorBody?.error?.type === 'invalid_request_error') {
+                if (
+                  errorBody?.error?.message?.includes('prompt is too long') ||
+                  (errorBody?.error?.message?.includes('tokens') &&
+                    errorBody?.error?.message?.includes('maximum')) ||
+                  errorBody?.error?.type === 'invalid_request_error'
+                ) {
                   isPromptTooLong = true;
-                  const tokenMatch = errorBody?.error?.message?.match(/(\d+)\s+tokens?\s+>\s+(\d+)\s+maximum/);
+                  const tokenMatch = errorBody?.error?.message?.match(
+                    /(\d+)\s+tokens?\s+>\s+(\d+)\s+maximum/,
+                  );
                   if (tokenMatch) {
                     const [, actualTokens, maxTokens] = tokenMatch;
                     userFriendlyError = `Error [AI_APICallError]: prompt is too long: ${actualTokens} tokens > ${maxTokens} maximum`;
-                    console.error('[ChatRoute] PROMPT LENGTH ERROR - API reported:', actualTokens, 'tokens vs', maxTokens, 'maximum');
-                    console.error('[ChatRoute] Our estimate was:', tokenStats.totalTokens, 'tokens');
-                    console.error('[ChatRoute] Estimation accuracy:', Math.round((tokenStats.totalTokens / parseInt(actualTokens)) * 100) + '%');
+                    console.error(
+                      '[ChatRoute] PROMPT LENGTH ERROR - API reported:',
+                      actualTokens,
+                      'tokens vs',
+                      maxTokens,
+                      'maximum',
+                    );
+                    console.error(
+                      '[ChatRoute] Our estimate was:',
+                      tokenStats.totalTokens,
+                      'tokens',
+                    );
+                    console.error(
+                      '[ChatRoute] Estimation accuracy:',
+                      `${Math.round((tokenStats.totalTokens / Number.parseInt(actualTokens)) * 100)}%`,
+                    );
                   } else {
                     userFriendlyError = `Error [AI_APICallError]: ${errorBody?.error?.message || 'Prompt is too long for the current model'}`;
-                    console.error('[ChatRoute] PROMPT LENGTH ERROR - Message:', errorBody?.error?.message);
+                    console.error(
+                      '[ChatRoute] PROMPT LENGTH ERROR - Message:',
+                      errorBody?.error?.message,
+                    );
                   }
                 } else if (errorBody?.error?.message) {
                   userFriendlyError = `Error: ${errorBody?.error?.message}`;
@@ -559,57 +625,92 @@ export async function POST(request: Request) {
                 isPromptTooLong,
                 estimatedTokens: tokenStats.totalTokens,
                 modelLimit: 200000,
-                model: selectedChatModel
-              }
+                model: selectedChatModel,
+              },
             };
 
             // Log error to console for visibility
             if (isPromptTooLong) {
               // Comprehensive context analysis when hitting the limit
-              console.error('[ChatRoute] ==================== PROMPT TOO LONG ERROR ====================');
+              console.error(
+                '[ChatRoute] ==================== PROMPT TOO LONG ERROR ====================',
+              );
               console.error('[ChatRoute] Error Details:', errorResponse);
 
               // Also analyze the original processed messages for file content
-              const fileAnalysis = processedMessages.map((msg, idx) => {
-                const fileParts = msg.parts?.filter((p: any) =>
-                  p.type === 'text' && p.text?.startsWith('File:'))
-                  .map((p: any) => ({
-                    messageIndex: idx,
-                    contentLength: p.text.length,
-                    preview: p.text.substring(0, 200),
-                  }));
-                return fileParts?.length ? fileParts : null;
-              }).filter(Boolean).flat();
+              interface FileContentInfo {
+                messageIndex: number;
+                contentLength: number;
+                preview: string;
+              }
+
+              const fileAnalysis = processedMessages
+                .map((msg, idx) => {
+                  const fileParts = msg.parts
+                    ?.filter(
+                      (p): p is { type: 'text'; text: string } =>
+                        p.type === 'text' &&
+                        'text' in p &&
+                        typeof p.text === 'string' &&
+                        p.text.startsWith('File:'),
+                    )
+                    .map((p) => ({
+                      messageIndex: idx,
+                      contentLength: p.text.length,
+                      preview: p.text.substring(0, 200),
+                    }));
+                  return fileParts?.length ? fileParts : null;
+                })
+                .filter(Boolean)
+                .flat() as FileContentInfo[];
 
               if (fileAnalysis.length > 0) {
                 console.error('[ChatRoute] FILE CONTENT DETECTED IN MESSAGES:');
-                fileAnalysis.forEach((file: any) => {
-                  console.error(`  - Message #${file.messageIndex}: ${file.contentLength} chars`);
+                fileAnalysis.forEach((file) => {
+                  console.error(
+                    `  - Message #${file.messageIndex}: ${file.contentLength} chars`,
+                  );
                   console.error(`    Preview: ${file.preview}...`);
                 });
               }
 
               // Simplified error analysis using tokenStats
               console.error('[ChatRoute] DETAILED ERROR ANALYSIS:');
-              console.error('  System prompt tokens:', tokenStats.systemPromptTokens);
+              console.error(
+                '  System prompt tokens:',
+                tokenStats.systemPromptTokens,
+              );
               console.error('  User message tokens:', tokenStats.userTokens);
-              console.error('  Assistant message tokens:', tokenStats.assistantTokens);
+              console.error(
+                '  Assistant message tokens:',
+                tokenStats.assistantTokens,
+              );
               console.error('  Total tokens:', tokenStats.totalTokens);
-              console.error('  Over limit by:', tokenStats.totalTokens - 200000, 'tokens');
+              console.error(
+                '  Over limit by:',
+                tokenStats.totalTokens - 200000,
+                'tokens',
+              );
 
               console.error('[ChatRoute] TOP 5 LARGEST MESSAGES:');
               tokenStats.largestMessages.forEach((msg, idx) => {
-                console.error(`    ${idx + 1}. Message #${msg.index} (${msg.role}): ${msg.tokens.toLocaleString()} tokens`);
+                console.error(
+                  `    ${idx + 1}. Message #${msg.index} (${msg.role}): ${msg.tokens.toLocaleString()} tokens`,
+                );
                 console.error(`       Preview: "${msg.preview}..."`);
               });
               console.error('');
 
               console.error('[ChatRoute] SUGGESTIONS TO REDUCE CONTEXT:');
               console.error('  1. Start a new chat');
-              console.error('  2. Use loadDocument with maxChars parameter to limit content');
+              console.error(
+                '  2. Use loadDocument with maxChars parameter to limit content',
+              );
               console.error('  3. Load fewer documents at once');
               console.error('  4. Clear older messages from the conversation');
-              console.error('[ChatRoute] ================================================================');
+              console.error(
+                '[ChatRoute] ================================================================',
+              );
             }
 
             // Re-throw with the user-friendly message

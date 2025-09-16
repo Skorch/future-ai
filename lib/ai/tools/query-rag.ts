@@ -264,7 +264,8 @@ export const queryRAG = (props: QueryRAGProps) => {
         console.log('[queryRAG] Using namespace:', namespace);
 
         // Internal configuration (not exposed to LLM)
-        const topK = 10; // Fixed number of results to return
+        const topK = 15; // Number of results to return after reranking
+        const initialFetchK = 30; // Fetch more results for reranking
         const useReranking = true; // Always use reranking for better quality
         const expandContext = false; // Don't expand by default (can be slow)
 
@@ -280,7 +281,7 @@ export const queryRAG = (props: QueryRAGProps) => {
           params.query,
           {
             namespace,
-            topK: topK * 2, // Get more results for reranking
+            topK: initialFetchK, // Fetch more results for reranking
             filter,
             includeMetadata: true,
             minScore: 0.0, // Temporarily lowered to debug - was filtering everything out
@@ -306,20 +307,24 @@ export const queryRAG = (props: QueryRAGProps) => {
 
           const reranker = createReranker();
 
-          // Truncate content to avoid token limit (roughly 4 chars per token)
-          // Keep it under 800 tokens to leave room for the query
+          // Truncate content for Voyage rerank-2 16K token window
+          // Voyage rerank-2 supports 16K tokens combined (4K query + 12K per doc)
+          // Using ~4 chars per token, we can use up to 48K chars per document
+          // Being conservative with 40K to leave room for query
           const truncatedMatches = matches.map((match) => ({
             ...match,
-            content: match.content.substring(0, 3000), // ~750 tokens
+            content: match.content.substring(0, 40000), // ~10K tokens per doc
           }));
 
           const rerankedResults = await reranker.rerank(
             params.query,
             truncatedMatches,
             {
-              model: 'bge-reranker-v2-m3',
+              model: 'rerank-2',
               topN: topK,
               returnDocuments: true,
+              truncation: true,
+              scoreThreshold: 0.5, // Filter out results below 50% relevance
             },
           );
 

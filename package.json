@@ -111,6 +111,7 @@
     "use-stick-to-bottom": "^1.1.1",
     "usehooks-ts": "^3.1.0",
     "uuid": "^13.0.0",
+    "voyageai": "^0.0.8",
     "zod": "^3.25.76"
   },
   "devDependencies": {
