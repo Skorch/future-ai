@@ -87,10 +87,42 @@ export function Chat({
       mutate(unstable_serialize(getChatHistoryPaginationKey));
     },
     onError: (error) => {
-      if (error instanceof ChatSDKError) {
+      console.error('[Chat] Error received:', error);
+
+      // Check for prompt length errors
+      const errorMessage = error?.message || error?.toString() || 'An error occurred';
+      const isPromptTooLong = errorMessage.includes('prompt is too long') ||
+                              errorMessage.includes('AI_APICallError') ||
+                              errorMessage.includes('tokens') && errorMessage.includes('maximum');
+
+      if (isPromptTooLong) {
+        // Display prominent error for prompt length issues
+        toast({
+          type: 'error',
+          description: errorMessage,
+        });
+
+        // Also add as a message in the chat for visibility
+        setMessages((prevMessages) => [
+          ...prevMessages,
+          {
+            id: generateUUID(),
+            role: 'assistant',
+            parts: [{
+              type: 'text',
+              text: `⚠️ ${errorMessage}\n\nThe conversation has too much content. Consider:\n• Starting a new chat\n• Using document tools to load only specific documents\n• Loading documents with maxChars parameter to limit content`
+            }],
+          },
+        ]);
+      } else if (error instanceof ChatSDKError) {
         toast({
           type: 'error',
           description: error.message,
+        });
+      } else {
+        toast({
+          type: 'error',
+          description: errorMessage,
         });
       }
     },

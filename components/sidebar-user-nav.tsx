@@ -132,7 +132,7 @@ export function SidebarUserNav({ user }: { user: User }) {
                   className="cursor-pointer text-destructive focus:text-destructive"
                   onSelect={() => setShowResetDialog(true)}
                 >
-                  <Trash2 className="mr-2 h-4 w-4" />
+                  <Trash2 className="mr-2 size-4" />
                   Reset All Data
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
@@ -192,7 +192,7 @@ export function SidebarUserNav({ user }: { user: User }) {
             >
               {isResetting ? (
                 <>
-                  <span className="mr-2 h-4 w-4 animate-spin">
+                  <span className="mr-2 size-4 animate-spin">
                     <LoaderIcon />
                   </span>
                   Resetting...

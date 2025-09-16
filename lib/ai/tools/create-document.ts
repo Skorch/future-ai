@@ -97,22 +97,13 @@ The sourceDocumentIds parameter is REQUIRED - you must provide at least one tran
           sourceDocumentIds.map((docId) => getDocumentById({ id: docId })),
         );
 
-        // Combine transcript content from all source documents
-        const combinedTranscript = transcriptDocuments
-          .filter((doc) => doc?.content) // Only include documents with content
-          .map((doc) => doc.content)
-          .join('\n\n---\n\n'); // Separate multiple transcripts with divider
-
-        console.log(
-          '[CreateDocument] Combined transcript length:',
-          combinedTranscript.length,
-        );
-
         // Import the meeting summary handler directly
         const { meetingSummaryHandler } = await import(
           '@/artifacts/meeting-summary/server'
         );
 
+        // The handler will fetch transcripts from sourceDocumentIds itself
+        // We don't need to pass transcript content at all
         await meetingSummaryHandler.onCreateDocument({
           id,
           title,
@@ -120,7 +111,6 @@ The sourceDocumentIds parameter is REQUIRED - you must provide at least one tran
           session,
           metadata: {
             sourceDocumentIds: sourceDocumentIds || [],
-            transcript: combinedTranscript, // Pass actual transcript content!
             meetingDate: metadata?.meetingDate,
             participants: metadata?.participants,
           },

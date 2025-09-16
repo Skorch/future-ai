@@ -64,13 +64,10 @@ export const meetingSummaryHandler = createDocumentHandler<'text'>({
         validDocuments.length,
         'documents',
       );
-    } else if (typedMetadata?.transcript) {
-      // Fallback to direct transcript in metadata
-      transcript = typedMetadata.transcript;
     } else {
-      // Summaries MUST have source documents or transcript
+      // Summaries MUST have source documents
       throw new Error(
-        'Meeting summaries require sourceDocumentIds or transcript',
+        'Meeting summaries require sourceDocumentIds to fetch transcript content',
       );
     }
 

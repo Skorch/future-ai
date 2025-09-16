@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { memo, useState, useEffect } from 'react';
 import type { Vote } from '@/lib/db/schema';
 import { DocumentToolResult } from './document';
+import { DocumentToolResult as DocumentToolResultDisplay } from './elements/document-tool-result';
 import { PencilEditIcon, SparklesIcon } from './icons';
 import { Response } from './elements/response';
 import { MessageContent } from './elements/message';
@@ -677,6 +678,61 @@ const PurePreviewMessage = ({
                     input={toolPart.input || {}}
                   />
                 );
+              }
+
+              // Handle document tools: listDocuments, loadDocument, loadDocuments
+              if ((type as string) === 'tool-listDocuments' ||
+                  (type as string) === 'tool-loadDocument' ||
+                  (type as string) === 'tool-loadDocuments') {
+                const toolPart = part as {
+                  toolCallId?: string;
+                  state?: string;
+                  output?: unknown;
+                  input?: unknown;
+                };
+                const { toolCallId, state } = toolPart;
+                const toolName = (type as string).replace('tool-', '') as 'listDocuments' | 'loadDocument' | 'loadDocuments';
+
+                console.log(`[Message] Found ${toolName} tool:`, {
+                  state,
+                  hasOutput: !!toolPart.output,
+                  outputKeys: toolPart.output ? Object.keys(toolPart.output) : [],
+                });
+
+                // Only render when output is available
+                if (state === 'output-available' && toolPart.output) {
+                  // Type-safe rendering based on tool name
+                  if (toolName === 'listDocuments') {
+                    return (
+                      <DocumentToolResultDisplay
+                        key={toolCallId || `listDocuments-${index}`}
+                        toolName="listDocuments"
+                        result={toolPart.output as any}
+                      />
+                    );
+                  }
+                  if (toolName === 'loadDocument') {
+                    return (
+                      <DocumentToolResultDisplay
+                        key={toolCallId || `loadDocument-${index}`}
+                        toolName="loadDocument"
+                        result={toolPart.output as any}
+                      />
+                    );
+                  }
+                  if (toolName === 'loadDocuments') {
+                    return (
+                      <DocumentToolResultDisplay
+                        key={toolCallId || `loadDocuments-${index}`}
+                        toolName="loadDocuments"
+                        result={toolPart.output as any}
+                      />
+                    );
+                  }
+                }
+
+                // Return null for input states to avoid rendering empty tool blocks
+                return null;
               }
             })}
 
