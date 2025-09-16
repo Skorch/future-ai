@@ -1,8 +1,14 @@
 {
   "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "incremental": true,
+    "tsBuildInfoFile": "./.tsbuildinfo.precommit"
+  },
   "exclude": [
     "node_modules",
     "tests/**/*",
+    "__tests__/**/*",
+    "scripts/**/*",
     "**/*.test.ts",
     "**/*.test.tsx",
     "**/*.spec.ts",
