@@ -99,23 +99,54 @@ The tool returns an array of loaded documents with their content and metadata.`,
             otherCount ? `, ${otherCount} other` : ''
           }). Total: ${totalCharsLoaded.toLocaleString()} characters (~${estimatedTokensLoaded.toLocaleString()} tokens)`;
 
+      console.log('[LoadDocuments Tool] Documents loaded successfully:', {
+        count: documents.length,
+        summaries: summaryCount,
+        transcripts: transcriptCount,
+        totalCharsLoaded,
+        totalCharsAvailable,
+        estimatedTokensLoaded,
+        percentLoaded: Math.round(
+          (totalCharsLoaded / totalCharsAvailable) * 100,
+        ),
+      });
+
       return {
-        documents: documents.map((doc) => ({
-          id: doc.id,
-          title: doc.title,
-          content: doc.content,
-          metadata: doc.metadata,
-          sourceDocumentIds: doc.sourceDocumentIds,
-          createdAt: doc.createdAt,
-          documentType: doc.documentType,
-          loadInfo: {
-            truncated: doc.truncated,
-            loadedChars: doc.loadedChars,
-            fullContentLength: doc.fullContentLength,
-            estimatedTokensLoaded: Math.ceil(doc.loadedChars / 4),
-            estimatedTokensTotal: Math.ceil(doc.fullContentLength / 4),
-          },
-        })),
+        documents: documents.map((doc) => {
+          // Clean metadata by removing transcript if it exists
+          let cleanedMetadata = doc.metadata;
+          if (
+            doc.metadata &&
+            typeof doc.metadata === 'object' &&
+            'transcript' in doc.metadata
+          ) {
+            const { transcript, ...rest } = doc.metadata as Record<
+              string,
+              unknown
+            > & { transcript?: unknown };
+            cleanedMetadata = rest;
+            console.warn(
+              `[LoadDocuments Tool] Removed transcript from metadata for document: ${doc.id}`,
+            );
+          }
+
+          return {
+            id: doc.id,
+            title: doc.title,
+            content: doc.content,
+            metadata: cleanedMetadata,
+            sourceDocumentIds: doc.sourceDocumentIds,
+            createdAt: doc.createdAt,
+            documentType: doc.documentType,
+            loadInfo: {
+              truncated: doc.truncated,
+              loadedChars: doc.loadedChars,
+              fullContentLength: doc.fullContentLength,
+              estimatedTokensLoaded: Math.ceil(doc.loadedChars / 4),
+              estimatedTokensTotal: Math.ceil(doc.fullContentLength / 4),
+            },
+          };
+        }),
         summary: {
           documentsLoaded: documents.length,
           documentsRequested: documentIds.length,

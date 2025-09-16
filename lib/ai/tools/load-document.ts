@@ -44,6 +44,12 @@ Reserve space for user messages, your responses, and other tool outputs.`,
         ),
     }),
     execute: async ({ documentId, maxChars }) => {
+      console.log('[LoadDocument Tool] Executing load-document tool call:', {
+        documentId,
+        maxChars: maxChars || 'full',
+        userId: session.user.id,
+      });
+
       const document = await getDocumentForUser({
         documentId,
         userId: session.user.id,
@@ -51,6 +57,10 @@ Reserve space for user messages, your responses, and other tool outputs.`,
       });
 
       if (!document) {
+        console.log(
+          '[LoadDocument Tool] Document not found or access denied:',
+          documentId,
+        );
         return {
           error: 'DOCUMENT_NOT_FOUND',
           message: 'Document does not exist or you do not have access',
@@ -80,11 +90,32 @@ Reserve space for user messages, your responses, and other tool outputs.`,
         [key: string]: unknown;
       } | null;
 
+      console.log('[LoadDocument Tool] Document loaded successfully:', {
+        id: document.id,
+        title: document.title,
+        type: metadata?.documentType || 'document',
+        loadedChars: document.loadedChars,
+        fullLength: document.fullContentLength,
+        truncated: document.truncated,
+        percentLoaded,
+        estimatedTokens: Math.ceil(document.loadedChars / 4),
+      });
+
+      // Clean metadata by removing transcript if it exists
+      let cleanedMetadata = metadata;
+      if (metadata && 'transcript' in metadata) {
+        const { transcript, ...rest } = metadata;
+        cleanedMetadata = rest;
+        console.warn(
+          `[LoadDocument Tool] Removed transcript from metadata for document: ${document.id}`,
+        );
+      }
+
       return {
         id: document.id,
         title: document.title,
         content: document.content,
-        metadata: document.metadata,
+        metadata: cleanedMetadata,
         sourceDocumentIds: document.sourceDocumentIds,
         createdAt: document.createdAt,
         documentType:

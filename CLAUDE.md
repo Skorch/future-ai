@@ -300,3 +300,4 @@ Remember: The best code is code that doesn't exist. Every line you write is a li
 - The current version of Next.js 15's App Router where all
   dynamic route parameters are now async - parameters must be declared as Promise<>
 - when testing always use pnpm and the testing framework is vitest
+- You can NOT ever bypass pre-commit hooks
