@@ -10,6 +10,7 @@ import {
   gte,
   inArray,
   lt,
+  sql,
   type SQL,
 } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
@@ -429,6 +430,168 @@ export async function deleteDocumentsByIdAfterTimestamp({
       'Failed to delete documents by id after timestamp',
     );
   }
+}
+
+export async function getAllUserDocuments({ userId }: { userId: string }) {
+  try {
+    const documents = await db
+      .select({
+        id: document.id,
+        title: document.title,
+        createdAt: document.createdAt,
+        metadata: document.metadata,
+        sourceDocumentIds: document.sourceDocumentIds,
+        contentLength: sql<number>`LENGTH(${document.content})`,
+        contentPreview: sql<string>`SUBSTRING(${document.content}, 1, 500)`,
+      })
+      .from(document)
+      .where(eq(document.userId, userId))
+      .orderBy(desc(document.createdAt));
+
+    return documents.map((doc) => {
+      const metadata = doc.metadata as {
+        documentType?: 'transcript' | 'meeting-summary';
+        fileName?: string;
+        fileSize?: number;
+        uploadedAt?: string;
+        meetingDate?: string;
+        participants?: string[];
+        [key: string]: unknown;
+      } | null;
+
+      return {
+        ...doc,
+        estimatedTokens: Math.ceil(doc.contentLength / 4),
+        humanReadableSize: formatBytes(doc.contentLength),
+        documentType:
+          metadata?.documentType ||
+          ('document' as 'transcript' | 'meeting-summary' | 'document'),
+        sourceDocumentIds: (doc.sourceDocumentIds || []) as string[],
+      };
+    });
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get user documents',
+    );
+  }
+}
+
+export async function getDocumentForUser({
+  documentId,
+  userId,
+  maxChars,
+}: {
+  documentId: string;
+  userId: string;
+  maxChars?: number;
+}) {
+  try {
+    const query = db
+      .select({
+        id: document.id,
+        title: document.title,
+        content: maxChars
+          ? sql<string>`SUBSTRING(${document.content}, 1, ${maxChars})`
+          : document.content,
+        metadata: document.metadata,
+        sourceDocumentIds: document.sourceDocumentIds,
+        createdAt: document.createdAt,
+        fullContentLength: sql<number>`LENGTH(${document.content})`,
+      })
+      .from(document)
+      .where(and(eq(document.id, documentId), eq(document.userId, userId)));
+
+    const [doc] = await query;
+
+    if (!doc) {
+      return null;
+    }
+
+    return {
+      ...doc,
+      truncated: maxChars ? doc.fullContentLength > maxChars : false,
+      loadedChars: maxChars
+        ? Math.min(maxChars, doc.fullContentLength)
+        : doc.fullContentLength,
+    };
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get document for user',
+    );
+  }
+}
+
+export async function getDocumentsForUser({
+  documentIds,
+  userId,
+  maxCharsPerDoc,
+}: {
+  documentIds: string[];
+  userId: string;
+  maxCharsPerDoc?: number;
+}) {
+  try {
+    if (documentIds.length === 0) {
+      return [];
+    }
+
+    const documents = await db
+      .select({
+        id: document.id,
+        title: document.title,
+        content: maxCharsPerDoc
+          ? sql<string>`SUBSTRING(${document.content}, 1, ${maxCharsPerDoc})`
+          : document.content,
+        metadata: document.metadata,
+        sourceDocumentIds: document.sourceDocumentIds,
+        createdAt: document.createdAt,
+        fullContentLength: sql<number>`LENGTH(${document.content})`,
+      })
+      .from(document)
+      .where(
+        and(inArray(document.id, documentIds), eq(document.userId, userId)),
+      );
+
+    return documents.map((doc) => {
+      const metadata = doc.metadata as {
+        documentType?: 'transcript' | 'meeting-summary';
+        fileName?: string;
+        fileSize?: number;
+        uploadedAt?: string;
+        meetingDate?: string;
+        participants?: string[];
+        [key: string]: unknown;
+      } | null;
+
+      return {
+        ...doc,
+        documentType:
+          metadata?.documentType ||
+          ('document' as 'transcript' | 'meeting-summary' | 'document'),
+        truncated: maxCharsPerDoc
+          ? doc.fullContentLength > maxCharsPerDoc
+          : false,
+        loadedChars: maxCharsPerDoc
+          ? Math.min(maxCharsPerDoc, doc.fullContentLength)
+          : doc.fullContentLength,
+      };
+    });
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get documents for user',
+    );
+  }
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${Number.parseFloat((bytes / k ** i).toFixed(2))} ${sizes[i]}`;
 }
 
 export async function saveSuggestions({

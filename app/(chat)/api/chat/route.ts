@@ -23,6 +23,9 @@ import { updateDocument } from '@/lib/ai/tools/update-document';
 import { requestSuggestions } from '@/lib/ai/tools/request-suggestions';
 import { getWeather } from '@/lib/ai/tools/get-weather';
 import { queryRAG } from '@/lib/ai/tools/query-rag';
+import { listDocuments } from '@/lib/ai/tools/list-documents';
+import { loadDocument } from '@/lib/ai/tools/load-document';
+import { loadDocuments } from '@/lib/ai/tools/load-documents';
 import { isProductionEnvironment } from '@/lib/constants';
 import { myProvider } from '@/lib/ai/providers';
 import { postRequestBodySchema, type PostRequestBody } from './schema';
@@ -207,6 +210,9 @@ export async function POST(request: Request) {
                 'updateDocument',
                 'requestSuggestions',
                 'queryRAG',
+                'listDocuments',
+                'loadDocument',
+                'loadDocuments',
               ];
 
           console.log('[ChatRoute] Starting streamText', {
@@ -314,6 +320,9 @@ export async function POST(request: Request) {
                       dataStream,
                     }),
                     queryRAG: queryRAG({ session, dataStream }),
+                    listDocuments: listDocuments({ session }),
+                    loadDocument: loadDocument({ session }),
+                    loadDocuments: loadDocuments({ session }),
                   },
               experimental_telemetry: {
                 isEnabled: isProductionEnvironment,
