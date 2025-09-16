@@ -13,5 +13,8 @@
   "eslint.workingDirectories": [
     { "pattern": "app/*" },
     { "pattern": "packages/*" }
-  ]
+  ],
+  "files.exclude": {
+    "**/.tsbuildinfo.precommit": true
+  }
 }
