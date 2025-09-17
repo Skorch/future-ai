@@ -47,6 +47,8 @@ const buildLanguageModels = () => {
   // Add title and artifact models using Claude
   // Using Haiku for title generation (fast and cheap)
   models['title-model'] = getAnthropic()('claude-3-haiku-20240307');
+  // Using Sonnet 4 for reranking (reliable structured outputs)
+  models['reranker-model'] = getAnthropic()('claude-3-5-sonnet-20241022');
   // Using Sonnet for artifact generation (good balance of capability and speed)
   models['artifact-model'] = getAnthropic()('claude-3-5-sonnet-20241022');
 

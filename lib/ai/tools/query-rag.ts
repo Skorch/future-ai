@@ -2,6 +2,7 @@ import { tool, type UIMessageStreamWriter } from 'ai';
 import { z } from 'zod';
 import { PineconeClient } from '../../rag/pinecone-client';
 import { createReranker } from '../../rag/reranker';
+import { rerankWithLLM, type LLMRerankResult } from '../../rag/llm-reranker';
 import type { QueryResult, QueryMatch, RAGMetadata } from '../../rag/types';
 import type { Session } from 'next-auth';
 import type { ChatMessage } from '@/lib/types';
@@ -33,6 +34,11 @@ const queryRAGSchema = z.object({
     })
     .optional()
     .describe('Additional filters for search'),
+  rerankMethod: z
+    .enum(['llm', 'voyage'])
+    .optional()
+    .default('llm')
+    .describe('Reranking method: llm (Claude Haiku) or voyage (Voyage AI)'),
 });
 
 type QueryRAGParams = z.infer<typeof queryRAGSchema>;
@@ -295,83 +301,132 @@ export const queryRAG = (props: QueryRAGProps) => {
         );
 
         let matches = queryResult.matches;
+        let llmRerankResult: LLMRerankResult | null = null;
 
         // Apply reranking if enabled and we have results
         if (useReranking && matches.length > 0) {
-          console.log('[queryRAG] Starting reranking process');
-
-          // Store original positions for comparison
-          const originalPositions = new Map(
-            matches.map((m, idx) => [m.id, idx + 1]),
-          );
-
-          const reranker = createReranker();
-
-          // Truncate content for Voyage rerank-2 16K token window
-          // Voyage rerank-2 supports 16K tokens combined (4K query + 12K per doc)
-          // Using ~4 chars per token, we can use up to 48K chars per document
-          // Being conservative with 40K to leave room for query
-          const truncatedMatches = matches.map((match) => ({
-            ...match,
-            content: match.content.substring(0, 40000), // ~10K tokens per doc
-          }));
-
-          const rerankedResults = await reranker.rerank(
-            params.query,
-            truncatedMatches,
-            {
-              model: 'rerank-2',
-              topN: topK,
-              returnDocuments: true,
-              truncation: true,
-              scoreThreshold: 0.33, // Filter out results below 33% relevance
-            },
-          );
-
-          // Log reranking comparison
-          console.log('[queryRAG] Reranking Results Comparison:');
-          console.log('─'.repeat(100));
           console.log(
-            '| New Pos | Old Pos | Change | RAG Score | Rerank Score | Doc ID',
+            `[queryRAG] Starting reranking process with method: ${params.rerankMethod}`,
           );
-          console.log('─'.repeat(100));
 
-          // Convert reranked results back to QueryMatch format
-          // Restore original full content from the original matches
-          const originalMatchesMap = new Map(matches.map((m) => [m.id, m]));
-          matches = rerankedResults.map((result, newIdx) => {
-            const originalMatch = originalMatchesMap.get(result.id);
-            const oldPos = originalPositions.get(result.id) || 0;
-            const newPos = newIdx + 1;
-            const change = oldPos - newPos;
-            const changeSymbol =
-              change > 0
-                ? `↑${change}`
-                : change < 0
-                  ? `↓${Math.abs(change)}`
-                  : '─';
+          if (params.rerankMethod === 'llm') {
+            // Use LLM reranker (default)
+            try {
+              llmRerankResult = await rerankWithLLM(params.query, matches, {
+                maxMatches: topK,
+              });
 
-            console.log(
-              `| ${String(newPos).padEnd(7)} | ${String(oldPos).padEnd(7)} | ${changeSymbol.padEnd(6)} | ${(
-                originalMatch?.score || 0
-              )
-                .toFixed(3)
-                .padEnd(
-                  9,
-                )} | ${result.score.toFixed(3).padEnd(12)} | ${result.id}`,
+              // Use the LLM-reranked matches
+              matches = llmRerankResult.matches.map((m) => ({
+                id: m.id,
+                score: m.score,
+                content: m.content,
+                metadata: m.metadata,
+                // Add LLM-specific fields for UI
+                ...(m.topicId && { topicId: m.topicId }),
+                ...(m.merged && { merged: m.merged }),
+              }));
+
+              console.log(
+                `[queryRAG] LLM reranking complete: ${matches.length} results from ${queryResult.matches.length} original`,
+              );
+              console.log(
+                '[queryRAG] Topic groups:',
+                llmRerankResult.topicGroups,
+              );
+              console.log(
+                '[queryRAG] Merged matches:',
+                llmRerankResult.matches.filter(
+                  (m) => m.merged && m.merged.length > 0,
+                ).length,
+              );
+            } catch (error) {
+              console.error(
+                '[queryRAG] LLM reranking failed, falling back to Voyage:',
+                error,
+              );
+              // Fall back to Voyage on error
+              params.rerankMethod = 'voyage';
+            }
+          }
+
+          if (params.rerankMethod === 'voyage') {
+            // Use Voyage reranker as fallback
+            console.log('[queryRAG] Using Voyage reranker');
+
+            // Store original positions for comparison
+            const originalPositions = new Map(
+              matches.map((m, idx) => [m.id, idx + 1]),
             );
 
-            return {
-              id: result.id,
-              score: result.score,
-              content: originalMatch?.content || result.content, // Use original full content
-              metadata: result.metadata as RAGMetadata,
-            };
-          });
-          console.log('─'.repeat(100));
-          console.log(
-            `[queryRAG] Reranking complete: ${rerankedResults.length} results reordered`,
-          );
+            const reranker = createReranker();
+
+            // Truncate content for Voyage rerank-2 16K token window
+            // Voyage rerank-2 supports 16K tokens combined (4K query + 12K per doc)
+            // Using ~4 chars per token, we can use up to 48K chars per document
+            // Being conservative with 40K to leave room for query
+            const truncatedMatches = matches.map((match) => ({
+              ...match,
+              content: match.content.substring(0, 40000), // ~10K tokens per doc
+            }));
+
+            const rerankedResults = await reranker.rerank(
+              params.query,
+              truncatedMatches,
+              {
+                model: 'rerank-2',
+                topN: topK,
+                returnDocuments: true,
+                truncation: true,
+                scoreThreshold: 0.33, // Filter out results below 33% relevance
+              },
+            );
+
+            // Log reranking comparison
+            console.log('[queryRAG] Reranking Results Comparison:');
+            console.log('─'.repeat(100));
+            console.log(
+              '| New Pos | Old Pos | Change | RAG Score | Rerank Score | Doc ID',
+            );
+            console.log('─'.repeat(100));
+
+            // Convert reranked results back to QueryMatch format
+            // Restore original full content from the original matches
+            const originalMatchesMap = new Map(matches.map((m) => [m.id, m]));
+            matches = rerankedResults.map((result, newIdx) => {
+              const originalMatch = originalMatchesMap.get(result.id);
+              const oldPos = originalPositions.get(result.id) || 0;
+              const newPos = newIdx + 1;
+              const change = oldPos - newPos;
+              const changeSymbol =
+                change > 0
+                  ? `↑${change}`
+                  : change < 0
+                    ? `↓${Math.abs(change)}`
+                    : '─';
+
+              console.log(
+                `| ${String(newPos).padEnd(7)} | ${String(oldPos).padEnd(7)} | ${changeSymbol.padEnd(6)} | ${(
+                  originalMatch?.score || 0
+                )
+                  .toFixed(3)
+                  .padEnd(
+                    9,
+                  )} | ${result.score.toFixed(3).padEnd(12)} | ${result.id}`,
+              );
+
+              return {
+                id: result.id,
+                score: result.score,
+                content: originalMatch?.content || result.content, // Use original full content
+                metadata: result.metadata as RAGMetadata,
+              };
+            });
+            console.log('─'.repeat(100));
+            console.log(
+              `[queryRAG] Reranking complete: ${rerankedResults.length} results reordered`,
+            );
+          }
         } else {
           // Just take the top K without reranking
           matches = matches.slice(0, topK);
@@ -392,7 +447,8 @@ export const queryRAG = (props: QueryRAGProps) => {
         }
 
         // Format results for LLM
-        const formattedContent = formatResultsForLLM(matches);
+        const formattedContent =
+          llmRerankResult?.content || formatResultsForLLM(matches);
 
         const duration = Date.now() - startTime;
 
@@ -409,6 +465,14 @@ export const queryRAG = (props: QueryRAGProps) => {
             content: m.content, // Full content, let UI handle truncation
             metadata: m.metadata,
           })),
+          // Add LLM rerank specific data if available
+          ...(llmRerankResult && {
+            topicGroups: llmRerankResult.topicGroups,
+            rerankMethod: 'llm' as const,
+          }),
+          ...(params.rerankMethod === 'voyage' && {
+            rerankMethod: 'voyage' as const,
+          }),
         };
 
         // Cache the result

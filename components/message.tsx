@@ -34,6 +34,7 @@ import {
 } from './ui/collapsible';
 import { SearchIcon, ChevronDownIcon } from 'lucide-react';
 import { Badge } from './ui/badge';
+import { LLMRAGQueryResult } from './llm-rag-result';
 
 // Type narrowing is handled by TypeScript's control flow analysis
 // The AI SDK provides proper discriminated unions for tool calls
@@ -648,13 +649,35 @@ const PurePreviewMessage = ({
                   toolCallId?: string;
                   state?: string;
                   output?: {
+                    rerankMethod?: 'llm' | 'voyage';
                     result?: {
                       matches: Array<{
                         content?: string;
                         metadata?: Record<string, unknown>;
                         score?: number;
+                        topicId?: string;
+                        merged?: string[];
+                      }>;
+                      rerankMethod?: 'llm' | 'voyage';
+                      topicGroups?: Array<{
+                        id: string;
+                        topic: string;
+                        matchIds: string[];
                       }>;
                     };
+                    // Alternative structure
+                    matches?: Array<{
+                      content?: string;
+                      metadata?: Record<string, unknown>;
+                      score?: number;
+                      topicId?: string;
+                      merged?: string[];
+                    }>;
+                    topicGroups?: Array<{
+                      id: string;
+                      topic: string;
+                      matchIds: string[];
+                    }>;
                   };
                   input?: {
                     query?: string;
@@ -668,7 +691,24 @@ const PurePreviewMessage = ({
                   outputKeys: toolPart.output
                     ? Object.keys(toolPart.output)
                     : [],
+                  rerankMethod: toolPart.output?.rerankMethod,
                 });
+
+                // Check if LLM reranking was used
+                const isLLMReranked =
+                  toolPart.output?.rerankMethod === 'llm' ||
+                  toolPart.output?.result?.rerankMethod === 'llm';
+
+                // Use LLM component for LLM reranked results, otherwise use standard
+                if (isLLMReranked) {
+                  return (
+                    <LLMRAGQueryResult
+                      key={toolCallId || `rag-${index}`}
+                      output={toolPart.output || {}}
+                      isStreaming={state === 'partial-call'}
+                    />
+                  );
+                }
 
                 return (
                   <RAGQueryResult
@@ -681,9 +721,11 @@ const PurePreviewMessage = ({
               }
 
               // Handle document tools: listDocuments, loadDocument, loadDocuments
-              if ((type as string) === 'tool-listDocuments' ||
-                  (type as string) === 'tool-loadDocument' ||
-                  (type as string) === 'tool-loadDocuments') {
+              if (
+                (type as string) === 'tool-listDocuments' ||
+                (type as string) === 'tool-loadDocument' ||
+                (type as string) === 'tool-loadDocuments'
+              ) {
                 const toolPart = part as {
                   toolCallId?: string;
                   state?: string;
@@ -691,12 +733,17 @@ const PurePreviewMessage = ({
                   input?: unknown;
                 };
                 const { toolCallId, state } = toolPart;
-                const toolName = (type as string).replace('tool-', '') as 'listDocuments' | 'loadDocument' | 'loadDocuments';
+                const toolName = (type as string).replace('tool-', '') as
+                  | 'listDocuments'
+                  | 'loadDocument'
+                  | 'loadDocuments';
 
                 console.log(`[Message] Found ${toolName} tool:`, {
                   state,
                   hasOutput: !!toolPart.output,
-                  outputKeys: toolPart.output ? Object.keys(toolPart.output) : [],
+                  outputKeys: toolPart.output
+                    ? Object.keys(toolPart.output)
+                    : [],
                 });
 
                 // Only render when output is available
@@ -707,6 +754,7 @@ const PurePreviewMessage = ({
                       <DocumentToolResultDisplay
                         key={toolCallId || `listDocuments-${index}`}
                         toolName="listDocuments"
+                        // biome-ignore lint/suspicious/noExplicitAny: existing code
                         result={toolPart.output as any}
                       />
                     );
@@ -716,6 +764,7 @@ const PurePreviewMessage = ({
                       <DocumentToolResultDisplay
                         key={toolCallId || `loadDocument-${index}`}
                         toolName="loadDocument"
+                        // biome-ignore lint/suspicious/noExplicitAny: existing code
                         result={toolPart.output as any}
                       />
                     );
@@ -725,6 +774,7 @@ const PurePreviewMessage = ({
                       <DocumentToolResultDisplay
                         key={toolCallId || `loadDocuments-${index}`}
                         toolName="loadDocuments"
+                        // biome-ignore lint/suspicious/noExplicitAny: existing code
                         result={toolPart.output as any}
                       />
                     );
