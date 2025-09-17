@@ -264,8 +264,8 @@ export const queryRAG = (props: QueryRAGProps) => {
         console.log('[queryRAG] Using namespace:', namespace);
 
         // Internal configuration (not exposed to LLM)
-        const topK = 15; // Number of results to return after reranking
-        const initialFetchK = 30; // Fetch more results for reranking
+        const topK = 50; // Number of results to return after reranking (filtered by 33% relevance threshold)
+        const initialFetchK = 150; // Fetch more results for reranking (3x topK for better reranking)
         const useReranking = true; // Always use reranking for better quality
         const expandContext = false; // Don't expand by default (can be slow)
 
@@ -273,7 +273,7 @@ export const queryRAG = (props: QueryRAGProps) => {
         console.log('[queryRAG] Querying Pinecone with:', {
           query: params.query,
           namespace,
-          topK: topK * 2, // Get more for reranking
+          topK: initialFetchK, // Get more for reranking
           filter,
         });
 
@@ -324,7 +324,7 @@ export const queryRAG = (props: QueryRAGProps) => {
               topN: topK,
               returnDocuments: true,
               truncation: true,
-              scoreThreshold: 0.5, // Filter out results below 50% relevance
+              scoreThreshold: 0.33, // Filter out results below 33% relevance
             },
           );
 
