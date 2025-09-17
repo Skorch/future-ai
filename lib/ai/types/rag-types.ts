@@ -117,6 +117,9 @@ export interface QueryMatch {
   score: number;
   content: string;
   metadata: RAGMetadata;
+  // LLM reranking specific fields
+  topicId?: string;
+  merged?: string[];
 }
 
 // Zod schemas for validation

@@ -29,6 +29,12 @@ interface TopicGroup {
 
 interface LLMRAGQueryResult {
   output: {
+    // DETERMINISTIC: metadata field for preserved values
+    metadata?: {
+      rerankMethod?: 'llm' | 'voyage' | 'none';
+      topicGroups?: TopicGroup[];
+      topicCount?: number;
+    };
     result?: {
       success?: boolean;
       query?: string;
@@ -42,6 +48,11 @@ interface LLMRAGQueryResult {
         topicId?: string;
         merged?: string[];
       }>;
+      metadata?: {
+        rerankMethod?: 'llm' | 'voyage' | 'none';
+        topicGroups?: TopicGroup[];
+        topicCount?: number;
+      };
       topicGroups?: TopicGroup[];
       rerankMethod?: 'llm' | 'voyage';
     };
@@ -71,22 +82,20 @@ export function LLMRAGQueryResult({ output, isStreaming }: LLMRAGQueryResult) {
     new Set(),
   );
 
-  // Get data from either location
+  // Get data from either location (check metadata first for deterministic values)
   const result = output.result || output;
   const matches = result.matches || [];
-  const topicGroups = result.topicGroups || [];
-  const rerankMethod = result.rerankMethod;
+  // DETERMINISTIC: Check metadata first, then fallback to direct fields
+  const topicGroups =
+    result.metadata?.topicGroups ||
+    result.topicGroups ||
+    output.metadata?.topicGroups ||
+    [];
+  const rerankMethod =
+    result.metadata?.rerankMethod ||
+    result.rerankMethod ||
+    output.metadata?.rerankMethod;
   const duration = result.duration;
-
-  // Debug logging
-  console.log('[LLMRAGQueryResult] Received:', {
-    matchCount: matches.length,
-    topicGroupCount: topicGroups.length,
-    topicGroups: topicGroups,
-    rerankMethod: rerankMethod,
-    hasTopicIds: matches.some((m) => m.topicId),
-    hasMerged: matches.some((m) => m.merged && m.merged.length > 0),
-  });
 
   // Auto-collapse after streaming completes
   useEffect(() => {

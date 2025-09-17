@@ -239,8 +239,6 @@ export const queryRAG = (props: QueryRAGProps) => {
       'Search the RAG system for relevant content using semantic search',
     inputSchema: queryRAGSchema,
     execute: async (params) => {
-      console.log('[queryRAG] Tool invoked with params:', params);
-      console.log('[queryRAG] Session user:', props.session?.user?.id);
       const startTime = Date.now();
 
       try {
@@ -248,26 +246,22 @@ export const queryRAG = (props: QueryRAGProps) => {
         const cacheKey = JSON.stringify(params);
         const cached = queryCache.get(cacheKey);
         if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-          console.log('[queryRAG] Returning cached result');
           return cached.result;
         }
 
         // Initialize Pinecone client
-        console.log('[queryRAG] Initializing Pinecone client');
         const pineconeClient = new PineconeClient({
           indexName: process.env.PINECONE_INDEX_NAME || 'rag-agent-poc',
         });
 
         // Build filter from parameters
         const filter = buildPineconeFilter(params);
-        console.log('[queryRAG] Built filter:', filter);
 
         // Always use userId as namespace for proper isolation
         const namespace = props.session?.user?.id;
         if (!namespace) {
           throw new Error('User session required for RAG queries');
         }
-        console.log('[queryRAG] Using namespace:', namespace);
 
         // Internal configuration (not exposed to LLM)
         const topK = 50; // Number of results to return after reranking (filtered by 33% relevance threshold)
@@ -276,12 +270,6 @@ export const queryRAG = (props: QueryRAGProps) => {
         const expandContext = false; // Don't expand by default (can be slow)
 
         // Query Pinecone with text (integrated embeddings handle conversion)
-        console.log('[queryRAG] Querying Pinecone with:', {
-          query: params.query,
-          namespace,
-          topK: initialFetchK, // Get more for reranking
-          filter,
-        });
 
         const queryResult: QueryResult = await pineconeClient.queryByText(
           params.query,
@@ -294,21 +282,11 @@ export const queryRAG = (props: QueryRAGProps) => {
           },
         );
 
-        console.log(
-          '[queryRAG] Query returned',
-          queryResult.matches.length,
-          'matches',
-        );
-
         let matches = queryResult.matches;
         let llmRerankResult: LLMRerankResult | null = null;
 
         // Apply reranking if enabled and we have results
         if (useReranking && matches.length > 0) {
-          console.log(
-            `[queryRAG] Starting reranking process with method: ${params.rerankMethod}`,
-          );
-
           if (params.rerankMethod === 'llm') {
             // Use LLM reranker (default)
             try {
@@ -326,24 +304,9 @@ export const queryRAG = (props: QueryRAGProps) => {
                 ...(m.topicId && { topicId: m.topicId }),
                 ...(m.merged && { merged: m.merged }),
               }));
-
-              console.log(
-                `[queryRAG] LLM reranking complete: ${matches.length} results from ${queryResult.matches.length} original`,
-              );
-              console.log(
-                '[queryRAG] Topic groups:',
-                llmRerankResult.topicGroups,
-              );
-              console.log(
-                '[queryRAG] Merged matches:',
-                llmRerankResult.matches.filter(
-                  (m) => m.merged && m.merged.length > 0,
-                ).length,
-              );
             } catch (error) {
               console.error(
-                '[queryRAG] LLM reranking failed, falling back to Voyage:',
-                error,
+                '[queryRAG] LLM reranking failed, falling back to Voyage',
               );
               // Fall back to Voyage on error
               params.rerankMethod = 'voyage';
@@ -352,7 +315,6 @@ export const queryRAG = (props: QueryRAGProps) => {
 
           if (params.rerankMethod === 'voyage') {
             // Use Voyage reranker as fallback
-            console.log('[queryRAG] Using Voyage reranker');
 
             // Store original positions for comparison
             const originalPositions = new Map(
@@ -382,39 +344,11 @@ export const queryRAG = (props: QueryRAGProps) => {
               },
             );
 
-            // Log reranking comparison
-            console.log('[queryRAG] Reranking Results Comparison:');
-            console.log('─'.repeat(100));
-            console.log(
-              '| New Pos | Old Pos | Change | RAG Score | Rerank Score | Doc ID',
-            );
-            console.log('─'.repeat(100));
-
             // Convert reranked results back to QueryMatch format
             // Restore original full content from the original matches
             const originalMatchesMap = new Map(matches.map((m) => [m.id, m]));
-            matches = rerankedResults.map((result, newIdx) => {
+            matches = rerankedResults.map((result) => {
               const originalMatch = originalMatchesMap.get(result.id);
-              const oldPos = originalPositions.get(result.id) || 0;
-              const newPos = newIdx + 1;
-              const change = oldPos - newPos;
-              const changeSymbol =
-                change > 0
-                  ? `↑${change}`
-                  : change < 0
-                    ? `↓${Math.abs(change)}`
-                    : '─';
-
-              console.log(
-                `| ${String(newPos).padEnd(7)} | ${String(oldPos).padEnd(7)} | ${changeSymbol.padEnd(6)} | ${(
-                  originalMatch?.score || 0
-                )
-                  .toFixed(3)
-                  .padEnd(
-                    9,
-                  )} | ${result.score.toFixed(3).padEnd(12)} | ${result.id}`,
-              );
-
               return {
                 id: result.id,
                 score: result.score,
@@ -422,10 +356,6 @@ export const queryRAG = (props: QueryRAGProps) => {
                 metadata: result.metadata as RAGMetadata,
               };
             });
-            console.log('─'.repeat(100));
-            console.log(
-              `[queryRAG] Reranking complete: ${rerankedResults.length} results reordered`,
-            );
           }
         } else {
           // Just take the top K without reranking
@@ -434,11 +364,6 @@ export const queryRAG = (props: QueryRAGProps) => {
 
         // Expand context if requested
         if (expandContext && matches.length > 0) {
-          console.log(
-            '[queryRAG] Expanding context for',
-            matches.length,
-            'matches',
-          );
           matches = await expandChunkContext(
             matches,
             pineconeClient,
@@ -452,6 +377,13 @@ export const queryRAG = (props: QueryRAGProps) => {
 
         const duration = Date.now() - startTime;
 
+        // Determine which rerank method was actually used
+        const actualRerankMethod = llmRerankResult
+          ? 'llm'
+          : params.rerankMethod === 'voyage'
+            ? 'voyage'
+            : 'none';
+
         const result = {
           success: true,
           query: params.query,
@@ -464,15 +396,27 @@ export const queryRAG = (props: QueryRAGProps) => {
             score: m.score,
             content: m.content, // Full content, let UI handle truncation
             metadata: m.metadata,
+            // IMPORTANT: Preserve LLM-specific fields for UI topic grouping
+            ...(m.topicId && { topicId: m.topicId }),
+            ...(m.merged && { merged: m.merged }),
           })),
-          // Add LLM rerank specific data if available
+          // DETERMINISTIC: Embed rerank info in a metadata object that AI SDK will preserve
+          metadata: {
+            rerankMethod: actualRerankMethod,
+            ...(llmRerankResult && {
+              topicGroups: llmRerankResult.topicGroups,
+              topicCount: llmRerankResult.topicGroups.length,
+            }),
+          },
+          // Also keep at top level for backward compatibility
           ...(llmRerankResult && {
             topicGroups: llmRerankResult.topicGroups,
             rerankMethod: 'llm' as const,
           }),
-          ...(params.rerankMethod === 'voyage' && {
-            rerankMethod: 'voyage' as const,
-          }),
+          ...(params.rerankMethod === 'voyage' &&
+            !llmRerankResult && {
+              rerankMethod: 'voyage' as const,
+            }),
         };
 
         // Cache the result
@@ -480,7 +424,6 @@ export const queryRAG = (props: QueryRAGProps) => {
 
         return result;
       } catch (error) {
-        console.error('[queryRAG] Error during execution:', error);
         const errorMessage =
           error instanceof Error ? error.message : 'Unknown error';
 

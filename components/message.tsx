@@ -261,19 +261,6 @@ const RAGQueryResult = memo(function RAGQueryResult({
                   const hasLongContent =
                     match.content && match.content.length > 200;
 
-                  // Debug: Log the actual structure
-                  if (idx === 0) {
-                    console.log('[RAGQueryResult] First match structure:', {
-                      match,
-                      metadata: match.metadata,
-                      hasArtifactId: !!match.metadata?.artifactId,
-                      hasDocumentType: !!match.metadata?.documentType,
-                      metadataKeys: match.metadata
-                        ? Object.keys(match.metadata)
-                        : [],
-                    });
-                  }
-
                   return (
                     <div
                       key={`match-${idx}-${match.metadata?.documentId || ''}`}
@@ -649,6 +636,16 @@ const PurePreviewMessage = ({
                   toolCallId?: string;
                   state?: string;
                   output?: {
+                    // DETERMINISTIC: metadata field for preserved values
+                    metadata?: {
+                      rerankMethod?: 'llm' | 'voyage' | 'none';
+                      topicGroups?: Array<{
+                        id: string;
+                        topic: string;
+                        matchIds: string[];
+                      }>;
+                      topicCount?: number;
+                    };
                     rerankMethod?: 'llm' | 'voyage';
                     result?: {
                       matches: Array<{
@@ -658,6 +655,14 @@ const PurePreviewMessage = ({
                         topicId?: string;
                         merged?: string[];
                       }>;
+                      metadata?: {
+                        rerankMethod?: 'llm' | 'voyage' | 'none';
+                        topicGroups?: Array<{
+                          id: string;
+                          topic: string;
+                          matchIds: string[];
+                        }>;
+                      };
                       rerankMethod?: 'llm' | 'voyage';
                       topicGroups?: Array<{
                         id: string;
@@ -685,21 +690,15 @@ const PurePreviewMessage = ({
                 };
                 const { toolCallId, state } = toolPart;
 
-                console.log('[Message] Found queryRAG tool:', {
-                  state,
-                  hasOutput: !!toolPart.output,
-                  outputKeys: toolPart.output
-                    ? Object.keys(toolPart.output)
-                    : [],
-                  rerankMethod: toolPart.output?.rerankMethod,
-                });
-
-                // Check if LLM reranking was used
+                // DETERMINISTIC: Check metadata field first, then fallback to direct fields
                 const isLLMReranked =
+                  toolPart.output?.metadata?.rerankMethod === 'llm' ||
+                  toolPart.output?.result?.metadata?.rerankMethod === 'llm' ||
                   toolPart.output?.rerankMethod === 'llm' ||
                   toolPart.output?.result?.rerankMethod === 'llm';
 
                 // Use LLM component for LLM reranked results, otherwise use standard
+
                 if (isLLMReranked) {
                   return (
                     <LLMRAGQueryResult

@@ -93,8 +93,6 @@ export async function rerankWithLLM(
   const maxMatches = options.maxMatches || 50;
 
   try {
-    console.log(`[LLM Reranker] Starting with ${matches.length} matches`);
-
     // Prepare matches for LLM analysis (truncate content to save tokens)
     const truncatedMatches = matches.map((m, idx) => ({
       index: idx + 1,
@@ -155,9 +153,6 @@ RULES:
 - Return up to ${maxMatches} results`;
 
     // Generate structured output with Claude
-    console.log(
-      `[LLM Reranker] Sending prompt with ${prompt.length} chars to model`,
-    );
 
     let object: {
       matches: Array<{
@@ -169,7 +164,6 @@ RULES:
       topics: Array<{ id: string; name: string }>;
     };
     try {
-      console.log('[LLM Reranker] Using generateObject with schema validation');
       const response = await generateObject({
         model: myProvider.languageModel('reranker-model'),
         mode: 'json',
@@ -197,20 +191,6 @@ RULES:
       }
       throw error;
     }
-
-    console.log(
-      `[LLM Reranker] Received analysis in ${Date.now() - startTime}ms`,
-    );
-
-    // Log what we got back
-    console.log('[LLM Reranker] Response summary:', {
-      matchCount: object.matches.length,
-      topicCount: object.topics.length,
-      topics: object.topics.map((t) => ({ id: t.id, name: t.name })),
-      mergedMatches: object.matches.filter(
-        (m) => m.mergedIds && m.mergedIds.length > 0,
-      ).length,
-    });
 
     // Create a map for quick lookup
     const matchesMap = new Map(matches.map((m) => [m.id, m]));
@@ -277,10 +257,6 @@ RULES:
 
     // Format content for LLM consumption
     const formattedContent = formatForLLM(processedMatches, topicGroups);
-
-    console.log(
-      `[LLM Reranker] Completed: ${processedMatches.length} results from ${matches.length} original (${matches.length - processedMatches.length - processedMatches.reduce((acc, m) => acc + (m.merged?.length || 0), 0)} excluded, ${processedMatches.reduce((acc, m) => acc + (m.merged?.length || 0), 0)} merged)`,
-    );
 
     return {
       matches: processedMatches,
