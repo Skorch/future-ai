@@ -59,6 +59,19 @@ export interface TopicGroup {
   matchIds: string[];
 }
 
+// Configuration for OpenAI reranking - using GPT-4.1-mini for optimal performance
+const OPENAI_RERANK_CONFIG = {
+  provider: 'openai' as const,
+  modelFamily: 'gpt-4.1' as const, // Using GPT-4.1 family
+  modelVariant: 'mini' as const, // Using mini for better balance of speed and quality
+  textVerbosity: 'low' as const,
+  reasoning_effort: 'low' as const, // Reduced to 'low' to disable reasoning overhead
+  reasoningSummary: false, // No reasoning summary per user preference
+} as const;
+
+// Set to true to use OpenAI for reranking, false to use Anthropic
+const USE_OPENAI_FOR_RERANKING = true;
+
 const systemPrompt = `You are a JSON API that analyzes search results. You MUST return ONLY valid JSON output with no additional text.
 
 YOUR MAIN TASKS:
@@ -92,7 +105,30 @@ export async function rerankWithLLM(
   const startTime = Date.now();
   const maxMatches = options.maxMatches || 50;
 
+  // Performance tracking
+  const perfLog = (stage: string) => {
+    const elapsed = Date.now() - startTime;
+    console.log(`[LLM Reranker Performance] ${stage}: ${elapsed}ms`);
+  };
+
+  // Log which provider is being used
+  console.log(
+    `[LLM Reranker] Using ${USE_OPENAI_FOR_RERANKING ? `OpenAI GPT-5-${OPENAI_RERANK_CONFIG.modelVariant}` : 'Anthropic Claude'} for reranking`,
+  );
+  perfLog('Initialized');
+
   try {
+    // Debug: Check if matches have content
+    const matchesWithContent = matches.filter(
+      (m) => m.content && m.content.length > 0,
+    ).length;
+    const matchesWithoutContent = matches.filter(
+      (m) => !m.content || m.content.length === 0,
+    ).length;
+    console.log(
+      `[LLM Reranker] Input matches: ${matchesWithContent} with content, ${matchesWithoutContent} without content`,
+    );
+
     // Prepare matches for LLM analysis (truncate content to save tokens)
     const truncatedMatches = matches.map((m, idx) => ({
       index: idx + 1,
@@ -103,9 +139,9 @@ export async function rerankWithLLM(
       speakers: m.metadata?.speakers?.join(', ') || '',
       // Truncate content but include beginning and end for context
       contentPreview:
-        m.content.length > 800
+        m.content && m.content.length > 800
           ? `${m.content.substring(0, 400)}...[truncated]...${m.content.substring(m.content.length - 400)}`
-          : m.content,
+          : m.content || '[NO CONTENT]',
     }));
 
     // Build prompt for LLM
@@ -152,7 +188,29 @@ RULES:
 - Merge similar/duplicate chunks
 - Return up to ${maxMatches} results`;
 
-    // Generate structured output with Claude
+    perfLog('Prompt prepared');
+
+    // Generate structured output with OpenAI (default) or Claude based on const configuration
+
+    // Use configuration const to determine provider
+    const modelToUse = USE_OPENAI_FOR_RERANKING
+      ? `openai-${OPENAI_RERANK_CONFIG.modelFamily}-${OPENAI_RERANK_CONFIG.modelVariant}-reranker` // Build model name from family and variant
+      : options.model || 'reranker-model'; // Fallback to Claude
+
+    console.log(`[LLM Reranker] Model selected: ${modelToUse}`);
+
+    // Build provider options for OpenAI if needed
+    const providerOptions = USE_OPENAI_FOR_RERANKING
+      ? {
+          openai: {
+            textVerbosity: OPENAI_RERANK_CONFIG.textVerbosity,
+            reasoning_effort: OPENAI_RERANK_CONFIG.reasoning_effort,
+            // No reasoning summary based on configuration
+          },
+        }
+      : undefined;
+
+    perfLog('Config prepared');
 
     let object: {
       matches: Array<{
@@ -164,14 +222,22 @@ RULES:
       topics: Array<{ id: string; name: string }>;
     };
     try {
+      console.log(`[LLM Reranker] Starting generateObject call...`);
+      perfLog('Before generateObject');
+
       const response = await generateObject({
-        model: myProvider.languageModel('reranker-model'),
+        model: myProvider.languageModel(modelToUse),
         mode: 'json',
         system: systemPrompt,
         prompt,
         schema: LLMRerankSchema,
         temperature: 0.1, // Very low temperature for consistency
+        ...(providerOptions && {
+          experimental_providerMetadata: providerOptions,
+        }),
       });
+
+      perfLog('After generateObject');
       object = response.object;
     } catch (error) {
       console.error('[LLM Reranker] generateObject failed:', error);
@@ -195,6 +261,23 @@ RULES:
     // Create a map for quick lookup
     const matchesMap = new Map(matches.map((m) => [m.id, m]));
 
+    console.log(`[LLM Reranker] Original matches count: ${matches.length}`);
+    console.log(`[LLM Reranker] LLM returned ${object.matches.length} matches`);
+
+    // Debug: Log first few IDs from both
+    if (matches.length > 0) {
+      console.log(
+        `[LLM Reranker] Sample original IDs:`,
+        matches.slice(0, 3).map((m) => m.id),
+      );
+    }
+    if (object.matches.length > 0) {
+      console.log(
+        `[LLM Reranker] Sample LLM IDs:`,
+        object.matches.slice(0, 3).map((m) => m.id),
+      );
+    }
+
     // Process LLM results
     const processedMatches: LLMRerankMatch[] = [];
     const seenIds = new Set<string>();
@@ -206,7 +289,20 @@ RULES:
       if (seenIds.has(llmMatch.id)) continue;
 
       const originalMatch = matchesMap.get(llmMatch.id);
-      if (!originalMatch) continue;
+      if (!originalMatch) {
+        console.warn(
+          `[LLM Reranker] Warning: LLM returned ID '${llmMatch.id}' not found in original matches`,
+        );
+        continue;
+      }
+
+      // Debug content availability
+      console.log(`[LLM Reranker] Processing match ${llmMatch.id}:`, {
+        hasContent: !!originalMatch.content,
+        contentLength: originalMatch.content?.length || 0,
+        contentPreview:
+          originalMatch.content?.substring(0, 100) || 'NO CONTENT',
+      });
 
       seenIds.add(llmMatch.id);
 
@@ -233,14 +329,28 @@ RULES:
         finalContent = combineContent(mergedContents);
       }
 
-      processedMatches.push({
+      const processedMatch = {
         id: llmMatch.id,
         content: finalContent,
         metadata: originalMatch.metadata,
         score: llmMatch.score,
         topicId: llmMatch.topicId,
         merged: mergedIds.length > 0 ? mergedIds : undefined,
-      });
+      };
+
+      // Debug log for content
+      if (!finalContent || finalContent.trim().length === 0) {
+        console.error(
+          `[LLM Reranker] ERROR: No content for match ${llmMatch.id}`,
+        );
+        console.error(
+          `[LLM Reranker] Original content length:`,
+          originalMatch.content?.length || 0,
+        );
+        console.error(`[LLM Reranker] Merged IDs:`, mergedIds);
+      }
+
+      processedMatches.push(processedMatch);
     }
 
     // Sort by score descending
@@ -257,6 +367,24 @@ RULES:
 
     // Format content for LLM consumption
     const formattedContent = formatForLLM(processedMatches, topicGroups);
+
+    // Final debug summary
+    console.log(`[LLM Reranker] Final results:`, {
+      processedCount: processedMatches.length,
+      withContent: processedMatches.filter(
+        (m) => m.content && m.content.length > 0,
+      ).length,
+      withoutContent: processedMatches.filter(
+        (m) => !m.content || m.content.length === 0,
+      ).length,
+      totalContentLength: processedMatches.reduce(
+        (sum, m) => sum + (m.content?.length || 0),
+        0,
+      ),
+      topicGroups: topicGroups.length,
+    });
+
+    perfLog('Complete');
 
     return {
       matches: processedMatches,

@@ -1,5 +1,6 @@
 import { customProvider, type LanguageModel } from 'ai';
 import { createAnthropic } from '@ai-sdk/anthropic';
+import { createOpenAI } from '@ai-sdk/openai';
 import {
   artifactModel,
   chatModel,
@@ -26,6 +27,23 @@ const getAnthropic = () => {
   return anthropicInstance;
 };
 
+// Create OpenAI provider instance - lazy initialization for reranking only
+let openaiInstance: ReturnType<typeof createOpenAI> | null = null;
+
+const getOpenAI = () => {
+  if (!openaiInstance) {
+    console.log(
+      '[Providers] Initializing OpenAI with API key:',
+      process.env.OPENAI_API_KEY ? 'present' : 'missing',
+    );
+
+    openaiInstance = createOpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+  }
+  return openaiInstance;
+};
+
 // Build language models from our model definitions
 const buildLanguageModels = () => {
   // biome-ignore lint/suspicious/noExplicitAny: Language models have varying types
@@ -47,10 +65,26 @@ const buildLanguageModels = () => {
   // Add title and artifact models using Claude
   // Using Haiku for title generation (fast and cheap)
   models['title-model'] = getAnthropic()('claude-3-haiku-20240307');
-  // Using Sonnet 4 for reranking (reliable structured outputs)
+  // Using Sonnet 4 for reranking (reliable structured outputs) - kept as fallback
   models['reranker-model'] = getAnthropic()('claude-3-5-sonnet-20241022');
   // Using Sonnet for artifact generation (good balance of capability and speed)
   models['artifact-model'] = getAnthropic()('claude-3-5-sonnet-20241022');
+
+  // Add OpenAI models for reranking ONLY - not exposed to chat interface
+  // These models are exclusively for tool use, particularly the LLM reranker
+  console.log('[Providers] Registering OpenAI models for reranking...');
+
+  // GPT-5 family
+  models['openai-gpt-5-reranker'] = getOpenAI()('gpt-5');
+  models['openai-gpt-5-mini-reranker'] = getOpenAI()('gpt-5-mini');
+  models['openai-gpt-5-nano-reranker'] = getOpenAI()('gpt-5-nano');
+
+  // GPT-4.1 family
+  models['openai-gpt-4.1-reranker'] = getOpenAI()('gpt-4.1');
+  models['openai-gpt-4.1-mini-reranker'] = getOpenAI()('gpt-4.1-mini');
+  models['openai-gpt-4.1-nano-reranker'] = getOpenAI()('gpt-4.1-nano');
+
+  console.log('[Providers] OpenAI models registered');
 
   return models;
 };
@@ -79,11 +113,14 @@ export const myProvider = isTestEnvironment
     })
   : {
       languageModel: (modelId: string) => {
+        console.log(`[Providers] Requesting model: ${modelId}`);
         const models = getLanguageModels();
         const model = models[modelId];
         if (!model) {
+          console.error(`[Providers] Available models:`, Object.keys(models));
           throw new Error(`Model ${modelId} not found in provider`);
         }
+        console.log(`[Providers] Model ${modelId} retrieved successfully`);
         return model;
       },
     };
