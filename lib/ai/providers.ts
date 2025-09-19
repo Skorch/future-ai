@@ -67,8 +67,8 @@ const buildLanguageModels = () => {
   models['title-model'] = getAnthropic()('claude-3-haiku-20240307');
   // Using Sonnet 4 for reranking (reliable structured outputs) - kept as fallback
   models['reranker-model'] = getAnthropic()('claude-3-5-sonnet-20241022');
-  // Using Sonnet for artifact generation (good balance of capability and speed)
-  models['artifact-model'] = getAnthropic()('claude-3-5-sonnet-20241022');
+  // Using Sonnet 4 for artifact generation (best balance of speed and detailed output)
+  models['artifact-model'] = getAnthropic()('claude-sonnet-4-20250514');
 
   // Add OpenAI models for reranking ONLY - not exposed to chat interface
   // These models are exclusively for tool use, particularly the LLM reranker

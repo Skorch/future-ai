@@ -3,7 +3,7 @@ import { myProvider } from '@/lib/ai/providers';
 import { createDocumentHandler } from '@/lib/artifacts/server';
 import { getDocumentById } from '@/lib/db/queries';
 import { metadata } from './metadata';
-import { AGENT_BASE_PROMPT } from '@/lib/ai/prompts/agent-base';
+import { ARTIFACT_SYSTEM_PROMPT } from '@/lib/ai/prompts/artifact-system';
 
 // Type definitions for meeting summary metadata
 interface MeetingSummaryMetadata {
@@ -82,9 +82,9 @@ export const meetingSummaryHandler = createDocumentHandler<'text'>({
       '[MeetingSummaryHandler] Preparing to stream with artifact-model',
     );
 
-    // Compose prompts correctly: Agent Base + Document Specific + Template
+    // Compose: Artifact system prompt + Meeting summary specific instructions + Template
     const systemPrompt = [
-      AGENT_BASE_PROMPT,
+      ARTIFACT_SYSTEM_PROMPT,
       '\n## Document Type Specific Instructions\n',
       metadata.prompt,
       '\n## Required Output Format\n',
@@ -96,6 +96,7 @@ export const meetingSummaryHandler = createDocumentHandler<'text'>({
     const { fullStream } = streamText({
       model: myProvider.languageModel('artifact-model'),
       system: systemPrompt,
+      maxOutputTokens: 8192, // Testing if token limit affects verbosity
       experimental_transform: smoothStream({ chunking: 'word' }),
       prompt: `Create a comprehensive meeting summary from this transcript:
 
@@ -148,6 +149,7 @@ ${transcript}`,
     const { fullStream } = streamText({
       model: myProvider.languageModel('artifact-model'),
       system: `You are editing a meeting summary. Maintain the structured format with Date, Participants, Topics, Key Decisions, and Action Items sections. Current content:\n${document.content}`,
+      maxOutputTokens: 8192, // Testing if token limit affects verbosity
       experimental_transform: smoothStream({ chunking: 'word' }),
       prompt: description,
     });

@@ -9,7 +9,7 @@ import type { ChatMessage } from '../types';
 import { smoothStream, streamText } from 'ai';
 import { myProvider } from '@/lib/ai/providers';
 import type { ArtifactMetadata } from './types';
-import { AGENT_BASE_PROMPT } from '@/lib/ai/prompts/agent-base';
+import { ARTIFACT_SYSTEM_PROMPT } from '@/lib/ai/prompts/artifact-system';
 
 export interface SaveDocumentProps {
   id: string;
@@ -163,9 +163,9 @@ function createEnhancedDocumentHandler<T extends ArtifactKind>(
 ): DocumentHandler<T> {
   // Default prompt composition function
   const defaultComposePrompt = (metadata: ArtifactMetadata): string => {
-    // Compose: Agent Base + Artifact Prompt + Template
+    // Compose: Artifact system prompt + Document specific instructions + Template
     return [
-      AGENT_BASE_PROMPT,
+      ARTIFACT_SYSTEM_PROMPT,
       '\n## Document Type Specific Instructions\n',
       metadata.prompt,
       '\n## Required Output Format\n',
@@ -191,6 +191,7 @@ function createEnhancedDocumentHandler<T extends ArtifactKind>(
     const { fullStream } = streamText({
       model: myProvider.languageModel('artifact-model'),
       system: systemPrompt,
+      maxOutputTokens: 8192, // Testing if token limit affects verbosity
       experimental_transform: smoothStream({ chunking: 'word' }),
       prompt: args.title,
     });
