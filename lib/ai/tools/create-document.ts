@@ -8,6 +8,7 @@ import {
 } from '@/lib/artifacts/server';
 import type { ChatMessage } from '@/lib/types';
 import { getDocumentById } from '@/lib/db/queries';
+import { loadAllArtifactDefinitions } from '@/lib/artifacts';
 
 interface CreateDocumentProps {
   session: Session;
@@ -33,6 +34,26 @@ const createDocumentSchema = z.object({
     .optional()
     .describe('Optional metadata like meeting date and participants'),
 });
+
+// Build dynamic tool description from registry
+async function buildToolDescription(): Promise<string> {
+  try {
+    const definitions = await loadAllArtifactDefinitions();
+    const descriptions = definitions
+      .map((d) => `- ${d.metadata.type}: ${d.metadata.description}`)
+      .join('\n');
+
+    return `Create documents of various types. Available types:\n${descriptions}\n\nUse the appropriate documentType based on the user's request.`;
+  } catch (error) {
+    console.warn(
+      'Failed to load artifact definitions for tool description',
+      error,
+    );
+    return `Create a meeting summary document from uploaded transcript documents.
+IMPORTANT: This tool ONLY creates summaries, not transcripts. Transcripts are created via file upload.
+When you see TRANSCRIPT_DOCUMENT markers in the chat, use those document IDs in the sourceDocumentIds parameter.`;
+  }
+}
 
 export const createDocument = ({ session, dataStream }: CreateDocumentProps) =>
   tool({

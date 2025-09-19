@@ -6,6 +6,10 @@ import { saveDocument } from '../db/queries';
 import type { Session } from 'next-auth';
 import type { UIMessageStreamWriter } from 'ai';
 import type { ChatMessage } from '../types';
+import { smoothStream, streamText } from 'ai';
+import { myProvider } from '@/lib/ai/providers';
+import type { ArtifactMetadata } from './types';
+import { AGENT_BASE_PROMPT } from '@/lib/ai/prompts/agent-base';
 
 export interface SaveDocumentProps {
   id: string;
@@ -32,19 +36,47 @@ export interface UpdateDocumentCallbackProps {
 
 export interface DocumentHandler<T = ArtifactKind> {
   kind: T;
+  metadata?: ArtifactMetadata;
   onCreateDocument: (args: CreateDocumentCallbackProps) => Promise<void>;
   onUpdateDocument: (args: UpdateDocumentCallbackProps) => Promise<void>;
 }
 
-export function createDocumentHandler<T extends ArtifactKind>(config: {
+export interface DocumentHandlerConfig<T extends ArtifactKind> {
   kind: T;
-  onCreateDocument: (params: CreateDocumentCallbackProps) => Promise<string>;
-  onUpdateDocument: (params: UpdateDocumentCallbackProps) => Promise<string>;
-}): DocumentHandler<T> {
+  metadata?: ArtifactMetadata;
+  composePrompt?: (metadata: ArtifactMetadata) => string;
+  onCreateDocument?: (params: CreateDocumentCallbackProps) => Promise<string>;
+  onUpdateDocument?: (params: UpdateDocumentCallbackProps) => Promise<string>;
+}
+
+export function createDocumentHandler<T extends ArtifactKind>(
+  config:
+    | DocumentHandlerConfig<T>
+    | {
+        kind: T;
+        onCreateDocument: (
+          params: CreateDocumentCallbackProps,
+        ) => Promise<string>;
+        onUpdateDocument: (
+          params: UpdateDocumentCallbackProps,
+        ) => Promise<string>;
+      },
+): DocumentHandler<T> {
+  // Handle legacy config format
+  if ('metadata' in config || 'composePrompt' in config) {
+    return createEnhancedDocumentHandler(config as DocumentHandlerConfig<T>);
+  }
+
+  // Legacy handler for backward compatibility
+  const legacyConfig = config as {
+    kind: T;
+    onCreateDocument: (params: CreateDocumentCallbackProps) => Promise<string>;
+    onUpdateDocument: (params: UpdateDocumentCallbackProps) => Promise<string>;
+  };
   return {
-    kind: config.kind,
+    kind: legacyConfig.kind,
     onCreateDocument: async (args: CreateDocumentCallbackProps) => {
-      const draftContent = await config.onCreateDocument({
+      const draftContent = await legacyConfig.onCreateDocument({
         id: args.id,
         title: args.title,
         dataStream: args.dataStream,
@@ -61,7 +93,7 @@ export function createDocumentHandler<T extends ArtifactKind>(config: {
           | undefined;
 
         // Special handling for meeting-summary handler
-        if (config.kind === 'text') {
+        if (legacyConfig.kind === 'text') {
           // Check if this is coming from the meeting-summary handler
           const sourceDocIds = args.metadata?.sourceDocumentIds as
             | string[]
@@ -84,6 +116,116 @@ export function createDocumentHandler<T extends ArtifactKind>(config: {
           documentType,
           artifactId: args.id,
           artifactTitle: args.title,
+          artifactType: legacyConfig.kind,
+          artifactCreatedAt: new Date().toISOString(),
+        };
+
+        await saveDocument({
+          id: args.id,
+          title: args.title,
+          content: draftContent,
+          kind: legacyConfig.kind,
+          userId: args.session.user.id,
+          metadata: documentMetadata,
+          sourceDocumentIds:
+            (args.metadata?.sourceDocumentIds as string[] | undefined) || [],
+        });
+      }
+
+      return;
+    },
+    onUpdateDocument: async (args: UpdateDocumentCallbackProps) => {
+      const draftContent = await legacyConfig.onUpdateDocument({
+        document: args.document,
+        description: args.description,
+        dataStream: args.dataStream,
+        session: args.session,
+      });
+
+      if (args.session?.user?.id) {
+        await saveDocument({
+          id: args.document.id,
+          title: args.document.title,
+          content: draftContent,
+          kind: legacyConfig.kind,
+          userId: args.session.user.id,
+        });
+      }
+
+      return;
+    },
+  };
+}
+
+// Enhanced document handler with prompt composition
+function createEnhancedDocumentHandler<T extends ArtifactKind>(
+  config: DocumentHandlerConfig<T>,
+): DocumentHandler<T> {
+  // Default prompt composition function
+  const defaultComposePrompt = (metadata: ArtifactMetadata): string => {
+    // Compose: Agent Base + Artifact Prompt + Template
+    return [
+      AGENT_BASE_PROMPT,
+      '\n## Document Type Specific Instructions\n',
+      metadata.prompt,
+      '\n## Required Output Format\n',
+      metadata.template,
+    ]
+      .filter(Boolean)
+      .join('\n');
+  };
+
+  const composePrompt = config.composePrompt || defaultComposePrompt;
+
+  // Default create implementation with prompt composition
+  const defaultOnCreateDocument = async (
+    args: CreateDocumentCallbackProps,
+  ): Promise<string> => {
+    if (!config.metadata) {
+      throw new Error('Metadata is required for enhanced document handler');
+    }
+
+    const systemPrompt = composePrompt(config.metadata);
+    let draftContent = '';
+
+    const { fullStream } = streamText({
+      model: myProvider.languageModel('artifact-model'),
+      system: systemPrompt,
+      experimental_transform: smoothStream({ chunking: 'word' }),
+      prompt: args.title,
+    });
+
+    for await (const delta of fullStream) {
+      const { type } = delta;
+
+      if (type === 'text-delta') {
+        const { text } = delta;
+        draftContent += text;
+
+        args.dataStream.write({
+          type: 'data-textDelta',
+          data: text,
+          transient: true,
+        });
+      }
+    }
+
+    return draftContent;
+  };
+
+  return {
+    kind: config.kind,
+    metadata: config.metadata,
+    onCreateDocument: async (args: CreateDocumentCallbackProps) => {
+      const createFn = config.onCreateDocument || defaultOnCreateDocument;
+      const draftContent = await createFn(args);
+
+      if (args.session?.user?.id) {
+        const documentMetadata = {
+          ...args.metadata,
+          documentType: config.metadata?.type || 'document',
+          artifactId: args.id,
+          artifactTitle: args.title,
           artifactType: config.kind,
           artifactCreatedAt: new Date().toISOString(),
         };
@@ -102,26 +244,25 @@ export function createDocumentHandler<T extends ArtifactKind>(config: {
 
       return;
     },
-    onUpdateDocument: async (args: UpdateDocumentCallbackProps) => {
-      const draftContent = await config.onUpdateDocument({
-        document: args.document,
-        description: args.description,
-        dataStream: args.dataStream,
-        session: args.session,
-      });
+    onUpdateDocument: config.onUpdateDocument
+      ? async (args: UpdateDocumentCallbackProps) => {
+          const draftContent = await config.onUpdateDocument?.(args);
 
-      if (args.session?.user?.id) {
-        await saveDocument({
-          id: args.document.id,
-          title: args.document.title,
-          content: draftContent,
-          kind: config.kind,
-          userId: args.session.user.id,
-        });
-      }
+          if (args.session?.user?.id && draftContent) {
+            await saveDocument({
+              id: args.document.id,
+              title: args.document.title,
+              content: draftContent,
+              kind: config.kind,
+              userId: args.session.user.id,
+            });
+          }
 
-      return;
-    },
+          return;
+        }
+      : async () => {
+          throw new Error('Update not implemented for this document type');
+        },
   };
 }
 

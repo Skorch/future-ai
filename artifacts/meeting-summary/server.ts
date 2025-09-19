@@ -2,6 +2,8 @@ import { smoothStream, streamText } from 'ai';
 import { myProvider } from '@/lib/ai/providers';
 import { createDocumentHandler } from '@/lib/artifacts/server';
 import { getDocumentById } from '@/lib/db/queries';
+import { metadata } from './metadata';
+import { AGENT_BASE_PROMPT } from '@/lib/ai/prompts/agent-base';
 
 // Type definitions for meeting summary metadata
 interface MeetingSummaryMetadata {
@@ -13,9 +15,10 @@ interface MeetingSummaryMetadata {
 
 export const meetingSummaryHandler = createDocumentHandler<'text'>({
   kind: 'text',
-  onCreateDocument: async ({ title, dataStream, metadata }) => {
+  metadata,
+  onCreateDocument: async ({ title, dataStream, metadata: docMetadata }) => {
     // Cast metadata to our expected type
-    const typedMetadata = metadata as MeetingSummaryMetadata | undefined;
+    const typedMetadata = docMetadata as MeetingSummaryMetadata | undefined;
     console.log('[MeetingSummaryHandler] Starting document creation', {
       title,
       hasTranscript: !!typedMetadata?.transcript,
@@ -79,36 +82,28 @@ export const meetingSummaryHandler = createDocumentHandler<'text'>({
       '[MeetingSummaryHandler] Preparing to stream with artifact-model',
     );
 
+    // Compose prompts correctly: Agent Base + Document Specific + Template
+    const systemPrompt = [
+      AGENT_BASE_PROMPT,
+      '\n## Document Type Specific Instructions\n',
+      metadata.prompt,
+      '\n## Required Output Format\n',
+      metadata.template,
+    ]
+      .filter(Boolean)
+      .join('\n');
+
     const { fullStream } = streamText({
       model: myProvider.languageModel('artifact-model'),
-      system: `You are a meeting intelligence assistant. Generate a structured meeting summary with the following format:
-# Meeting Summary: ${title}
-**Date:** ${meetingDate}
-**Participants:** ${participants.join(', ')}
-**Duration:** [Extract from transcript if available]
-
-## Executive Overview
-[2-3 sentence high-level summary]
-
-## Topic: [First Major Discussion Topic]
-- Key points with detail
-- Decisions or conclusions
-- Action items with owners
-
-## Topic: [Second Major Discussion Topic]
-[Continue pattern for all major topics]
-
-## Key Decisions
-1. Clear, actionable decisions with context
-
-## Action Items
-| Owner | Task | Due Date |
-|-------|------|----------|
-| [Name] | [Task] | [Date] |
-
-Focus on extracting actionable insights and decisions. Use "## Topic:" format for each discussion topic.`,
+      system: systemPrompt,
       experimental_transform: smoothStream({ chunking: 'word' }),
-      prompt: `Create a comprehensive meeting summary from this transcript:\n\n${transcript}`,
+      prompt: `Create a comprehensive meeting summary from this transcript:
+
+Meeting Date: ${meetingDate}
+Participants: ${participants.join(', ')}
+
+Transcript:
+${transcript}`,
     });
 
     let chunkCount = 0;
