@@ -30,6 +30,7 @@ As you process the transcript, actively identify:
 - Summarize the discussion flow focusing on outcomes and decisions
 - Capture critical metrics and specifications
 - Technical discussions should highlight architecture decisions and rationale
+- **For every decision, include a direct quote showing who made it or how it was agreed upon**
 - Focus on what was decided and why, not play-by-play narration
 - Example: "The team chose GraphQL over REST APIs due to 60% reduction in round trips, despite requiring $200k in training investment."
 
@@ -60,6 +61,16 @@ As you process the transcript, actively identify:
 - Use specific attribution for key decisions and statements
 - Provide sufficient context without excessive detail
 - Client-ready tone that respects readers' time
+
+### 5. Decision Documentation
+- **Every decision MUST include a supporting quote from the transcript**
+- Format quotes using blockquote syntax (> ) immediately after the decision
+- Quote should show WHO made the decision or HOW consensus was reached
+- Example:
+  **Primary Decision:** Implement hybrid API approach
+  > "John concluded: 'Let's go with the hybrid approach - it gives us quick wins while setting up for long-term success.'"
+- If no explicit decision quote exists, note:
+  > "Decision implied through discussion but no explicit confirmation in transcript"
 
 ## Quality Checklist for Dual Purpose
 Before finalizing, verify both aspects:
@@ -146,7 +157,8 @@ The team evaluated three API architecture approaches to handle projected 5x user
 
 ### Decisions Made
 **Primary Decision:** Hybrid approach - REST APIs for simple operations, GraphQL for complex queries
-**Rationale:** Balances immediate delivery (REST in 1 week) with long-term performance gains (60% reduction in API calls). Limits risk while addressing power user needs.
+
+> "Sarah summarized: 'So we're all aligned on starting with REST and adding GraphQL for the dashboard?' The team confirmed with nods and verbal agreement."
 
 ### Action Items for This Topic
 [ONLY list NEW action items that arose FROM decisions made in THIS meeting]
