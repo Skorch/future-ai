@@ -45,7 +45,7 @@ import { chatModels, type ChatModel } from '@/lib/ai/models';
 import type { VisibilityType } from '@/components/visibility-selector';
 import { processMessageFiles } from '@/lib/ai/utils/file-processor';
 
-export const maxDuration = 60;
+export const maxDuration = 60 * 5;
 
 let globalStreamContext: ResumableStreamContext | null = null;
 
