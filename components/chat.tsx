@@ -2,7 +2,7 @@
 
 import { DefaultChatTransport } from 'ai';
 import { useChat } from '@ai-sdk/react';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 import { ChatHeader } from '@/components/chat-header';
 import type { Vote, Chat as ChatType } from '@/lib/db/schema';
@@ -46,12 +46,9 @@ export function Chat({
   });
 
   const { mutate } = useSWRConfig();
-  const { dataStream, setDataStream } = useDataStream();
+  const { setDataStream } = useDataStream();
 
   const [input, setInput] = useState<string>('');
-
-  // Track processed continuation requests to prevent duplicates
-  const processedContinuations = useRef<Set<number>>(new Set());
 
   const {
     messages,
@@ -148,38 +145,6 @@ export function Chat({
       window.history.replaceState({}, '', `/chat/${id}`);
     }
   }, [query, sendMessage, hasAppendedQuery, id]);
-
-  // Process continuation requests from mode switches
-  useEffect(() => {
-    // Only process when ready
-    if (!dataStream?.length || status !== 'ready') return;
-
-    // Find unprocessed continuation requests
-    dataStream.forEach((item, index) => {
-      if (
-        item.type === 'data-continuationRequest' &&
-        !processedContinuations.current.has(index)
-      ) {
-        // Check if data exists and has the message property
-        if (
-          item.data &&
-          typeof item.data === 'object' &&
-          'message' in item.data
-        ) {
-          // Mark as processed immediately to prevent infinite loop
-          processedContinuations.current.add(index);
-
-          // Send continuation as user message
-          // The content makes it clear this is a continuation
-          // (e.g., "Now implementing the authentication system...")
-          sendMessage({
-            role: 'user',
-            parts: [{ type: 'text', text: item.data.message }],
-          });
-        }
-      }
-    });
-  }, [dataStream, status, sendMessage]);
 
   const { data: votes } = useSWR<Array<Vote>>(
     messages.length >= 2 ? `/api/vote?chatId=${id}` : null,

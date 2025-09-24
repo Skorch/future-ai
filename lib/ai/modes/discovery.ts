@@ -1,4 +1,3 @@
-import { stepCountIs, hasToolCall } from 'ai';
 import type { ModeConfig } from './types';
 import type { ModeContext } from '@/lib/db/schema';
 
@@ -38,7 +37,8 @@ TOOL RESTRICTIONS IN DISCOVERY MODE:
 
 When ready to execute:
 - Consider if you have enough context to build
-- Call setMode('build') to enter execution mode
+- Call setMode('build') with a nextMessage describing what you'll build
+- IMPORTANT: After calling setMode, continue working - don't stop!
 - Note: Goal is optional but recommended for clarity
 `,
 
@@ -47,11 +47,7 @@ When ready to execute:
     'listDocuments',
     'loadDocument',
     'setMode',
-  ],
-
-  stopWhen: [
-    stepCountIs(30),
-    hasToolCall('setMode'), // Stop when switching modes
+    'setComplete', // Allow marking task complete in any mode
   ],
 
   temperature: 0.6, // Slightly more focused for analysis

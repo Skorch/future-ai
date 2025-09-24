@@ -39,6 +39,11 @@ export const chat = pgTable('Chat', {
   goalSetAt: timestamp('goal_set_at'),
   todoList: text('todo_list'), // JSON string
   todoListUpdatedAt: timestamp('todo_list_updated_at'),
+
+  // Completion tracking fields
+  complete: boolean('complete').default(false).notNull(),
+  completedAt: timestamp('completed_at'),
+  firstCompletedAt: timestamp('first_completed_at'),
 });
 
 export type Chat = InferSelectModel<typeof chat>;

@@ -64,6 +64,13 @@
       "when": 1758678497353,
       "tag": "0008_cultured_archangel",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1758742159571,
+      "tag": "0009_glorious_juggernaut",
+      "breakpoints": true
     }
   ]
 }

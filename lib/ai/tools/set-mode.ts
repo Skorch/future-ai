@@ -24,6 +24,8 @@ export const setMode = ({ chatId, dataStream }: SetModeProps) => {
   return tool({
     description: `Switch between discovery and build modes. You have full autonomy to change modes based on the conversation needs.
 
+IMPORTANT: After switching modes, you should CONTINUE working in the new mode immediately. Don't just announce the switch - actually proceed with the task in the new mode.
+
 WHEN TO USE EACH MODE:
 
 Discovery Mode:
@@ -40,11 +42,11 @@ Build Mode:
 - When delivering on requirements
 
 The mode change will:
-1. Stop current execution
-2. Update available tools
+1. Take effect on the next step (via prepareStep)
+2. Update available tools immediately
 3. Change system prompt focus
-4. Allow fresh context on next message
-5. Optionally auto-send continuation message if provided`,
+4. Continue seamlessly if nextMessage provided
+5. Stop current agent execution for fresh start`,
 
     inputSchema: setModeSchema,
 
@@ -53,10 +55,12 @@ The mode change will:
       reason,
       nextMessage,
     }: z.infer<typeof setModeSchema>) => {
-      // Update database directly (per requirement)
+      console.log(`[setMode] Switching to ${mode} mode: ${reason}`);
+
+      // Update database for persistence across sessions
       await updateChatMode({ id: chatId, mode });
 
-      // Emit to dataStream for UI updates
+      // Emit UI notification only (no continuation request)
       dataStream.write({
         type: 'data-modeChanged',
         data: {
@@ -67,21 +71,16 @@ The mode change will:
         transient: true,
       });
 
-      // If continuation requested, emit it AFTER DB update is complete
-      if (nextMessage) {
-        dataStream.write({
-          type: 'data-continuationRequest',
-          data: { message: nextMessage },
-          transient: false, // Persist for handler
-        });
-      }
+      // Note: prepareStep will handle the nextMessage continuation
+      // No need to emit data-continuationRequest anymore
 
-      // Return structured result that triggers stopWhen
+      // Return structured result
+      // The stopWhen condition in route.ts will halt execution
       return {
         success: true,
         mode,
         reason,
-        continuation: nextMessage || null,
+        nextMessage: nextMessage || null, // prepareStep will use this
         message: `Switching to ${mode} mode: ${reason}`,
       };
     },

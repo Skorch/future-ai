@@ -44,8 +44,11 @@ import type { ChatMessage } from '@/lib/types';
 import { DEFAULT_CHAT_MODEL } from '@/lib/ai/models';
 import type { ChatMode, ModeContext, Todo, TodoList } from '@/lib/db/schema';
 import { getModeConfig } from '@/lib/ai/modes';
+import { createPrepareStep } from '@/lib/ai/modes/prepare-step';
 import type { VisibilityType } from '@/components/visibility-selector';
 import { processMessageFiles } from '@/lib/ai/utils/file-processor';
+import { stepCountIs, hasToolCall } from 'ai';
+import { setComplete } from '@/lib/ai/tools/set-complete';
 
 export const maxDuration = 60; // 60 seconds
 
@@ -158,11 +161,18 @@ export async function POST(request: Request) {
       messageCount: userMessageCount,
     };
 
-    // Get mode-specific configuration
+    // Get mode-specific configuration (still needed for initial model selection)
     const modeConfig = getModeConfig(currentMode);
 
+    // Create prepareStep function with initial state
+    const prepareStepFn = createPrepareStep(
+      currentMode,
+      modeContext,
+      chat?.complete || false,
+    );
+
     console.log(
-      `[Mode System] Current mode: ${currentMode}, Goal: ${modeContext.goal ? 'Set' : 'Not set'}, Todos: ${todos.length}`,
+      `[Mode System] Current mode: ${currentMode}, Goal: ${modeContext.goal ? 'Set' : 'Not set'}, Todos: ${todos.length}, Complete: ${chat?.complete || false}`,
     );
 
     const uiMessages = [...convertToUIMessages(messagesFromDb), message];
@@ -381,10 +391,11 @@ export async function POST(request: Request) {
           let result: ReturnType<typeof streamText>;
           try {
             // Extract specific props from modeConfig
+            // Note: We no longer use stopWhen from mode config - it's universal now
             const {
-              system: modeSystemPrompt,
+              system: _modeSystemPrompt, // prepareStep will handle system prompt
               model: _model, // We use modelInstance instead
-              stopWhen, // Extract separately to add conditionally
+              stopWhen: _stopWhen, // Ignore mode-specific stopWhen
               ...restModeConfig
             } = modeConfig;
 
@@ -395,8 +406,8 @@ export async function POST(request: Request) {
               // Override with actual model instance
               model: modelInstance,
 
-              // Combine base prompt with mode-specific prompt
-              system: `${systemPromptText}\n\n--- MODE CONTEXT ---\n${modeSystemPrompt(modeContext)}`,
+              // Base system prompt (prepareStep will override per step)
+              system: systemPromptText,
 
               // Standard messages
               messages: modelMessages,
@@ -405,8 +416,9 @@ export async function POST(request: Request) {
               tools: shouldDisableTools
                 ? {}
                 : {
-                    // Add setMode tool
+                    // Mode and completion tools
                     setMode: setMode({ chatId: id, dataStream }),
+                    setComplete: setComplete({ chatId: id, dataStream }),
 
                     // Existing tools
                     getWeather,
@@ -422,7 +434,15 @@ export async function POST(request: Request) {
                     loadDocuments: loadDocuments({ session }),
                   },
 
-              // experimental_activeTools from mode config (already in spread)
+              // Add prepareStep for dynamic mode and tool management
+              prepareStep: prepareStepFn,
+
+              // Universal stopWhen conditions (not mode-specific)
+              stopWhen: [
+                stepCountIs(30), // Max steps to prevent infinite loops
+                // Don't stop on setMode - let prepareStep handle seamless transitions
+                hasToolCall('setComplete'), // Stop when marking complete/incomplete
+              ],
 
               // Keep existing options that shouldn't be overridden
               experimental_transform: smoothStream({ chunking: 'word' }),
@@ -434,6 +454,11 @@ export async function POST(request: Request) {
               onStepFinish: (event) => {
                 stepCount++;
                 console.log(`\n[Agent Step ${stepCount}] Completed`);
+
+                // Log finish reason to understand why the step ended
+                if (event.finishReason) {
+                  console.log(`  Finish reason: ${event.finishReason}`);
+                }
 
                 // Log what happened in this step
                 if (event.toolCalls && event.toolCalls.length > 0) {
@@ -504,11 +529,8 @@ export async function POST(request: Request) {
               tools: Object.keys(streamOptions.tools || {}),
             });
 
-            // Call streamText with all options including stopWhen
-            result = streamText({
-              ...streamOptions,
-              ...(stopWhen && { stopWhen }),
-            });
+            // Call streamText with all options (stopWhen is now in streamOptions)
+            result = streamText(streamOptions);
           } catch (streamError: unknown) {
             console.error(
               '\n==================== STREAM ERROR ====================',

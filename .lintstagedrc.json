@@ -1,4 +1,5 @@
 {
   "*.{ts,tsx,js,jsx}": ["biome check --write --unsafe --error-on-warnings"],
-  "*.{json,css}": ["biome format --write"]
+  "*.{json,css}": ["biome format --write"],
+  "lib/db/migrations/**/*.json": ["echo 'Skipping migration files'"]
 }

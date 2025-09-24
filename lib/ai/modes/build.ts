@@ -1,4 +1,3 @@
-import { stepCountIs, hasToolCall } from 'ai';
 import type { ModeConfig } from './types';
 import type { ModeContext } from '@/lib/db/schema';
 
@@ -40,7 +39,8 @@ Execution workflow:
 2. Create and refine documents as needed
 3. You can switch back to discovery if you need more planning
 
-To replan: Call setMode('discovery')
+To replan: Call setMode('discovery') with a nextMessage explaining what you need to clarify
+IMPORTANT: After mode switches, continue working - the conversation doesn't stop!
 `,
 
   experimental_activeTools: [
@@ -52,11 +52,7 @@ To replan: Call setMode('discovery')
     'updateDocument',
     'requestSuggestions',
     'setMode',
-  ],
-
-  stopWhen: [
-    stepCountIs(30),
-    hasToolCall('setMode'), // Stop when switching modes
+    'setComplete', // Allow marking task complete in any mode
   ],
 
   temperature: 0.7, // More creative for building

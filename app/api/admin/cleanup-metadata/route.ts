@@ -7,13 +7,13 @@ export async function POST() {
     // Check authentication
     const session = await auth();
     if (!session?.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log('[API] Starting metadata cleanup for user:', session.user.email);
+    console.log(
+      '[API] Starting metadata cleanup for user:',
+      session.user.email,
+    );
 
     // Run the cleanup
     const result = await cleanupTranscriptsFromMetadata();
@@ -27,14 +27,15 @@ export async function POST() {
     console.error('[API] Cleanup failed:', error);
     return NextResponse.json(
       { error: 'Cleanup failed', details: String(error) },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
 export async function GET() {
   return NextResponse.json({
-    message: 'POST to this endpoint to clean transcripts from document metadata',
+    message:
+      'POST to this endpoint to clean transcripts from document metadata',
     warning: 'This will modify your database. Make sure you have a backup.',
   });
 }

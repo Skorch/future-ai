@@ -843,3 +843,38 @@ export async function getChatMode(id: string): Promise<ChatMode | undefined> {
 
   return result[0]?.mode as ChatMode | undefined;
 }
+
+export async function updateChatCompletion({
+  id,
+  complete,
+  completedAt,
+  firstCompletedAt,
+}: {
+  id: string;
+  complete: boolean;
+  completedAt: Date | null;
+  firstCompletedAt?: Date; // undefined means don't update this field
+}) {
+  // Build update object conditionally
+  const updateObj: Record<string, unknown> = {
+    complete,
+    completedAt,
+  };
+
+  // Only update firstCompletedAt if explicitly provided
+  if (firstCompletedAt !== undefined) {
+    // Check if firstCompletedAt is already set
+    const existingChat = await getChatById({ id });
+    if (!existingChat.firstCompletedAt) {
+      updateObj.firstCompletedAt = firstCompletedAt;
+    }
+  }
+
+  const [updatedChat] = await db
+    .update(chat)
+    .set(updateObj)
+    .where(eq(chat.id, id))
+    .returning();
+
+  return updatedChat;
+}
