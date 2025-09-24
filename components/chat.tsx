@@ -22,7 +22,6 @@ import { useAutoResume } from '@/hooks/use-auto-resume';
 import { ChatSDKError } from '@/lib/errors';
 import type { Attachment, ChatMessage } from '@/lib/types';
 import { useDataStream } from './data-stream-provider';
-import { ModeIndicator } from './mode-indicator';
 
 export function Chat({
   id,
@@ -172,14 +171,6 @@ export function Chat({
           session={session}
         />
 
-        {chat && (
-          <ModeIndicator
-            initialMode={(chat.mode as 'discovery' | 'build') || 'discovery'}
-            goal={chat.goal}
-            todos={chat.todoList}
-          />
-        )}
-
         <Messages
           chatId={id}
           status={status}
@@ -205,6 +196,7 @@ export function Chat({
               setMessages={setMessages}
               sendMessage={sendMessage}
               selectedVisibilityType={visibilityType}
+              chat={chat}
             />
           )}
         </div>

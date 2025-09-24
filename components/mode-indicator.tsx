@@ -7,12 +7,14 @@ interface ModeIndicatorProps {
   initialMode?: 'discovery' | 'build';
   goal?: string | null;
   todos?: string | null;
+  className?: string;
 }
 
 export function ModeIndicator({
   initialMode = 'discovery',
   goal,
   todos,
+  className = '',
 }: ModeIndicatorProps) {
   const [currentMode, setCurrentMode] = useState(initialMode);
   const [todoCount, setTodoCount] = useState(0);
@@ -51,12 +53,18 @@ export function ModeIndicator({
   }, [dataStream]);
 
   return (
-    <div className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border-b border-gray-200 dark:border-gray-700">
+    <div
+      className={`flex items-center justify-between px-4 py-2 border border-gray-300 dark:border-sidebar-border transition-all duration-200 ${
+        currentMode === 'discovery'
+          ? 'bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/10 dark:to-purple-900/10'
+          : 'bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/10 dark:to-emerald-900/10'
+      } ${className}`}
+    >
       <div className="flex items-center gap-2">
         {currentMode === 'discovery' ? (
           <>
             <svg
-              className="w-4 h-4 text-blue-600 dark:text-blue-400"
+              className="size-4 text-blue-600 dark:text-blue-400"
               fill="none"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -70,7 +78,7 @@ export function ModeIndicator({
               Discovery Mode
             </span>
             {!goal && (
-              <span className="text-xs text-blue-600 dark:text-blue-400">
+              <span className="text-xs text-blue-600/70 dark:text-blue-400/70">
                 - Understanding requirements
               </span>
             )}
@@ -78,7 +86,7 @@ export function ModeIndicator({
         ) : (
           <>
             <svg
-              className="w-4 h-4 text-green-600 dark:text-green-400"
+              className="size-4 text-green-600 dark:text-green-400"
               fill="none"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -92,7 +100,7 @@ export function ModeIndicator({
               Build Mode
             </span>
             {todoCount > 0 && (
-              <span className="text-xs text-green-600 dark:text-green-400">
+              <span className="text-xs text-green-600/70 dark:text-green-400/70">
                 - {todoCount} todos
               </span>
             )}
@@ -102,7 +110,7 @@ export function ModeIndicator({
 
       {goal && (
         <span
-          className="text-xs text-gray-600 dark:text-gray-400 truncate max-w-[300px]"
+          className="text-xs text-gray-600 dark:text-gray-400 truncate max-w-[200px]"
           title={goal}
         >
           Goal: {goal}

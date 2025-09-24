@@ -139,13 +139,15 @@ export function parseDocument(content: string): TranscriptItem[] {
   const headerRegex = /^(#{1,3})\s+(.+)$/gm;
   const sections: TranscriptItem[] = [];
   const lastIndex = 0;
-  let match;
+  let match: RegExpExecArray | null = null;
   let sectionIndex = 0;
 
   // Find all headers and their positions
   const matches: Array<{ start: number; title: string }> = [];
-  while ((match = headerRegex.exec(content)) !== null) {
+  match = headerRegex.exec(content);
+  while (match !== null) {
     matches.push({ start: match.index, title: match[2] });
+    match = headerRegex.exec(content);
   }
 
   // Extract sections between headers

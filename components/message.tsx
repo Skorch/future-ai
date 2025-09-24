@@ -32,7 +32,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from './ui/collapsible';
-import { SearchIcon, ChevronDownIcon } from 'lucide-react';
+import { SearchIcon, ChevronDownIcon, CheckCircleIcon } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { LLMRAGQueryResult } from './llm-rag-result';
 
@@ -624,6 +624,63 @@ const PurePreviewMessage = ({
                             )
                           }
                           errorText={undefined}
+                        />
+                      )}
+                    </ToolContent>
+                  </Tool>
+                );
+              }
+
+              if (type === 'tool-setMode') {
+                const { toolCallId, state } = part;
+
+                return (
+                  <Tool key={toolCallId} defaultOpen={true}>
+                    <ToolHeader type="tool-setMode" state={state} />
+                    <ToolContent>
+                      {state === 'input-available' && (
+                        <ToolInput input={part.input} />
+                      )}
+                      {state === 'output-available' && (
+                        <ToolOutput
+                          output={
+                            part.output &&
+                            typeof part.output === 'object' &&
+                            'message' in part.output ? (
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2">
+                                  <CheckCircleIcon className="size-4 text-green-600" />
+                                  <span className="text-sm font-medium">
+                                    {part.output.message}
+                                  </span>
+                                </div>
+                                {part.output.mode && (
+                                  <div className="text-xs text-muted-foreground">
+                                    New mode:{' '}
+                                    <span className="font-medium">
+                                      {part.output.mode}
+                                    </span>
+                                  </div>
+                                )}
+                                {part.output.reason && (
+                                  <div className="text-xs text-muted-foreground">
+                                    Reason: {part.output.reason}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="text-sm text-muted-foreground">
+                                Mode transition initiated
+                              </div>
+                            )
+                          }
+                          errorText={
+                            part.output &&
+                            typeof part.output === 'object' &&
+                            'error' in part.output
+                              ? String(part.output.error)
+                              : undefined
+                          }
                         />
                       )}
                     </ToolContent>

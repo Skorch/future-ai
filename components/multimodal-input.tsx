@@ -32,6 +32,8 @@ import { ArrowDown } from 'lucide-react';
 import { useScrollToBottom } from '@/hooks/use-scroll-to-bottom';
 import type { VisibilityType } from './visibility-selector';
 import type { Attachment, ChatMessage } from '@/lib/types';
+import { ModeIndicator } from './mode-indicator';
+import type { Chat } from '@/lib/db/schema';
 
 // Extended attachment type for transcript documents
 interface TranscriptAttachment extends Attachment {
@@ -51,6 +53,7 @@ function PureMultimodalInput({
   sendMessage,
   className,
   selectedVisibilityType,
+  chat,
 }: {
   chatId: string;
   input: string;
@@ -64,6 +67,7 @@ function PureMultimodalInput({
   sendMessage: UseChatHelpers<ChatMessage>['sendMessage'];
   className?: string;
   selectedVisibilityType: VisibilityType;
+  chat?: Chat | null;
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { width } = useWindowSize();
@@ -299,81 +303,96 @@ function PureMultimodalInput({
         tabIndex={-1}
       />
 
-      <PromptInput
-        className="bg-gray-50 rounded-3xl border border-gray-300 shadow-none transition-all duration-200 dark:bg-sidebar dark:border-sidebar-border hover:ring-1 hover:ring-primary/30 focus-within:ring-1 focus-within:ring-primary/50"
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (status !== 'ready') {
-            toast.error('Please wait for the model to finish its response!');
-          } else {
-            submitForm();
-          }
-        }}
-      >
-        {(attachments.length > 0 || uploadQueue.length > 0) && (
-          <div
-            data-testid="attachments-preview"
-            className="flex overflow-x-scroll flex-row gap-2 items-end px-3 py-2"
-          >
-            {attachments.map((attachment) => (
-              <PreviewAttachment
-                key={attachment.url}
-                attachment={attachment}
-                onRemove={() => {
-                  setAttachments((currentAttachments) =>
-                    currentAttachments.filter((a) => a.url !== attachment.url),
-                  );
-                  if (fileInputRef.current) {
-                    fileInputRef.current.value = '';
-                  }
-                }}
-              />
-            ))}
-
-            {uploadQueue.map((filename) => (
-              <PreviewAttachment
-                key={filename}
-                attachment={{
-                  url: '',
-                  name: filename,
-                  contentType: '',
-                }}
-                isUploading={true}
-              />
-            ))}
-          </div>
+      <div className="relative">
+        {chat && (
+          <ModeIndicator
+            initialMode={(chat.mode as 'discovery' | 'build') || 'discovery'}
+            goal={chat.goal}
+            todos={chat.todoList}
+            className="rounded-t-3xl rounded-b-none border-b-0"
+          />
         )}
 
-        <PromptInputTextarea
-          data-testid="multimodal-input"
-          ref={textareaRef}
-          placeholder="Send a message..."
-          value={input}
-          onChange={handleInput}
-          minHeight={72}
-          maxHeight={200}
-          disableAutoResize={true}
-          className="text-base resize-none p-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] bg-transparent !border-0 !border-none outline-none ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none"
-          rows={1}
-          autoFocus
-        />
-        <PromptInputToolbar className="px-4 py-2 !border-t-0 !border-top-0 shadow-none dark:!border-transparent dark:border-0">
-          <PromptInputTools className="gap-2">
-            <AttachmentsButton fileInputRef={fileInputRef} status={status} />
-          </PromptInputTools>
-          {status === 'submitted' ? (
-            <StopButton stop={stop} setMessages={setMessages} />
-          ) : (
-            <PromptInputSubmit
-              status={status}
-              disabled={!input.trim() || uploadQueue.length > 0}
-              className="p-3 text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 dark:bg-sidebar-accent dark:hover:bg-sidebar-accent/80 dark:text-gray-300"
+        <PromptInput
+          className={`bg-gray-50 border border-gray-300 shadow-none transition-all duration-200 dark:bg-sidebar dark:border-sidebar-border hover:ring-1 hover:ring-primary/30 focus-within:ring-1 focus-within:ring-primary/50 ${
+            chat ? 'rounded-t-none rounded-b-3xl border-t-0' : 'rounded-3xl'
+          }`}
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (status !== 'ready') {
+              toast.error('Please wait for the model to finish its response!');
+            } else {
+              submitForm();
+            }
+          }}
+        >
+          {(attachments.length > 0 || uploadQueue.length > 0) && (
+            <div
+              data-testid="attachments-preview"
+              className="flex overflow-x-scroll flex-row gap-2 items-end px-3 py-2"
             >
-              <ArrowUpIcon size={20} />
-            </PromptInputSubmit>
+              {attachments.map((attachment) => (
+                <PreviewAttachment
+                  key={attachment.url}
+                  attachment={attachment}
+                  onRemove={() => {
+                    setAttachments((currentAttachments) =>
+                      currentAttachments.filter(
+                        (a) => a.url !== attachment.url,
+                      ),
+                    );
+                    if (fileInputRef.current) {
+                      fileInputRef.current.value = '';
+                    }
+                  }}
+                />
+              ))}
+
+              {uploadQueue.map((filename) => (
+                <PreviewAttachment
+                  key={filename}
+                  attachment={{
+                    url: '',
+                    name: filename,
+                    contentType: '',
+                  }}
+                  isUploading={true}
+                />
+              ))}
+            </div>
           )}
-        </PromptInputToolbar>
-      </PromptInput>
+
+          <PromptInputTextarea
+            data-testid="multimodal-input"
+            ref={textareaRef}
+            placeholder="Send a message..."
+            value={input}
+            onChange={handleInput}
+            minHeight={72}
+            maxHeight={200}
+            disableAutoResize={true}
+            className="text-base resize-none p-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] bg-transparent !border-0 !border-none outline-none ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none"
+            rows={1}
+            autoFocus
+          />
+          <PromptInputToolbar className="px-4 py-2 !border-t-0 !border-top-0 shadow-none dark:!border-transparent dark:border-0">
+            <PromptInputTools className="gap-2">
+              <AttachmentsButton fileInputRef={fileInputRef} status={status} />
+            </PromptInputTools>
+            {status === 'submitted' ? (
+              <StopButton stop={stop} setMessages={setMessages} />
+            ) : (
+              <PromptInputSubmit
+                status={status}
+                disabled={!input.trim() || uploadQueue.length > 0}
+                className="p-3 text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 dark:bg-sidebar-accent dark:hover:bg-sidebar-accent/80 dark:text-gray-300"
+              >
+                <ArrowUpIcon size={20} />
+              </PromptInputSubmit>
+            )}
+          </PromptInputToolbar>
+        </PromptInput>
+      </div>
     </div>
   );
 }

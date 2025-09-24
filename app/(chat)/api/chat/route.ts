@@ -47,7 +47,7 @@ import { getModeConfig } from '@/lib/ai/modes';
 import type { VisibilityType } from '@/components/visibility-selector';
 import { processMessageFiles } from '@/lib/ai/utils/file-processor';
 
-export const maxDuration = 60 * 5;
+export const maxDuration = 300; // 5 minutes
 
 let globalStreamContext: ResumableStreamContext | null = null;
 
