@@ -435,8 +435,11 @@ export async function deleteDocumentsByIdAfterTimestamp({
 
 export async function getAllUserDocuments({ userId }: { userId: string }) {
   try {
-    const documents = await db
-      .select({
+    // Get the latest version of each document by using DISTINCT ON with document.id
+    // This ensures we only get one row per document ID (the most recent one)
+    // We need to order by id first for DISTINCT ON, then by createdAt DESC to get the latest version
+    const documentsQuery = await db
+      .selectDistinctOn([document.id], {
         id: document.id,
         title: document.title,
         createdAt: document.createdAt,
@@ -447,7 +450,12 @@ export async function getAllUserDocuments({ userId }: { userId: string }) {
       })
       .from(document)
       .where(eq(document.userId, userId))
-      .orderBy(desc(document.createdAt));
+      .orderBy(document.id, desc(document.createdAt));
+
+    // Sort the final results by createdAt descending to show newest documents first
+    const documents = documentsQuery.sort(
+      (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+    );
 
     return documents.map((doc) => {
       const metadata = doc.metadata as {

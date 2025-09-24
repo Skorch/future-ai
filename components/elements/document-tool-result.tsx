@@ -123,10 +123,14 @@ export function DocumentToolResult(props: DocumentToolResultProps) {
   const getToolIcon = () => {
     switch (toolName) {
       case 'listDocuments':
-        return <FolderOpenIcon className="size-4 text-muted-foreground shrink-0" />;
+        return (
+          <FolderOpenIcon className="size-4 text-muted-foreground shrink-0" />
+        );
       case 'loadDocument':
       case 'loadDocuments':
-        return <FileTextIcon className="size-4 text-muted-foreground shrink-0" />;
+        return (
+          <FileTextIcon className="size-4 text-muted-foreground shrink-0" />
+        );
       default:
         return <FileIcon className="size-4 text-muted-foreground shrink-0" />;
     }
@@ -189,7 +193,8 @@ export function DocumentToolResult(props: DocumentToolResultProps) {
       <CollapsibleContent className="data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2 text-popover-foreground outline-none data-[state=closed]:animate-out data-[state=open]:animate-in">
         <div className="px-3 pb-3 space-y-3">
           {/* Error Display */}
-          {('error' in result && result.error) || ('message' in result && result.message && 'error' in result) ? (
+          {('error' in result && result.error) ||
+          ('message' in result && result.message && 'error' in result) ? (
             <div className="p-3 bg-destructive/10 text-destructive rounded-md flex items-start gap-2">
               <AlertCircleIcon className="size-4 mt-0.5 shrink-0" />
               <div className="text-sm">
@@ -247,14 +252,16 @@ export function DocumentToolResult(props: DocumentToolResultProps) {
               Documents
             </div>
             <div className="space-y-2">
-              {listResult.documents.map((doc) => (
+              {listResult.documents.map((doc, index) => (
                 <div
-                  key={doc.id}
+                  key={`${doc.id}-${index}`}
                   className="p-2 rounded-md border bg-card/50 hover:bg-card/80 transition-colors"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm truncate">{doc.title}</div>
+                      <div className="font-medium text-sm truncate">
+                        {doc.title}
+                      </div>
                       <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
                         {doc.documentType && (
                           <Badge variant="outline" className="text-xs">
@@ -300,7 +307,8 @@ export function DocumentToolResult(props: DocumentToolResultProps) {
           </div>
           <div className="space-y-1">
             <div className="text-sm">
-              <span className="text-muted-foreground">Title:</span> {loadResult.title}
+              <span className="text-muted-foreground">Title:</span>{' '}
+              {loadResult.title}
             </div>
             {loadResult.documentType && (
               <div className="text-sm">
@@ -313,7 +321,9 @@ export function DocumentToolResult(props: DocumentToolResultProps) {
             {loadResult.id && (
               <div className="text-sm">
                 <span className="text-muted-foreground">ID:</span>{' '}
-                <span className="font-mono text-xs">{loadResult.id.substring(0, 12)}...</span>
+                <span className="font-mono text-xs">
+                  {loadResult.id.substring(0, 12)}...
+                </span>
               </div>
             )}
           </div>
@@ -348,10 +358,14 @@ export function DocumentToolResult(props: DocumentToolResultProps) {
                     <div className="flex-1 bg-muted rounded-full h-2">
                       <div
                         className="bg-primary rounded-full h-2 transition-all"
-                        style={{ width: `${loadResult.loadInfo.percentLoaded}%` }}
+                        style={{
+                          width: `${loadResult.loadInfo.percentLoaded}%`,
+                        }}
                       />
                     </div>
-                    <span className="text-xs">{loadResult.loadInfo.percentLoaded}%</span>
+                    <span className="text-xs">
+                      {loadResult.loadInfo.percentLoaded}%
+                    </span>
                   </div>
                 </div>
               )}
@@ -361,7 +375,9 @@ export function DocumentToolResult(props: DocumentToolResultProps) {
 
         {loadResult.loadMessage && (
           <div className="p-2 bg-muted/30 rounded-md">
-            <div className="text-sm text-muted-foreground">{loadResult.loadMessage}</div>
+            <div className="text-sm text-muted-foreground">
+              {loadResult.loadMessage}
+            </div>
           </div>
         )}
       </>
@@ -379,7 +395,8 @@ export function DocumentToolResult(props: DocumentToolResultProps) {
             <div className="grid grid-cols-2 gap-2 text-sm">
               <div>
                 <span className="text-muted-foreground">Loaded:</span>{' '}
-                {loadMultiResult.summary.documentsLoaded}/{loadMultiResult.summary.documentsRequested}
+                {loadMultiResult.summary.documentsLoaded}/
+                {loadMultiResult.summary.documentsRequested}
               </div>
               <div>
                 <span className="text-muted-foreground">Missing:</span>{' '}
@@ -416,14 +433,20 @@ export function DocumentToolResult(props: DocumentToolResultProps) {
               {loadMultiResult.summary.percentLoaded !== undefined && (
                 <div className="col-span-2">
                   <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground">Overall Progress:</span>
+                    <span className="text-muted-foreground">
+                      Overall Progress:
+                    </span>
                     <div className="flex-1 bg-muted rounded-full h-2">
                       <div
                         className="bg-primary rounded-full h-2 transition-all"
-                        style={{ width: `${loadMultiResult.summary.percentLoaded}%` }}
+                        style={{
+                          width: `${loadMultiResult.summary.percentLoaded}%`,
+                        }}
                       />
                     </div>
-                    <span className="text-xs">{loadMultiResult.summary.percentLoaded}%</span>
+                    <span className="text-xs">
+                      {loadMultiResult.summary.percentLoaded}%
+                    </span>
                   </div>
                 </div>
               )}
@@ -437,14 +460,16 @@ export function DocumentToolResult(props: DocumentToolResultProps) {
               Loaded Documents
             </div>
             <div className="space-y-2">
-              {loadMultiResult.documents.map((doc) => (
+              {loadMultiResult.documents.map((doc, index) => (
                 <div
-                  key={doc.id}
+                  key={`${doc.id}-${index}`}
                   className="p-2 rounded-md border bg-card/50 hover:bg-card/80 transition-colors"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm truncate">{doc.title}</div>
+                      <div className="font-medium text-sm truncate">
+                        {doc.title}
+                      </div>
                       <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
                         {doc.documentType && (
                           <Badge variant="outline" className="text-xs">
@@ -459,7 +484,9 @@ export function DocumentToolResult(props: DocumentToolResultProps) {
                               </Badge>
                             )}
                             <span>
-                              {formatTokens(doc.loadInfo.estimatedTokensLoaded || 0)}
+                              {formatTokens(
+                                doc.loadInfo.estimatedTokensLoaded || 0,
+                              )}
                             </span>
                           </>
                         )}
@@ -474,7 +501,9 @@ export function DocumentToolResult(props: DocumentToolResultProps) {
 
         {loadMultiResult.loadMessage && (
           <div className="p-2 bg-muted/30 rounded-md">
-            <div className="text-sm text-muted-foreground">{loadMultiResult.loadMessage}</div>
+            <div className="text-sm text-muted-foreground">
+              {loadMultiResult.loadMessage}
+            </div>
           </div>
         )}
       </>
