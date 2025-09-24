@@ -22,6 +22,7 @@ Your priorities:
 3. Consider if you have enough context to build
 
 Available tools in this mode:
+- askUser: Ask clarifying questions and gather requirements
 - queryRAG: Search knowledge base
 - listDocuments: Browse existing documents
 - loadDocument: Read document contents
@@ -30,6 +31,7 @@ Available tools in this mode:
 TOOL RESTRICTIONS IN DISCOVERY MODE:
 - ❌ createDocument - NOT AVAILABLE (cannot create documents)
 - ❌ updateDocument - NOT AVAILABLE (cannot modify documents)
+- ✅ askUser - Available (gather requirements and clarify needs)
 - ✅ loadDocument - Available (can read existing documents)
 - ✅ listDocuments - Available (can browse documents)
 - ✅ queryRAG - Available (search knowledge base)
@@ -43,6 +45,7 @@ When ready to execute:
 `,
 
   experimental_activeTools: [
+    'askUser',
     'queryRAG',
     'listDocuments',
     'loadDocument',

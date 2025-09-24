@@ -30,6 +30,7 @@ import { listDocuments } from '@/lib/ai/tools/list-documents';
 import { loadDocument } from '@/lib/ai/tools/load-document';
 import { loadDocuments } from '@/lib/ai/tools/load-documents';
 import { setMode } from '@/lib/ai/tools/set-mode';
+import { askUser } from '@/lib/ai/tools/ask-user';
 import { isProductionEnvironment } from '@/lib/constants';
 import { myProvider } from '@/lib/ai/providers';
 import { postRequestBodySchema, type PostRequestBody } from './schema';
@@ -432,6 +433,7 @@ export async function POST(request: Request) {
                     listDocuments: listDocuments({ session }),
                     loadDocument: loadDocument({ session }),
                     loadDocuments: loadDocuments({ session }),
+                    askUser: askUser({ dataStream }),
                   },
 
               // Add prepareStep for dynamic mode and tool management
@@ -442,6 +444,7 @@ export async function POST(request: Request) {
                 stepCountIs(30), // Max steps to prevent infinite loops
                 // Don't stop on setMode - let prepareStep handle seamless transitions
                 hasToolCall('setComplete'), // Stop when marking complete/incomplete
+                hasToolCall('askUser'), // Stop when user input is required
               ],
 
               // Keep existing options that shouldn't be overridden

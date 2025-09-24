@@ -28,6 +28,7 @@ ${context.todoList
 }
 
 TOOL USAGE IN BUILD MODE:
+- ✅ askUser - Get clarification and validate decisions
 - ✅ createDocument - Use to generate deliverables
 - ✅ updateDocument - Use to refine artifacts
 - ✅ requestSuggestions - Get feedback on documents
@@ -44,6 +45,7 @@ IMPORTANT: After mode switches, continue working - the conversation doesn't stop
 `,
 
   experimental_activeTools: [
+    'askUser',
     'queryRAG',
     'listDocuments',
     'loadDocument',
