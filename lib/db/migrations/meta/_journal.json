@@ -57,6 +57,13 @@
       "when": 1757968520251,
       "tag": "0007_famous_warpath",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1758678497353,
+      "tag": "0008_cultured_archangel",
+      "breakpoints": true
     }
   ]
 }
