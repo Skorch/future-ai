@@ -7,6 +7,12 @@ import { updateChatMode } from '@/lib/db/queries';
 const setModeSchema = z.object({
   mode: z.enum(['discovery', 'build']).describe('The mode to switch to'),
   reason: z.string().describe('Brief explanation for the mode change'),
+  nextMessage: z
+    .string()
+    .optional()
+    .describe(
+      'Optional message to continue with after mode switch for seamless continuity',
+    ),
 });
 
 interface SetModeProps {
@@ -37,11 +43,16 @@ The mode change will:
 1. Stop current execution
 2. Update available tools
 3. Change system prompt focus
-4. Allow fresh context on next message`,
+4. Allow fresh context on next message
+5. Optionally auto-send continuation message if provided`,
 
     inputSchema: setModeSchema,
 
-    execute: async ({ mode, reason }: z.infer<typeof setModeSchema>) => {
+    execute: async ({
+      mode,
+      reason,
+      nextMessage,
+    }: z.infer<typeof setModeSchema>) => {
       // Update database directly (per requirement)
       await updateChatMode({ id: chatId, mode });
 
@@ -56,11 +67,21 @@ The mode change will:
         transient: true,
       });
 
+      // If continuation requested, emit it AFTER DB update is complete
+      if (nextMessage) {
+        dataStream.write({
+          type: 'data-continuationRequest',
+          data: { message: nextMessage },
+          transient: false, // Persist for handler
+        });
+      }
+
       // Return structured result that triggers stopWhen
       return {
         success: true,
         mode,
         reason,
+        continuation: nextMessage || null,
         message: `Switching to ${mode} mode: ${reason}`,
       };
     },

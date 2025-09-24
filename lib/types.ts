@@ -50,6 +50,9 @@ export type CustomUIDataTypes = {
     reason: string;
     timestamp: string;
   };
+  continuationRequest: {
+    message: string;
+  };
 };
 
 export type ChatMessage = UIMessage<

@@ -384,12 +384,12 @@ export async function POST(request: Request) {
             const {
               system: modeSystemPrompt,
               model: _model, // We use modelInstance instead
-              stopWhen, // Extract but don't spread due to type issues
+              stopWhen, // Extract separately to add conditionally
               ...restModeConfig
             } = modeConfig;
 
             const streamOptions: Parameters<typeof streamText>[0] = {
-              // Spread safe mode config (excluding stopWhen)
+              // Spread safe mode config (excluding stopWhen which is added later)
               ...restModeConfig,
 
               // Override with actual model instance
@@ -504,19 +504,11 @@ export async function POST(request: Request) {
               tools: Object.keys(streamOptions.tools || {}),
             });
 
-            // Call streamText - handle stopWhen separately due to type complexity
-            // The AI SDK's StopCondition type is complex and we can't properly type it
-            // when coming from our mode config, so we build the full options inline
-            result = streamText(
-              stopWhen
-                ? {
-                    ...streamOptions,
-                    stopWhen: stopWhen as Parameters<
-                      typeof streamText
-                    >[0]['stopWhen'],
-                  }
-                : streamOptions,
-            );
+            // Call streamText with all options including stopWhen
+            result = streamText({
+              ...streamOptions,
+              ...(stopWhen && { stopWhen }),
+            });
           } catch (streamError: unknown) {
             console.error(
               '\n==================== STREAM ERROR ====================',

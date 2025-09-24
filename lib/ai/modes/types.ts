@@ -1,4 +1,5 @@
 import type { ModeContext } from '@/lib/db/schema';
+import type { StopCondition } from 'ai';
 
 // Mode configuration that mirrors streamText API parameters
 export interface ModeConfig {
@@ -6,9 +7,8 @@ export interface ModeConfig {
   model: string;
   system: (context: ModeContext) => string; // Dynamic system prompt
   experimental_activeTools: string[]; // Still experimental in v5
-  // stopWhen will be properly typed when used in streamText
-  // Using unknown here as the generic StopCondition<T> depends on the tool set
-  stopWhen?: unknown;
+  // biome-ignore lint/suspicious/noExplicitAny: StopCondition generic depends on runtime tool set
+  stopWhen?: StopCondition<any> | Array<StopCondition<any>>;
 
   // Optional streamText parameters
   temperature?: number;
