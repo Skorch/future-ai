@@ -29,6 +29,16 @@ export const chat = pgTable('Chat', {
   visibility: varchar('visibility', { enum: ['public', 'private'] })
     .notNull()
     .default('private'),
+
+  // Mode system columns
+  mode: text('mode').default('discovery'),
+  modeSetAt: timestamp('mode_set_at').defaultNow(),
+
+  // Future milestone columns (can be null for now)
+  goal: text('goal'),
+  goalSetAt: timestamp('goal_set_at'),
+  todoList: text('todo_list'), // JSON string
+  todoListUpdatedAt: timestamp('todo_list_updated_at'),
 });
 
 export type Chat = InferSelectModel<typeof chat>;
@@ -163,6 +173,31 @@ export const suggestion = pgTable(
 );
 
 export type Suggestion = InferSelectModel<typeof suggestion>;
+
+// Mode-Based Agent System
+export type ChatMode = 'discovery' | 'build';
+
+export interface ModeContext {
+  currentMode: ChatMode;
+  goal: string | null;
+  todoList: Todo[] | null;
+  modeSetAt: Date;
+  messageCount: number;
+}
+
+export interface Todo {
+  title: string;
+  description: string;
+  status: 'pending' | 'in_progress' | 'completed' | 'failed';
+  order: number;
+  attempts?: number;
+}
+
+export interface TodoList {
+  version: number;
+  todos: Todo[];
+  lastUpdated: Date;
+}
 
 export const stream = pgTable(
   'Stream',

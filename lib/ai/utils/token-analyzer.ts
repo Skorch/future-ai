@@ -25,7 +25,7 @@ export function estimateTokens(text: string): number {
 export function analyzeTokenUsage(
   systemPrompt: string,
   modelMessages: CoreMessage[],
-  iterationNumber?: number
+  iterationNumber?: number,
 ): TokenStats {
   let totalCharacters = 0;
   let totalEstimatedTokens = 0;
@@ -66,8 +66,14 @@ export function analyzeTokenUsage(
               : JSON.stringify(part.image).length;
           msgChars += imageSize;
           msgContent += `[IMAGE: ${imageSize} chars]`;
-        } else if ((part as any).type === 'tool-result' && (part as any).result) {
-          const toolResultSize = JSON.stringify((part as any).result).length;
+        } else if (
+          'type' in part &&
+          part.type === 'tool-result' &&
+          'result' in part
+        ) {
+          const toolResultSize = JSON.stringify(
+            (part as { result: unknown }).result,
+          ).length;
           msgChars += toolResultSize;
           msgContent += `[TOOL_RESULT: ${toolResultSize} chars]`;
         }
@@ -91,7 +97,9 @@ export function analyzeTokenUsage(
   });
 
   const modelLimit = 200000;
-  const utilizationPercent = Math.round((totalEstimatedTokens / modelLimit) * 100);
+  const utilizationPercent = Math.round(
+    (totalEstimatedTokens / modelLimit) * 100,
+  );
   const isOverLimit = totalEstimatedTokens > modelLimit;
   const isApproachingLimit = totalEstimatedTokens > 150000;
 
@@ -99,7 +107,7 @@ export function analyzeTokenUsage(
   const largestMessages = [...messageStats]
     .sort((a, b) => b.estimatedTokens - a.estimatedTokens)
     .slice(0, 5)
-    .map(msg => ({
+    .map((msg) => ({
       index: msg.index,
       role: msg.role,
       tokens: msg.estimatedTokens, // Rename estimatedTokens to tokens
@@ -120,45 +128,67 @@ export function analyzeTokenUsage(
   };
 }
 
-export function logTokenStats(stats: TokenStats, iterationNumber?: number): void {
+export function logTokenStats(
+  stats: TokenStats,
+  iterationNumber?: number,
+): void {
   const iteration = iterationNumber || 'Current';
 
-  console.log(`\n========== TOKEN USAGE STATS (Iteration: ${iteration}) ==========`);
-  console.log(`Total Tokens: ${stats.totalTokens.toLocaleString()} / 200,000 (${stats.utilizationPercent}% used)`);
+  console.log(
+    `\n========== TOKEN USAGE STATS (Iteration: ${iteration}) ==========`,
+  );
+  console.log(
+    `Total Tokens: ${stats.totalTokens.toLocaleString()} / 200,000 (${stats.utilizationPercent}% used)`,
+  );
   console.log(`Remaining: ${stats.remaining.toLocaleString()} tokens`);
-  console.log(`Status: ${stats.isOverLimit ? '⛔ OVER LIMIT' : stats.isApproachingLimit ? '⚠️  APPROACHING LIMIT' : '✅ OK'}`);
+  console.log(
+    `Status: ${stats.isOverLimit ? '⛔ OVER LIMIT' : stats.isApproachingLimit ? '⚠️  APPROACHING LIMIT' : '✅ OK'}`,
+  );
   console.log('Breakdown:');
-  console.log(`  - System Prompt: ${stats.systemPromptTokens.toLocaleString()} tokens`);
+  console.log(
+    `  - System Prompt: ${stats.systemPromptTokens.toLocaleString()} tokens`,
+  );
   console.log(`  - User Messages: ${stats.userTokens.toLocaleString()} tokens`);
-  console.log(`  - Assistant Messages: ${stats.assistantTokens.toLocaleString()} tokens`);
+  console.log(
+    `  - Assistant Messages: ${stats.assistantTokens.toLocaleString()} tokens`,
+  );
   console.log(`  - Total Messages: ${stats.messageCount}`);
   console.log('=====================================================\n');
 
   if (stats.isOverLimit) {
-    console.error('\n⛔⛔⛔ TOKEN LIMIT EXCEEDED - REQUEST WILL LIKELY FAIL ⛔⛔⛔');
+    console.error(
+      '\n⛔⛔⛔ TOKEN LIMIT EXCEEDED - REQUEST WILL LIKELY FAIL ⛔⛔⛔',
+    );
     console.error('TOP 5 LARGEST MESSAGES:');
     stats.largestMessages.forEach((msg, idx) => {
-      console.error(`  ${idx + 1}. Message #${msg.index} (${msg.role}): ${msg.tokens.toLocaleString()} tokens`);
+      console.error(
+        `  ${idx + 1}. Message #${msg.index} (${msg.role}): ${msg.tokens.toLocaleString()} tokens`,
+      );
       console.error(`     Preview: "${msg.preview}..."`);
     });
     console.error('\nRECOMMENDATIONS:');
     console.error('  1. Start a new chat');
     console.error('  2. Use loadDocument with maxChars parameter');
     console.error('  3. Load fewer documents at once');
-    console.error('⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔\n');
+    console.error(
+      '⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔\n',
+    );
   }
 }
 
 export function logTokenGrowth(
   beforeTokens: number,
   afterTokens: number,
-  operation: string
+  operation: string,
 ): void {
   const growth = afterTokens - beforeTokens;
-  const percentGrowth = beforeTokens > 0 ? Math.round((growth / beforeTokens) * 100) : 0;
+  const percentGrowth =
+    beforeTokens > 0 ? Math.round((growth / beforeTokens) * 100) : 0;
 
   console.log(`[Token Growth] ${operation}:`);
   console.log(`  Before: ${beforeTokens.toLocaleString()} tokens`);
   console.log(`  After: ${afterTokens.toLocaleString()} tokens`);
-  console.log(`  Growth: +${growth.toLocaleString()} tokens (${percentGrowth}% increase)`);
+  console.log(
+    `  Growth: +${growth.toLocaleString()} tokens (${percentGrowth}% increase)`,
+  );
 }

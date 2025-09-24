@@ -27,6 +27,7 @@ import {
   vote,
   type DBMessage,
   type Chat,
+  type ChatMode,
   stream,
 } from './schema';
 import { syncDocumentToRAG, deleteFromRAG } from '@/lib/rag/sync';
@@ -800,4 +801,37 @@ export async function deleteAllUserData(userId: string): Promise<void> {
       'Failed to delete user data',
     );
   }
+}
+
+// Mode System DAL Functions
+export async function updateChatMode({
+  id,
+  mode,
+}: {
+  id: string;
+  mode: ChatMode;
+}) {
+  const [updatedChat] = await db
+    .update(chat)
+    .set({
+      mode,
+      modeSetAt: new Date(),
+    })
+    .where(eq(chat.id, id))
+    .returning();
+
+  return updatedChat;
+}
+
+export async function getChatMode(id: string): Promise<ChatMode | undefined> {
+  const result = await db
+    .select({
+      mode: chat.mode,
+      modeSetAt: chat.modeSetAt,
+    })
+    .from(chat)
+    .where(eq(chat.id, id))
+    .limit(1);
+
+  return result[0]?.mode as ChatMode | undefined;
 }

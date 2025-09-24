@@ -7,3 +7,4 @@ export { queryRAG } from './query-rag';
 export { listDocuments } from './list-documents';
 export { loadDocument } from './load-document';
 export { loadDocuments } from './load-documents';
+export { setMode } from './set-mode';

@@ -24,9 +24,7 @@ export async function processMessageFiles(
 ): Promise<ChatMessage[]> {
   console.log('[FileProcessor] Processing messages', {
     messageCount: messages.length,
-    hasFileParts: messages.some((m) =>
-      m.parts?.some((p: any) => p.type === 'file'),
-    ),
+    hasFileParts: messages.some((m) => m.parts?.some((p) => p.type === 'file')),
   });
 
   return messages.map((message) => {

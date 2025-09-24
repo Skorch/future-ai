@@ -70,6 +70,10 @@ export function DataStreamHandler() {
               status: 'idle',
             };
 
+          case 'data-modeChanged':
+            // Mode changes are handled by ModeIndicator component
+            return draftArtifact;
+
           default:
             return draftArtifact;
         }

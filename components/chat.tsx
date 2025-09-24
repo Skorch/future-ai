@@ -5,7 +5,7 @@ import { useChat } from '@ai-sdk/react';
 import { useEffect, useState } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 import { ChatHeader } from '@/components/chat-header';
-import type { Vote } from '@/lib/db/schema';
+import type { Vote, Chat as ChatType } from '@/lib/db/schema';
 import { fetcher, fetchWithErrorHandlers, generateUUID } from '@/lib/utils';
 import { Artifact } from './artifact';
 import { MultimodalInput } from './multimodal-input';
@@ -22,23 +22,24 @@ import { useAutoResume } from '@/hooks/use-auto-resume';
 import { ChatSDKError } from '@/lib/errors';
 import type { Attachment, ChatMessage } from '@/lib/types';
 import { useDataStream } from './data-stream-provider';
+import { ModeIndicator } from './mode-indicator';
 
 export function Chat({
   id,
   initialMessages,
-  initialChatModel,
   initialVisibilityType,
   isReadonly,
   session,
   autoResume,
+  chat,
 }: {
   id: string;
   initialMessages: ChatMessage[];
-  initialChatModel: string;
   initialVisibilityType: VisibilityType;
   isReadonly: boolean;
   session: Session;
   autoResume: boolean;
+  chat?: ChatType | null;
 }) {
   const { visibilityType } = useChatVisibility({
     chatId: id,
@@ -49,8 +50,6 @@ export function Chat({
   const { setDataStream } = useDataStream();
 
   const [input, setInput] = useState<string>('');
-  const [selectedChatModel, setSelectedChatModel] =
-    useState<string>(initialChatModel);
 
   const {
     messages,
@@ -73,7 +72,6 @@ export function Chat({
           body: {
             id,
             message: messages.at(-1),
-            selectedChatModel: selectedChatModel,
             selectedVisibilityType: visibilityType,
             ...body,
           },
@@ -90,10 +88,12 @@ export function Chat({
       console.error('[Chat] Error received:', error);
 
       // Check for prompt length errors
-      const errorMessage = error?.message || error?.toString() || 'An error occurred';
-      const isPromptTooLong = errorMessage.includes('prompt is too long') ||
-                              errorMessage.includes('AI_APICallError') ||
-                              errorMessage.includes('tokens') && errorMessage.includes('maximum');
+      const errorMessage =
+        error?.message || error?.toString() || 'An error occurred';
+      const isPromptTooLong =
+        errorMessage.includes('prompt is too long') ||
+        errorMessage.includes('AI_APICallError') ||
+        (errorMessage.includes('tokens') && errorMessage.includes('maximum'));
 
       if (isPromptTooLong) {
         // Display prominent error for prompt length issues
@@ -108,10 +108,12 @@ export function Chat({
           {
             id: generateUUID(),
             role: 'assistant',
-            parts: [{
-              type: 'text',
-              text: `⚠️ ${errorMessage}\n\nThe conversation has too much content. Consider:\n• Starting a new chat\n• Using document tools to load only specific documents\n• Loading documents with maxChars parameter to limit content`
-            }],
+            parts: [
+              {
+                type: 'text',
+                text: `⚠️ ${errorMessage}\n\nThe conversation has too much content. Consider:\n• Starting a new chat\n• Using document tools to load only specific documents\n• Loading documents with maxChars parameter to limit content`,
+              },
+            ],
           },
         ]);
       } else if (error instanceof ChatSDKError) {
@@ -170,6 +172,14 @@ export function Chat({
           session={session}
         />
 
+        {chat && (
+          <ModeIndicator
+            initialMode={(chat.mode as 'discovery' | 'build') || 'discovery'}
+            goal={chat.goal}
+            todos={chat.todoList}
+          />
+        )}
+
         <Messages
           chatId={id}
           status={status}
@@ -195,8 +205,6 @@ export function Chat({
               setMessages={setMessages}
               sendMessage={sendMessage}
               selectedVisibilityType={visibilityType}
-              selectedModelId={selectedChatModel}
-              onModelChange={setSelectedChatModel}
             />
           )}
         </div>
@@ -217,7 +225,6 @@ export function Chat({
         votes={votes}
         isReadonly={isReadonly}
         selectedVisibilityType={visibilityType}
-        selectedModelId={selectedChatModel}
       />
     </>
   );

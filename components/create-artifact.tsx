@@ -5,7 +5,7 @@ import type { UIArtifact } from './artifact';
 import type { ChatMessage, CustomUIDataTypes } from '@/lib/types';
 import type { DataUIPart } from 'ai';
 
-export type ArtifactActionContext<M = any> = {
+export type ArtifactActionContext<M = Record<string, unknown>> = {
   content: string;
   handleVersionChange: (type: 'next' | 'prev' | 'toggle' | 'latest') => void;
   currentVersionIndex: number;
@@ -15,7 +15,7 @@ export type ArtifactActionContext<M = any> = {
   setMetadata: Dispatch<SetStateAction<M>>;
 };
 
-type ArtifactAction<M = any> = {
+type ArtifactAction<M = Record<string, unknown>> = {
   icon: ReactNode;
   label?: string;
   description: string;
@@ -33,7 +33,7 @@ export type ArtifactToolbarItem = {
   onClick: (context: ArtifactToolbarContext) => void;
 };
 
-interface ArtifactContent<M = any> {
+interface ArtifactContent<M = Record<string, unknown>> {
   title: string;
   content: string;
   mode: 'edit' | 'diff';
@@ -49,12 +49,12 @@ interface ArtifactContent<M = any> {
   setMetadata: Dispatch<SetStateAction<M>>;
 }
 
-interface InitializeParameters<M = any> {
+interface InitializeParameters<M = Record<string, unknown>> {
   documentId: string;
   setMetadata: Dispatch<SetStateAction<M>>;
 }
 
-type ArtifactConfig<T extends string, M = any> = {
+type ArtifactConfig<T extends string, M = Record<string, unknown>> = {
   kind: T;
   description: string;
   content: ComponentType<ArtifactContent<M>>;
@@ -68,7 +68,7 @@ type ArtifactConfig<T extends string, M = any> = {
   }) => void;
 };
 
-export class Artifact<T extends string, M = any> {
+export class Artifact<T extends string, M = Record<string, unknown>> {
   readonly kind: T;
   readonly description: string;
   readonly content: ComponentType<ArtifactContent<M>>;
@@ -87,7 +87,8 @@ export class Artifact<T extends string, M = any> {
     this.content = config.content;
     this.actions = config.actions || [];
     this.toolbar = config.toolbar || [];
-    this.initialize = config.initialize || (async () => ({}));
+    // @ts-expect-error - Default initialize function type doesn't match generic M constraint
+    this.initialize = config.initialize || (async () => {});
     this.onStreamPart = config.onStreamPart;
   }
 }

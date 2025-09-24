@@ -42,8 +42,10 @@ function PureArtifactActions({
     currentVersionIndex,
     isCurrentVersion,
     mode,
-    metadata,
-    setMetadata,
+    metadata: metadata as Record<string, unknown>,
+    setMetadata: setMetadata as Dispatch<
+      SetStateAction<Record<string, unknown>>
+    >,
   };
 
   return (
@@ -61,6 +63,7 @@ function PureArtifactActions({
                 setIsLoading(true);
 
                 try {
+                  // @ts-expect-error - Generic metadata type mismatch with specific artifact types
                   await Promise.resolve(action.onClick(actionContext));
                 } catch (error) {
                   toast.error('Failed to execute action');
@@ -72,7 +75,8 @@ function PureArtifactActions({
                 isLoading || artifact.status === 'streaming'
                   ? true
                   : action.isDisabled
-                    ? action.isDisabled(actionContext)
+                    ? // @ts-expect-error - Generic metadata type mismatch with specific artifact types
+                      action.isDisabled(actionContext)
                     : false
               }
             >

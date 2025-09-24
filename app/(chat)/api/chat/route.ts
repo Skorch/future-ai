@@ -3,7 +3,6 @@ import {
   createUIMessageStream,
   JsonToSseTransformStream,
   smoothStream,
-  stepCountIs,
   streamText,
 } from 'ai';
 import {
@@ -30,6 +29,7 @@ import { queryRAG } from '@/lib/ai/tools/query-rag';
 import { listDocuments } from '@/lib/ai/tools/list-documents';
 import { loadDocument } from '@/lib/ai/tools/load-document';
 import { loadDocuments } from '@/lib/ai/tools/load-documents';
+import { setMode } from '@/lib/ai/tools/set-mode';
 import { isProductionEnvironment } from '@/lib/constants';
 import { myProvider } from '@/lib/ai/providers';
 import { postRequestBodySchema, type PostRequestBody } from './schema';
@@ -41,7 +41,9 @@ import {
 import { after } from 'next/server';
 import { ChatSDKError } from '@/lib/errors';
 import type { ChatMessage } from '@/lib/types';
-import { chatModels, type ChatModel } from '@/lib/ai/models';
+import { DEFAULT_CHAT_MODEL } from '@/lib/ai/models';
+import type { ChatMode, ModeContext, Todo, TodoList } from '@/lib/db/schema';
+import { getModeConfig } from '@/lib/ai/modes';
 import type { VisibilityType } from '@/components/visibility-selector';
 import { processMessageFiles } from '@/lib/ai/utils/file-processor';
 
@@ -55,9 +57,8 @@ export function getStreamContext() {
       globalStreamContext = createResumableStreamContext({
         waitUntil: after,
       });
-      // biome-ignore lint/suspicious/noExplicitAny: Error type is unknown
-    } catch (error: any) {
-      if (error.message.includes('REDIS_URL')) {
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('REDIS_URL')) {
         console.log(
           ' > Resumable streams are disabled due to missing REDIS_URL',
         );
@@ -85,12 +86,10 @@ export async function POST(request: Request) {
     const {
       id,
       message,
-      selectedChatModel,
       selectedVisibilityType,
     }: {
       id: string;
       message: ChatMessage;
-      selectedChatModel: ChatModel['id'];
       selectedVisibilityType: VisibilityType;
     } = requestBody;
 
@@ -99,7 +98,6 @@ export async function POST(request: Request) {
       messageRole: message.role,
       partsCount: message.parts?.length || 0,
       hasFileParts: message.parts?.some((p) => p.type === 'file'),
-      selectedModel: selectedChatModel,
     });
 
     const session = await auth();
@@ -129,7 +127,44 @@ export async function POST(request: Request) {
       }
     }
 
+    // === MODE SYSTEM INTEGRATION ===
+
+    // Count messages for context
     const messagesFromDb = await getMessagesByChatId({ id });
+    const userMessageCount = messagesFromDb.filter(
+      (m) => m.role === 'user',
+    ).length;
+
+    // Load mode from database or set initial mode
+    const currentMode: ChatMode = (chat?.mode as ChatMode) || 'discovery';
+
+    // Parse existing todos from database (for future milestones)
+    let todos: Todo[] = [];
+    if (chat?.todoList) {
+      try {
+        const todoList: TodoList = JSON.parse(chat.todoList);
+        todos = todoList.todos || [];
+      } catch (e) {
+        console.error('Failed to parse todo list:', e);
+      }
+    }
+
+    // Create mode context for system prompt
+    const modeContext: ModeContext = {
+      currentMode,
+      goal: chat?.goal || null,
+      todoList: todos,
+      modeSetAt: chat?.modeSetAt || new Date(),
+      messageCount: userMessageCount,
+    };
+
+    // Get mode-specific configuration
+    const modeConfig = getModeConfig(currentMode);
+
+    console.log(
+      `[Mode System] Current mode: ${currentMode}, Goal: ${modeContext.goal ? 'Set' : 'Not set'}, Todos: ${todos.length}`,
+    );
+
     const uiMessages = [...convertToUIMessages(messagesFromDb), message];
 
     const { longitude, latitude, city, country } = geolocation(request);
@@ -157,57 +192,33 @@ export async function POST(request: Request) {
     const streamId = generateUUID();
     await createStreamId({ streamId, chatId: id });
 
-    // Get model configuration to check for reasoning capabilities
-    const modelConfig = chatModels.find((m) => m.id === selectedChatModel);
-    const isReasoningModel = modelConfig?.supportsReasoning;
+    // Mode will determine model selection later
+    // For now, use default model
+    const selectedModel = DEFAULT_CHAT_MODEL;
 
-    // All models are now Anthropic, which supports tools with reasoning
+    // All models are now Anthropic, which supports tools
     const shouldDisableTools = false;
-
-    // Only add provider options for models with native reasoning support
-    // Thinking budget must be subtracted from the model's max output capacity
-    const thinkingBudget = 2000; // 6k tokens for thinking
-    const providerOptions = modelConfig?.supportsReasoning
-      ? {
-          anthropic: {
-            thinking: {
-              type: 'enabled' as const,
-              budgetTokens: thinkingBudget,
-            },
-          },
-        }
-      : undefined;
-
-    console.log('[ChatRoute] Provider options for thinking model:', {
-      isReasoningModel,
-      providerOptions: JSON.stringify(providerOptions, null, 2),
-      modelConfig: modelConfig?.id,
-      supportsReasoning: modelConfig?.supportsReasoning,
-    });
 
     // Process messages BEFORE creating the stream so it's available in onFinish
     const processedMessages = await processMessageFiles(uiMessages);
 
     // Calculate token usage BEFORE creating the stream
     const systemPromptText = systemPrompt({
-      selectedChatModel,
       requestHints,
     });
 
     const modelMessages = convertToModelMessages(processedMessages);
 
     // Analyze token usage before streaming
-    const userMessageCount = modelMessages.filter(
-      (m) => m.role === 'user',
-    ).length;
+    const userMsgCount = modelMessages.filter((m) => m.role === 'user').length;
     const tokenStats = analyzeTokenUsage(
       systemPromptText,
       modelMessages,
-      userMessageCount,
+      userMsgCount,
     );
 
     // Log token stats for every call
-    logTokenStats(tokenStats, userMessageCount);
+    logTokenStats(tokenStats, userMsgCount);
 
     // Store initial token count for tracking growth
     let currentTokenCount = tokenStats.totalTokens;
@@ -242,7 +253,7 @@ export async function POST(request: Request) {
 
           // System prompt already calculated above
           // const systemPromptText = systemPrompt({
-          //   selectedChatModel,
+          //   selectedModel,
           //   requestHints,
           // });
 
@@ -261,7 +272,7 @@ export async function POST(request: Request) {
 
           console.log('[ChatRoute] Starting streamText', {
             messagesCount: processedMessages.length,
-            model: selectedChatModel,
+            model: selectedModel,
             toolsEnabled: !shouldDisableTools,
             activeToolsList: activeTools,
             systemPromptLength: systemPromptText.length,
@@ -283,9 +294,9 @@ export async function POST(request: Request) {
 
           // Log model info for debugging
           console.log('[ChatRoute] Model configuration:', {
-            model: selectedChatModel,
-            isReasoningModel,
-            thinkingBudget: isReasoningModel ? thinkingBudget : 0,
+            model: modeConfig.model || selectedModel,
+            mode: currentMode,
+            activeTools: modeConfig.experimental_activeTools?.length || 0,
             contextLimit: 200000,
           });
 
@@ -355,72 +366,49 @@ export async function POST(request: Request) {
           });
 
           console.log(
-            '[ChatRoute] About to call streamText with model:',
-            selectedChatModel,
+            '[ChatRoute] About to call streamText with mode-based model:',
+            modeConfig.model || selectedModel,
           );
           console.log(
             '[ChatRoute] ANTHROPIC_API_KEY present:',
             !!process.env.ANTHROPIC_API_KEY,
           );
 
-          const modelInstance = myProvider.languageModel(selectedChatModel);
-          // Debug logging - these properties are internal to the AI SDK
-          const debugModel = modelInstance as unknown as {
-            constructor?: { name?: string };
-            doGenerate?: unknown;
-            doStream?: unknown;
-            modelId?: string;
-            provider?: string;
-          };
-          console.log('[ChatRoute] Model instance:', {
-            type: typeof modelInstance,
-            constructor: debugModel?.constructor?.name,
-            hasDoGenerate: typeof debugModel?.doGenerate,
-            hasDoStream: typeof debugModel?.doStream,
-            modelId: debugModel?.modelId,
-            provider: debugModel?.provider,
-            keys: modelInstance ? Object.keys(modelInstance) : 'null',
-          });
-
-          // Calculate max output tokens based on model capacity
-          let maxOutputTokens: number | undefined = undefined;
-
-          if (isReasoningModel) {
-            // For thinking models, we need to subtract the thinking budget from max capacity
-            // Opus 4.1: 32k total capacity
-            // Sonnet 4: 64k total capacity (though we'll be conservative)
-            const isOpus = selectedChatModel.includes('opus');
-            const modelMaxCapacity = isOpus ? 25000 : 50000;
-
-            // Max output = total capacity - thinking budget
-            maxOutputTokens = modelMaxCapacity - thinkingBudget;
-
-            console.log(
-              '[ChatRoute] Thinking model output token calculation:',
-              {
-                model: selectedChatModel,
-                isOpus,
-                totalCapacity: modelMaxCapacity,
-                thinkingBudget: thinkingBudget,
-                maxOutputTokens: maxOutputTokens,
-              },
-            );
-          }
+          const modelInstance = myProvider.languageModel(
+            modeConfig.model || selectedModel,
+          );
 
           let result: ReturnType<typeof streamText>;
           try {
+            // Extract specific props from modeConfig
+            const {
+              system: modeSystemPrompt,
+              model: _model, // We use modelInstance instead
+              stopWhen, // Extract but don't spread due to type issues
+              ...restModeConfig
+            } = modeConfig;
+
             const streamOptions: Parameters<typeof streamText>[0] = {
+              // Spread safe mode config (excluding stopWhen)
+              ...restModeConfig,
+
+              // Override with actual model instance
               model: modelInstance,
-              system: systemPromptText,
+
+              // Combine base prompt with mode-specific prompt
+              system: `${systemPromptText}\n\n--- MODE CONTEXT ---\n${modeSystemPrompt(modeContext)}`,
+
+              // Standard messages
               messages: modelMessages,
-              ...(maxOutputTokens && { maxOutputTokens }), // Set explicit max tokens for thinking models
-              providerOptions, // Add provider options for thinking models
-              stopWhen: stepCountIs(5),
-              experimental_activeTools: activeTools,
-              experimental_transform: smoothStream({ chunking: 'word' }),
+
+              // Tools - define all, experimental_activeTools from mode config filters them
               tools: shouldDisableTools
                 ? {}
                 : {
+                    // Add setMode tool
+                    setMode: setMode({ chatId: id, dataStream }),
+
+                    // Existing tools
                     getWeather,
                     createDocument: createDocument({ session, dataStream }),
                     updateDocument: updateDocument({ session, dataStream }),
@@ -433,6 +421,11 @@ export async function POST(request: Request) {
                     loadDocument: loadDocument({ session }),
                     loadDocuments: loadDocuments({ session }),
                   },
+
+              // experimental_activeTools from mode config (already in spread)
+
+              // Keep existing options that shouldn't be overridden
+              experimental_transform: smoothStream({ chunking: 'word' }),
               experimental_telemetry: {
                 isEnabled: isProductionEnvironment,
                 functionId: 'stream-text',
@@ -491,8 +484,8 @@ export async function POST(request: Request) {
             console.log('[ChatRoute] Full streamText options being sent:', {
               modelType: typeof streamOptions.model,
               systemLength: streamOptions.system?.length,
-              messagesCount: streamOptions.messages.length,
-              messages: streamOptions.messages.map((m) => ({
+              messagesCount: streamOptions.messages?.length || 0,
+              messages: streamOptions.messages?.map((m) => ({
                 role: m.role,
                 contentLength:
                   typeof m.content === 'string'
@@ -511,7 +504,19 @@ export async function POST(request: Request) {
               tools: Object.keys(streamOptions.tools || {}),
             });
 
-            result = streamText(streamOptions);
+            // Call streamText - handle stopWhen separately due to type complexity
+            // The AI SDK's StopCondition type is complex and we can't properly type it
+            // when coming from our mode config, so we build the full options inline
+            result = streamText(
+              stopWhen
+                ? {
+                    ...streamOptions,
+                    stopWhen: stopWhen as Parameters<
+                      typeof streamText
+                    >[0]['stopWhen'],
+                  }
+                : streamOptions,
+            );
           } catch (streamError: unknown) {
             console.error(
               '\n==================== STREAM ERROR ====================',
@@ -554,15 +559,10 @@ export async function POST(request: Request) {
                   statusCode: error?.statusCode,
                   // Log what we actually sent
                   requestDetails: {
-                    modelId: selectedChatModel,
+                    modelId: selectedModel,
                     messagesCount: modelMessages.length,
                     systemPromptLength: systemPromptText.length,
                     estimatedInputTokens: tokenStats.totalTokens,
-                    thinkingBudget: (
-                      providerOptions as {
-                        anthropic?: { thinking?: { budgetTokens?: number } };
-                      }
-                    )?.anthropic?.thinking?.budgetTokens,
                   },
                 });
 
@@ -625,7 +625,7 @@ export async function POST(request: Request) {
                 isPromptTooLong,
                 estimatedTokens: tokenStats.totalTokens,
                 modelLimit: 200000,
-                model: selectedChatModel,
+                model: selectedModel,
               },
             };
 
@@ -840,30 +840,30 @@ export async function POST(request: Request) {
           }),
         });
       },
-      // biome-ignore lint/suspicious/noExplicitAny: Error type is unknown
-      onError: (error: any) => {
-        console.error('[Chat API] Stream processing error:', {
-          message: error?.message,
-          status: error?.status,
-          statusCode: error?.statusCode,
-          cause: error?.cause,
-          stack: error?.stack,
-        });
+      onError: (error: unknown) => {
+        const errorDetails =
+          error instanceof Error
+            ? {
+                message: error.message,
+                stack: error.stack,
+                cause: error.cause,
+              }
+            : { raw: error };
+        console.error('[Chat API] Stream processing error:', errorDetails);
 
         // Check for rate limit error
-        if (
-          error?.status === 429 ||
-          error?.statusCode === 429 ||
-          error?.message?.includes('429')
-        ) {
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : 'An error occurred while processing your request';
+
+        if (errorMessage.includes('429')) {
           console.error(
             '[Chat API] Rate limit error detected. Check your Anthropic API usage.',
           );
         }
 
-        return (
-          error?.message || 'An error occurred while processing your request'
-        );
+        return errorMessage;
       },
     });
 
