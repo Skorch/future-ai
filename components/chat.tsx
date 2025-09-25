@@ -134,6 +134,11 @@ export function Chat({
 
   const [hasAppendedQuery, setHasAppendedQuery] = useState(false);
 
+  // Clear dataStream when chat id changes (navigating to new chat)
+  useEffect(() => {
+    setDataStream([]);
+  }, [id, setDataStream]);
+
   useEffect(() => {
     if (query && !hasAppendedQuery) {
       sendMessage({

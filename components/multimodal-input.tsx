@@ -404,18 +404,15 @@ function PureMultimodalInput({
       )}
 
       <div className="relative">
-        {chat && (
-          <ModeIndicator
-            initialMode={(chat.mode as 'discovery' | 'build') || 'discovery'}
-            goal={chat.goal}
-            todos={chat.todoList}
-            className="rounded-t-3xl rounded-b-none border-b-0"
-          />
-        )}
+        <ModeIndicator
+          initialMode={(chat?.mode as 'discovery' | 'build') || 'discovery'}
+          goal={chat?.goal}
+          todos={chat?.todoList}
+          className="rounded-t-3xl rounded-b-none border-b-0"
+        />
 
         <PromptInput
-          className={`bg-gray-50 border border-gray-300 shadow-none transition-all duration-200 dark:bg-sidebar dark:border-sidebar-border hover:ring-1 hover:ring-primary/30 focus-within:ring-1 focus-within:ring-primary/50 ${
-            chat ? 'rounded-t-none rounded-b-3xl border-t-0' : 'rounded-3xl'
+          className={`bg-gray-50 border border-gray-300 shadow-none transition-all duration-200 dark:bg-sidebar dark:border-sidebar-border hover:ring-1 hover:ring-primary/30 focus-within:ring-1 focus-within:ring-primary/50 rounded-t-none rounded-b-3xl border-t-0
           }`}
           onSubmit={(event) => {
             event.preventDefault();
