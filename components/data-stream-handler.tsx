@@ -32,11 +32,24 @@ export function DataStreamHandler() {
 
       setArtifact((draftArtifact) => {
         if (!draftArtifact) {
+          console.log(
+            '[DataStreamHandler] Creating new artifact from initial data',
+          );
           return { ...initialArtifactData, status: 'streaming' };
         }
 
+        console.log('[DataStreamHandler] Processing delta:', {
+          type: delta.type,
+          hasData: !!delta.data,
+          dataPreview:
+            typeof delta.data === 'string'
+              ? delta.data.substring(0, 50)
+              : delta.data,
+        });
+
         switch (delta.type) {
           case 'data-id':
+            console.log('[DataStreamHandler] Setting document ID:', delta.data);
             return {
               ...draftArtifact,
               documentId: delta.data,
@@ -44,6 +57,7 @@ export function DataStreamHandler() {
             };
 
           case 'data-title':
+            console.log('[DataStreamHandler] Setting title:', delta.data);
             return {
               ...draftArtifact,
               title: delta.data,
@@ -51,6 +65,7 @@ export function DataStreamHandler() {
             };
 
           case 'data-kind':
+            console.log('[DataStreamHandler] Setting kind:', delta.data);
             return {
               ...draftArtifact,
               kind: delta.data,
@@ -58,6 +73,9 @@ export function DataStreamHandler() {
             };
 
           case 'data-clear':
+            console.log(
+              '[DataStreamHandler] CLEARING CONTENT - status set to streaming',
+            );
             return {
               ...draftArtifact,
               content: '',
@@ -65,6 +83,7 @@ export function DataStreamHandler() {
             };
 
           case 'data-finish':
+            console.log('[DataStreamHandler] FINISHING - status set to idle');
             return {
               ...draftArtifact,
               status: 'idle',
@@ -72,9 +91,16 @@ export function DataStreamHandler() {
 
           case 'data-modeChanged':
             // Mode changes are handled by ModeIndicator component
+            console.log(
+              '[DataStreamHandler] Mode changed event (handled elsewhere)',
+            );
             return draftArtifact;
 
           default:
+            console.log(
+              '[DataStreamHandler] Unhandled delta type:',
+              delta.type,
+            );
             return draftArtifact;
         }
       });

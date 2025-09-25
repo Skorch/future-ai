@@ -77,16 +77,34 @@ function PureArtifact({
 }) {
   const { artifact, setArtifact, metadata, setMetadata } = useArtifact();
 
+  // Debug logging for artifact state
+  console.log('[Artifact] Current artifact state:', {
+    documentId: artifact.documentId,
+    status: artifact.status,
+    hasContent: !!artifact.content,
+    contentLength: artifact.content?.length || 0,
+    title: artifact.title,
+    kind: artifact.kind,
+  });
+
+  const shouldFetchDocument =
+    artifact.documentId !== 'init' && artifact.status !== 'streaming';
+  const fetchUrl = shouldFetchDocument
+    ? `/api/document?id=${artifact.documentId}`
+    : null;
+
+  console.log('[Artifact] Document fetch conditions:', {
+    shouldFetchDocument,
+    fetchUrl,
+    documentId: artifact.documentId,
+    status: artifact.status,
+  });
+
   const {
     data: documents,
     isLoading: isDocumentsFetching,
     mutate: mutateDocuments,
-  } = useSWR<Array<Document>>(
-    artifact.documentId !== 'init' && artifact.status !== 'streaming'
-      ? `/api/document?id=${artifact.documentId}`
-      : null,
-    fetcher,
-  );
+  } = useSWR<Array<Document>>(fetchUrl, fetcher);
 
   const [mode, setMode] = useState<'edit' | 'diff'>('edit');
   const [document, setDocument] = useState<Document | null>(null);
@@ -95,19 +113,36 @@ function PureArtifact({
   const { open: isSidebarOpen } = useSidebar();
 
   useEffect(() => {
+    console.log('[Artifact] Documents loaded:', {
+      documentsCount: documents?.length || 0,
+      isLoading: isDocumentsFetching,
+      hasDocuments: !!documents,
+    });
+
     if (documents && documents.length > 0) {
       const mostRecentDocument = documents.at(-1);
+
+      console.log('[Artifact] Most recent document:', {
+        hasContent: !!mostRecentDocument?.content,
+        contentLength: mostRecentDocument?.content?.length || 0,
+        documentId: mostRecentDocument?.id,
+        title: mostRecentDocument?.title,
+      });
 
       if (mostRecentDocument) {
         setDocument(mostRecentDocument);
         setCurrentVersionIndex(documents.length - 1);
+
+        console.log('[Artifact] Updating artifact with document content');
         setArtifact((currentArtifact) => ({
           ...currentArtifact,
           content: mostRecentDocument.content ?? '',
         }));
       }
+    } else {
+      console.log('[Artifact] No documents loaded or empty documents array');
     }
-  }, [documents, setArtifact]);
+  }, [documents, setArtifact, isDocumentsFetching]);
 
   useEffect(() => {
     mutateDocuments();

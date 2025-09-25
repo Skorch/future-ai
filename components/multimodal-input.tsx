@@ -34,6 +34,10 @@ import type { VisibilityType } from './visibility-selector';
 import type { Attachment, ChatMessage } from '@/lib/types';
 import { ModeIndicator } from './mode-indicator';
 import type { Chat } from '@/lib/db/schema';
+import {
+  LARGE_PASTE_THRESHOLD,
+  PASTE_SUGGESTION_TIMEOUT,
+} from '@/lib/constants';
 
 // Extended attachment type for transcript documents
 interface TranscriptAttachment extends Attachment {
@@ -71,6 +75,11 @@ function PureMultimodalInput({
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { width } = useWindowSize();
+
+  // State for paste suggestion feature
+  const [showPasteSuggestion, setShowPasteSuggestion] = useState(false);
+  const [pastedText, setPastedText] = useState<string>('');
+  const pasteTimeoutRef = useRef<NodeJS.Timeout>();
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -115,8 +124,75 @@ function PureMultimodalInput({
     setInput(event.target.value);
   };
 
+  const handlePaste = useCallback(
+    async (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+      const text = event.clipboardData.getData('text');
+
+      if (text.length > LARGE_PASTE_THRESHOLD) {
+        event.preventDefault(); // Prevent default paste
+
+        // Store the pasted text temporarily
+        setPastedText(text);
+        setShowPasteSuggestion(true);
+
+        // Auto-dismiss after timeout
+        if (pasteTimeoutRef.current) {
+          clearTimeout(pasteTimeoutRef.current);
+        }
+        pasteTimeoutRef.current = setTimeout(() => {
+          // If not converted, add to input
+          if (pastedText) {
+            setInput((prev) => prev + text);
+            setPastedText('');
+          }
+          setShowPasteSuggestion(false);
+        }, PASTE_SUGGESTION_TIMEOUT);
+      }
+      // Let smaller pastes go through normally
+    },
+    [setInput, pastedText],
+  );
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadQueue, setUploadQueue] = useState<Array<string>>([]);
+
+  const convertToAttachment = useCallback(async () => {
+    if (!pastedText) return;
+
+    // Create a File object from the text
+    const file = new File([pastedText], `pasted-text-${Date.now()}.txt`, {
+      type: 'text/plain',
+    });
+
+    // Clear the paste suggestion UI
+    setShowPasteSuggestion(false);
+    if (pasteTimeoutRef.current) {
+      clearTimeout(pasteTimeoutRef.current);
+    }
+
+    // Upload using existing flow
+    setUploadQueue([file.name]);
+    try {
+      const attachment = await uploadFile(file);
+      if (attachment) {
+        setAttachments((current) => [...current, attachment]);
+      }
+    } finally {
+      setUploadQueue([]);
+      setPastedText('');
+    }
+  }, [pastedText, setAttachments]);
+
+  const keepAsText = useCallback(() => {
+    if (pastedText) {
+      setInput((prev) => prev + pastedText);
+    }
+    setShowPasteSuggestion(false);
+    setPastedText('');
+    if (pasteTimeoutRef.current) {
+      clearTimeout(pasteTimeoutRef.current);
+    }
+  }, [pastedText, setInput]);
 
   const submitForm = useCallback(() => {
     window.history.replaceState({}, '', `/chat/${chatId}`);
@@ -303,6 +379,30 @@ function PureMultimodalInput({
         tabIndex={-1}
       />
 
+      {showPasteSuggestion && (
+        <div className="absolute bottom-full mb-2 left-0 right-0 mx-4 z-50">
+          <div className="bg-background border rounded-lg shadow-lg p-3 flex items-center justify-between">
+            <div className="flex-1">
+              <p className="text-sm font-medium">
+                Large text pasted ({pastedText.length.toLocaleString()}{' '}
+                characters)
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Convert to attachment for better handling?
+              </p>
+            </div>
+            <div className="flex gap-2 ml-4">
+              <Button size="sm" variant="outline" onClick={keepAsText}>
+                Keep as Text
+              </Button>
+              <Button size="sm" onClick={convertToAttachment}>
+                Convert to Attachment
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="relative">
         {chat && (
           <ModeIndicator
@@ -368,6 +468,7 @@ function PureMultimodalInput({
             placeholder="Send a message..."
             value={input}
             onChange={handleInput}
+            onPaste={handlePaste}
             minHeight={72}
             maxHeight={200}
             disableAutoResize={true}

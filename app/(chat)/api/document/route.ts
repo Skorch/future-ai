@@ -11,7 +11,10 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
 
+  console.log('[Document API] GET request for document:', id);
+
   if (!id) {
+    console.log('[Document API] Error: Missing document ID');
     return new ChatSDKError(
       'bad_request:api',
       'Parameter id is missing',
@@ -21,21 +24,35 @@ export async function GET(request: Request) {
   const session = await auth();
 
   if (!session?.user) {
+    console.log('[Document API] Error: Unauthorized - no session');
     return new ChatSDKError('unauthorized:document').toResponse();
   }
 
+  console.log('[Document API] Fetching documents for ID:', id);
   const documents = await getDocumentsById({ id });
+
+  console.log('[Document API] Documents fetched:', {
+    count: documents.length,
+    hasContent: documents.map((d) => ({
+      hasContent: !!d.content,
+      contentLength: d.content?.length || 0,
+      title: d.title,
+    })),
+  });
 
   const [document] = documents;
 
   if (!document) {
+    console.log('[Document API] Error: Document not found');
     return new ChatSDKError('not_found:document').toResponse();
   }
 
   if (document.userId !== session.user.id) {
+    console.log('[Document API] Error: Forbidden - wrong user');
     return new ChatSDKError('forbidden:document').toResponse();
   }
 
+  console.log('[Document API] Returning documents successfully');
   return Response.json(documents, { status: 200 });
 }
 

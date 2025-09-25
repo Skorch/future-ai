@@ -72,51 +72,58 @@ export function createPrepareStep(
     if (steps.length > 0) {
       const lastStep = steps[steps.length - 1];
 
-      // Check for mode switch
+      // Check for mode switch in the last step's tool results
+      // When we're in Step N, the previous Step N-1's tool calls are now in toolResults
+      const setModeResult = lastStep?.toolResults?.find(
+        // biome-ignore lint/suspicious/noExplicitAny: Tool result structure varies by tool
+        (tr: any) => tr.toolName === 'setMode',
+      );
+
+      // Also check toolCalls for immediate detection within same step
       const setModeCall = lastStep?.toolCalls?.find(
         // biome-ignore lint/suspicious/noExplicitAny: Tool call structure varies by tool
         (tc: any) => tc.toolName === 'setMode',
       );
 
-      if (setModeCall?.args) {
-        const { mode, reason, nextMessage } = setModeCall.args as {
+      // Get the mode switch data from either source
+      // Tool results have data in 'output', tool calls have data in 'input'
+      const modeData = setModeResult?.output || setModeCall?.input;
+
+      if (modeData) {
+        const { mode, reason, nextMessage } = modeData as {
           mode: ChatMode;
           reason: string;
           nextMessage?: string;
         };
 
-        console.log(
-          `[prepareStep] Mode transition detected: ${state.currentMode} → ${mode} (Reason: ${reason})`,
-        );
-
-        // Update mode state
-        state.currentMode = mode;
-        state.modeHistory.push({
-          mode,
-          stepNumber,
-          reason,
-          timestamp: new Date(),
-        });
-
-        // Limit history to prevent unbounded growth
-        if (state.modeHistory.length > 10) {
-          state.modeHistory = state.modeHistory.slice(-10);
-        }
-
-        // If continuation message provided, inject as assistant message
-        if (nextMessage) {
+        // Only update if mode actually changed
+        if (mode !== state.currentMode) {
           console.log(
-            `[prepareStep] Injecting continuation message: "${nextMessage.substring(0, 50)}..."`,
+            `[prepareStep] Mode transition detected: ${state.currentMode} → ${mode} (Reason: ${reason})`,
           );
 
-          // Append assistant message to continue the conversation seamlessly
-          messages = [
-            ...messages,
-            {
-              role: 'assistant',
-              content: nextMessage,
-            },
-          ];
+          // Update mode state
+          state.currentMode = mode;
+          state.modeHistory.push({
+            mode,
+            stepNumber,
+            reason,
+            timestamp: new Date(),
+          });
+
+          // Limit history to prevent unbounded growth
+          if (state.modeHistory.length > 10) {
+            state.modeHistory = state.modeHistory.slice(-10);
+          }
+
+          // Note: We're NOT injecting the nextMessage anymore to prevent infinite loops
+          // The mode switch itself is sufficient, and the AI will continue naturally
+          // without needing an injected message that could trigger repeated actions
+          if (nextMessage) {
+            console.log(
+              `[prepareStep] NextMessage provided but not injected to prevent loops: "${nextMessage.substring(0, 50)}..."`,
+            );
+          }
         }
       }
 

@@ -51,7 +51,7 @@ import { processMessageFiles } from '@/lib/ai/utils/file-processor';
 import { stepCountIs, hasToolCall } from 'ai';
 import { setComplete } from '@/lib/ai/tools/set-complete';
 
-export const maxDuration = 60; // 60 seconds
+export const maxDuration = 300; // 5 minutes (300 seconds)
 
 let globalStreamContext: ResumableStreamContext | null = null;
 
