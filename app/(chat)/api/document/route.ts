@@ -6,6 +6,7 @@ import {
   saveDocument,
 } from '@/lib/db/queries';
 import { ChatSDKError } from '@/lib/errors';
+import { getActiveWorkspace } from '@/lib/workspace/context';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -47,7 +48,8 @@ export async function GET(request: Request) {
     return new ChatSDKError('not_found:document').toResponse();
   }
 
-  if (document.userId !== session.user.id) {
+  // TODO: Phase 4 - Check if user has access to this workspace
+  if (document.createdByUserId !== session.user.id) {
     console.log('[Document API] Error: Forbidden - wrong user');
     return new ChatSDKError('forbidden:document').toResponse();
   }
@@ -85,10 +87,14 @@ export async function POST(request: Request) {
   if (documents.length > 0) {
     const [document] = documents;
 
-    if (document.userId !== session.user.id) {
+    // TODO: Phase 4 - Check if user has access to this workspace
+    if (document.createdByUserId !== session.user.id) {
       return new ChatSDKError('forbidden:document').toResponse();
     }
   }
+
+  // Get workspace from cookie/context
+  const workspaceId = await getActiveWorkspace(session.user.id);
 
   const document = await saveDocument({
     id,
@@ -96,6 +102,7 @@ export async function POST(request: Request) {
     title,
     kind,
     userId: session.user.id,
+    workspaceId,
   });
 
   return Response.json(document, { status: 200 });
@@ -130,7 +137,8 @@ export async function DELETE(request: Request) {
 
   const [document] = documents;
 
-  if (document.userId !== session.user.id) {
+  // TODO: Phase 4 - Check if user has access to this workspace
+  if (document.createdByUserId !== session.user.id) {
     return new ChatSDKError('forbidden:document').toResponse();
   }
 

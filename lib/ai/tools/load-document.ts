@@ -5,9 +5,10 @@ import type { Session } from 'next-auth';
 
 interface LoadDocumentProps {
   session: Session;
+  workspaceId: string;
 }
 
-export const loadDocument = ({ session }: LoadDocumentProps) =>
+export const loadDocument = ({ session, workspaceId }: LoadDocumentProps) =>
   tool({
     description: `Load a document's content into the conversation context.
 
@@ -53,6 +54,7 @@ Reserve space for user messages, your responses, and other tool outputs.`,
       const document = await getDocumentForUser({
         documentId,
         userId: session.user.id,
+        workspaceId,
         maxChars,
       });
 

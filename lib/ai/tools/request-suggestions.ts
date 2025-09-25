@@ -10,11 +10,13 @@ import type { ChatMessage } from '@/lib/types';
 interface RequestSuggestionsProps {
   session: Session;
   dataStream: UIMessageStreamWriter<ChatMessage>;
+  workspaceId: string;
 }
 
 export const requestSuggestions = ({
   session,
   dataStream,
+  workspaceId,
 }: RequestSuggestionsProps) =>
   tool({
     description: 'Request suggestions for a document',
@@ -76,6 +78,7 @@ export const requestSuggestions = ({
           suggestions: suggestions.map((suggestion) => ({
             ...suggestion,
             userId,
+            workspaceId,
             createdAt: new Date(),
             documentCreatedAt: document.createdAt,
           })),

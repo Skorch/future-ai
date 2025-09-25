@@ -9,6 +9,7 @@ import {
   primaryKey,
   foreignKey,
   boolean,
+  index,
 } from 'drizzle-orm/pg-core';
 
 export const user = pgTable('User', {
@@ -19,50 +20,71 @@ export const user = pgTable('User', {
 
 export type User = InferSelectModel<typeof user>;
 
-export const chat = pgTable('Chat', {
-  id: uuid('id').primaryKey().notNull().defaultRandom(),
-  createdAt: timestamp('createdAt').notNull(),
-  title: text('title').notNull(),
-  userId: uuid('userId')
-    .notNull()
-    .references(() => user.id),
-  visibility: varchar('visibility', { enum: ['public', 'private'] })
-    .notNull()
-    .default('private'),
+// Workspace table for multi-tenant isolation
+export const workspace = pgTable(
+  'Workspace',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('userId')
+      .references(() => user.id)
+      .notNull(),
+    name: varchar('name', { length: 255 }).notNull(),
+    description: text('description'),
+    createdAt: timestamp('createdAt').defaultNow().notNull(),
+    lastAccessedAt: timestamp('lastAccessedAt').defaultNow().notNull(),
+    deletedAt: timestamp('deletedAt'), // Soft delete
+  },
+  (table) => ({
+    // Composite index for efficient workspace queries
+    userWorkspaceIdx: index('user_workspace_idx').on(table.userId, table.id),
+  }),
+);
 
-  // Mode system columns
-  mode: text('mode').default('discovery'),
-  modeSetAt: timestamp('mode_set_at').defaultNow(),
+export type Workspace = InferSelectModel<typeof workspace>;
 
-  // Future milestone columns (can be null for now)
-  goal: text('goal'),
-  goalSetAt: timestamp('goal_set_at'),
-  todoList: text('todo_list'), // JSON string
-  todoListUpdatedAt: timestamp('todo_list_updated_at'),
+export const chat = pgTable(
+  'Chat',
+  {
+    id: uuid('id').primaryKey().notNull().defaultRandom(),
+    createdAt: timestamp('createdAt').notNull(),
+    title: text('title').notNull(),
+    userId: uuid('userId')
+      .notNull()
+      .references(() => user.id),
+    workspaceId: uuid('workspaceId')
+      .references(() => workspace.id)
+      .notNull(), // NEW
+    visibility: varchar('visibility', { enum: ['public', 'private'] })
+      .notNull()
+      .default('private'),
 
-  // Completion tracking fields
-  complete: boolean('complete').default(false).notNull(),
-  completedAt: timestamp('completed_at'),
-  firstCompletedAt: timestamp('first_completed_at'),
-});
+    // Mode system columns - FIXED to camelCase
+    mode: text('mode').default('discovery'),
+    modeSetAt: timestamp('modeSetAt').defaultNow(), // was mode_set_at
+
+    // Future milestone columns (can be null for now)
+    goal: text('goal'),
+    goalSetAt: timestamp('goalSetAt'), // was goal_set_at
+    todoList: text('todoList'), // was todo_list
+    todoListUpdatedAt: timestamp('todoListUpdatedAt'), // was todo_list_updated_at
+
+    // Completion tracking fields
+    complete: boolean('complete').default(false).notNull(),
+    completedAt: timestamp('completedAt'), // was completed_at
+    firstCompletedAt: timestamp('firstCompletedAt'), // was first_completed_at
+  },
+  (table) => ({
+    // Composite index supports queries by workspace OR workspace+user
+    workspaceUserIdx: index('workspace_user_idx').on(
+      table.workspaceId,
+      table.userId,
+    ),
+  }),
+);
 
 export type Chat = InferSelectModel<typeof chat>;
 
-// DEPRECATED: The following schema is deprecated and will be removed in the future.
-// Read the migration guide at https://chat-sdk.dev/docs/migration-guides/message-parts
-export const messageDeprecated = pgTable('Message', {
-  id: uuid('id').primaryKey().notNull().defaultRandom(),
-  chatId: uuid('chatId')
-    .notNull()
-    .references(() => chat.id),
-  role: varchar('role').notNull(),
-  content: json('content').notNull(),
-  createdAt: timestamp('createdAt').notNull(),
-});
-
-export type MessageDeprecated = InferSelectModel<typeof messageDeprecated>;
-
-export const message = pgTable('Message_v2', {
+export const message = pgTable('Message', {
   id: uuid('id').primaryKey().notNull().defaultRandom(),
   chatId: uuid('chatId')
     .notNull()
@@ -75,30 +97,8 @@ export const message = pgTable('Message_v2', {
 
 export type DBMessage = InferSelectModel<typeof message>;
 
-// DEPRECATED: The following schema is deprecated and will be removed in the future.
-// Read the migration guide at https://chat-sdk.dev/docs/migration-guides/message-parts
-export const voteDeprecated = pgTable(
-  'Vote',
-  {
-    chatId: uuid('chatId')
-      .notNull()
-      .references(() => chat.id),
-    messageId: uuid('messageId')
-      .notNull()
-      .references(() => messageDeprecated.id),
-    isUpvoted: boolean('isUpvoted').notNull(),
-  },
-  (table) => {
-    return {
-      pk: primaryKey({ columns: [table.chatId, table.messageId] }),
-    };
-  },
-);
-
-export type VoteDeprecated = InferSelectModel<typeof voteDeprecated>;
-
 export const vote = pgTable(
-  'Vote_v2',
+  'Vote',
   {
     chatId: uuid('chatId')
       .notNull()
@@ -124,12 +124,13 @@ export const document = pgTable(
     createdAt: timestamp('createdAt').notNull(),
     title: text('title').notNull(),
     content: text('content'),
-    kind: varchar('text', { enum: ['text'] })
+    kind: varchar('kind', { enum: ['text', 'code'] }) // FIXED column name and added 'code'
       .notNull()
       .default('text'),
-    userId: uuid('userId')
-      .notNull()
-      .references(() => user.id),
+    workspaceId: uuid('workspaceId')
+      .references(() => workspace.id)
+      .notNull(), // CHANGED from userId
+    createdByUserId: uuid('createdByUserId').references(() => user.id), // NEW - track creator
     // NEW FIELDS for RAG simplification
     metadata: json('metadata')
       .$type<{
@@ -144,11 +145,10 @@ export const document = pgTable(
       .default({}),
     sourceDocumentIds: json('sourceDocumentIds').$type<string[]>().default([]),
   },
-  (table) => {
-    return {
-      pk: primaryKey({ columns: [table.id, table.createdAt] }),
-    };
-  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.id, table.createdAt] }),
+    workspaceIdx: index('workspace_idx').on(table.workspaceId),
+  }),
 );
 
 export type Document = InferSelectModel<typeof document>;
@@ -163,9 +163,10 @@ export const suggestion = pgTable(
     suggestedText: text('suggestedText').notNull(),
     description: text('description'),
     isResolved: boolean('isResolved').notNull().default(false),
-    userId: uuid('userId')
-      .notNull()
-      .references(() => user.id),
+    workspaceId: uuid('workspaceId')
+      .references(() => workspace.id)
+      .notNull(), // CHANGED from userId
+    suggestedByUserId: uuid('suggestedByUserId').references(() => user.id), // NEW - track suggester
     createdAt: timestamp('createdAt').notNull(),
   },
   (table) => ({
@@ -174,6 +175,7 @@ export const suggestion = pgTable(
       columns: [table.documentId, table.documentCreatedAt],
       foreignColumns: [document.id, document.createdAt],
     }),
+    workspaceIdx: index('suggestion_workspace_idx').on(table.workspaceId),
   }),
 );
 

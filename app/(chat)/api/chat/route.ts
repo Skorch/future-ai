@@ -21,6 +21,7 @@ import {
 } from '@/lib/db/queries';
 import { convertToUIMessages, generateUUID } from '@/lib/utils';
 import { generateTitleFromUserMessage } from '../../actions';
+import { getActiveWorkspace } from '@/lib/workspace/context';
 import { createDocument } from '@/lib/ai/tools/create-document';
 import { updateDocument } from '@/lib/ai/tools/update-document';
 import { requestSuggestions } from '@/lib/ai/tools/request-suggestions';
@@ -114,6 +115,9 @@ export async function POST(request: Request) {
 
     const chat = await getChatById({ id });
 
+    // Get workspace context early
+    const workspaceId = await getActiveWorkspace(session.user.id);
+
     if (!chat) {
       const title = await generateTitleFromUserMessage({
         message,
@@ -124,6 +128,7 @@ export async function POST(request: Request) {
         userId: session.user.id,
         title,
         visibility: selectedVisibilityType,
+        workspaceId,
       });
     } else {
       if (chat.userId !== session.user.id) {
@@ -423,16 +428,25 @@ export async function POST(request: Request) {
 
                     // Existing tools
                     getWeather,
-                    createDocument: createDocument({ session, dataStream }),
-                    updateDocument: updateDocument({ session, dataStream }),
+                    createDocument: createDocument({
+                      session,
+                      dataStream,
+                      workspaceId,
+                    }),
+                    updateDocument: updateDocument({
+                      session,
+                      dataStream,
+                      workspaceId,
+                    }),
                     requestSuggestions: requestSuggestions({
                       session,
                       dataStream,
+                      workspaceId,
                     }),
-                    queryRAG: queryRAG({ session, dataStream }),
-                    listDocuments: listDocuments({ session }),
-                    loadDocument: loadDocument({ session }),
-                    loadDocuments: loadDocuments({ session }),
+                    queryRAG: queryRAG({ session, dataStream, workspaceId }),
+                    listDocuments: listDocuments({ session, workspaceId }),
+                    loadDocument: loadDocument({ session, workspaceId }),
+                    loadDocuments: loadDocuments({ session, workspaceId }),
                     askUser: askUser({ dataStream }),
                   },
 

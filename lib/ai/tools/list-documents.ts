@@ -5,9 +5,10 @@ import type { Session } from 'next-auth';
 
 interface ListDocumentsProps {
   session: Session;
+  workspaceId: string;
 }
 
-export const listDocuments = ({ session }: ListDocumentsProps) =>
+export const listDocuments = ({ session, workspaceId }: ListDocumentsProps) =>
   tool({
     description: `List all documents available to the current user.
 Returns document metadata including size information to help decide what to load.
@@ -42,7 +43,10 @@ than RAG search, which might miss important topics.`,
     inputSchema: z.object({}),
     execute: async () => {
       console.log('[ListDocuments Tool] Executing list-documents tool call');
-      const documents = await getAllUserDocuments({ userId: session.user.id });
+      const documents = await getAllUserDocuments({
+        userId: session.user.id,
+        workspaceId,
+      });
 
       console.log('[ListDocuments Tool] Retrieved documents:', {
         count: documents.length,

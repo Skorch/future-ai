@@ -47,7 +47,8 @@ export async function POST(
   const documents = await getDocumentsById({ id });
   const [document] = documents;
 
-  if (!document || document.userId !== session.user.id) {
+  // TODO: Phase 4 - Check if user has access to this workspace
+  if (!document || document.createdByUserId !== session.user.id) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 

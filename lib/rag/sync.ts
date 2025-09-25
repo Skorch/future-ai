@@ -55,8 +55,10 @@ const pineconeClient = new PineconeClient({
 export async function syncDocumentToRAG(documentId: string): Promise<void> {
   try {
     const doc = await getDocumentById({ id: documentId });
-    if (!doc?.content || !doc?.userId) {
-      console.log(`[RAG Sync] No content or userId for document ${documentId}`);
+    if (!doc?.content || !doc?.workspaceId) {
+      console.log(
+        `[RAG Sync] No content or workspaceId for document ${documentId}`,
+      );
       return;
     }
 
@@ -73,17 +75,19 @@ export async function syncDocumentToRAG(documentId: string): Promise<void> {
     }
 
     console.log(
-      `[RAG Sync] Document ${documentId} type: ${documentType}, userId: ${doc.userId}, metadata:`,
+      `[RAG Sync] Document ${documentId} type: ${documentType}, workspaceId: ${doc.workspaceId}, metadata:`,
       doc.metadata,
     );
 
-    // Delete existing chunks for this document (use userId as namespace)
-    await deleteFromRAG(documentId, doc.userId);
+    // Delete existing chunks for this document
+    // TODO: Phase 4 - Change namespace from userId to workspaceId
+    await deleteFromRAG(documentId, doc.createdByUserId || 'default');
 
     // Chunk based on document type - pass all document info for rich metadata
     const chunks = await chunkDocument(doc.content, documentId, documentType, {
       ...doc.metadata,
-      userId: doc.userId,
+      userId: doc.createdByUserId,
+      workspaceId: doc.workspaceId,
       title: doc.title,
       kind: doc.kind,
       createdAt: doc.createdAt,
@@ -94,9 +98,10 @@ export async function syncDocumentToRAG(documentId: string): Promise<void> {
       return;
     }
 
-    // Store in Pinecone with userId as namespace for isolation
+    // Store in Pinecone
+    // TODO: Phase 4 - Change namespace from userId to workspaceId
     await pineconeClient.writeDocuments(chunks, {
-      namespace: doc.userId,
+      namespace: doc.createdByUserId || 'default',
     });
 
     console.log(`[RAG Sync] Stored ${chunks.length} chunks for ${documentId}`);
@@ -114,14 +119,14 @@ export async function deleteFromRAG(
   namespace?: string,
 ): Promise<void> {
   try {
-    // If no namespace provided, we need to get the document to find the userId
-    let userId = namespace;
-    if (!userId) {
+    // If no namespace provided, we need to get the document to find the workspaceId
+    let workspaceId = namespace;
+    if (!workspaceId) {
       const doc = await getDocumentById({ id: documentId });
-      userId = doc?.userId;
-      if (!userId) {
+      workspaceId = doc?.workspaceId;
+      if (!workspaceId) {
         console.log(
-          `[RAG Sync] No userId found for document ${documentId}, skipping delete`,
+          `[RAG Sync] No workspaceId found for document ${documentId}, skipping delete`,
         );
         return;
       }
@@ -132,11 +137,11 @@ export async function deleteFromRAG(
       {
         documentId: { $eq: documentId },
       },
-      userId,
-    ); // Use userId as namespace
+      workspaceId,
+    ); // Use workspaceId as namespace
 
     console.log(
-      `[RAG Sync] Deleted all chunks for ${documentId} in namespace ${userId}`,
+      `[RAG Sync] Deleted all chunks for ${documentId} in namespace ${workspaceId}`,
     );
   } catch (error) {
     console.error(`[RAG Sync] Failed to delete ${documentId}:`, error);

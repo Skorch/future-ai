@@ -22,8 +22,8 @@ import { SaveDocumentButton } from './save-document-button';
 
 interface DocumentPreviewProps {
   isReadonly: boolean;
-  result?: { id: string; title: string; kind: ArtifactKind };
-  args?: { title: string; kind: ArtifactKind };
+  result?: { id: string; title: string; kind: 'text' | 'code' };
+  args?: { title: string; kind: 'text' | 'code' };
 }
 
 export function DocumentPreview({
@@ -93,7 +93,8 @@ export function DocumentPreview({
           content: artifact.content,
           id: artifact.documentId,
           createdAt: new Date(),
-          userId: 'noop',
+          workspaceId: 'noop',
+          createdByUserId: 'noop',
           metadata: {},
           sourceDocumentIds: [],
         }
@@ -121,7 +122,9 @@ export function DocumentPreview({
   );
 }
 
-const LoadingSkeleton = ({ artifactKind }: { artifactKind: ArtifactKind }) => (
+const LoadingSkeleton = ({
+  artifactKind,
+}: { artifactKind: 'text' | 'code' }) => (
   <div className="w-full">
     <div className="p-4 border rounded-t-2xl flex flex-row gap-2 items-center justify-between dark:bg-muted h-[57px] dark:border-zinc-700 border-b-0">
       <div className="flex flex-row items-center gap-3">
@@ -146,7 +149,7 @@ const PureHitboxLayer = ({
   setArtifact,
 }: {
   hitboxRef: React.RefObject<HTMLDivElement>;
-  result: { id: string; title: string; kind: ArtifactKind };
+  result: { id: string; title: string; kind: 'text' | 'code' };
   setArtifact: (
     updaterFn: UIArtifact | ((currentArtifact: UIArtifact) => UIArtifact),
   ) => void;
@@ -162,7 +165,7 @@ const PureHitboxLayer = ({
               ...artifact,
               title: result.title,
               documentId: result.id,
-              kind: result.kind,
+              kind: result.kind as ArtifactKind,
               isVisible: true,
               boundingBox: {
                 left: boundingBox.x,
@@ -205,7 +208,7 @@ const PureDocumentHeader = ({
   documentId,
 }: {
   title: string;
-  kind: ArtifactKind;
+  kind: 'text' | 'code';
   isStreaming: boolean;
   documentId: string;
 }) => (

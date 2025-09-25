@@ -16,6 +16,7 @@
     "db:pull": "drizzle-kit pull",
     "db:check": "drizzle-kit check",
     "db:up": "drizzle-kit up",
+    "db:reset": "tsx scripts/reset-database.ts",
     "test": "export PLAYWRIGHT=True && pnpm exec playwright test",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest watch",

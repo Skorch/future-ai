@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { auth } from '@/app/(auth)/auth';
 import { saveDocument } from '@/lib/db/queries';
 import { generateUUID } from '@/lib/utils';
+import { getActiveWorkspace } from '@/lib/workspace/context';
 
 // Only transcript-related file extensions
 const ALLOWED_EXTENSIONS = ['.txt', '.md', '.vtt', '.srt', '.transcript'];
@@ -86,6 +87,9 @@ export async function POST(request: Request) {
       },
     });
 
+    // Get workspace from cookie/context
+    const workspaceId = await getActiveWorkspace(session.user.id);
+
     // Create transcript document directly in database
     await saveDocument({
       id: documentId,
@@ -93,6 +97,7 @@ export async function POST(request: Request) {
       content: content,
       kind: 'text',
       userId: session.user.id,
+      workspaceId,
       metadata: {
         documentType: 'transcript',
         fileName: filename,

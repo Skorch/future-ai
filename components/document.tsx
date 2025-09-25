@@ -25,7 +25,7 @@ const getActionText = (
 
 interface DocumentToolResultProps {
   type: 'create' | 'update' | 'request-suggestions';
-  result: { id: string; title: string; kind: ArtifactKind };
+  result: { id: string; title: string; kind: 'text' | 'code' };
   isReadonly: boolean;
 }
 
@@ -59,7 +59,7 @@ function PureDocumentToolResult({
 
         setArtifact({
           documentId: result.id,
-          kind: result.kind,
+          kind: result.kind as ArtifactKind,
           content: '',
           title: result.title,
           isVisible: true,
@@ -89,7 +89,7 @@ export const DocumentToolResult = memo(PureDocumentToolResult, () => true);
 interface DocumentToolCallProps {
   type: 'create' | 'update' | 'request-suggestions';
   args:
-    | { title: string; kind: ArtifactKind } // for create
+    | { title: string; kind: 'text' | 'code' } // for create
     | { id: string; description: string } // for update
     | { documentId: string }; // for request-suggestions
   isReadonly: boolean;

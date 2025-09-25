@@ -5,9 +5,10 @@ import type { Session } from 'next-auth';
 
 interface LoadDocumentsProps {
   session: Session;
+  workspaceId: string;
 }
 
-export const loadDocuments = ({ session }: LoadDocumentsProps) =>
+export const loadDocuments = ({ session, workspaceId }: LoadDocumentsProps) =>
   tool({
     description: `Load multiple documents into the conversation context in a single call.
 Efficient for loading related documents like meeting summaries from a time period.
@@ -56,6 +57,7 @@ The tool returns an array of loaded documents with their content and metadata.`,
       const documents = await getDocumentsForUser({
         documentIds,
         userId: session.user.id,
+        workspaceId,
         maxCharsPerDoc,
       });
 

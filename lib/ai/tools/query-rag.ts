@@ -226,9 +226,11 @@ function formatResultsForLLM(matches: QueryMatch[]): string {
 interface QueryRAGProps {
   session: Session;
   dataStream: UIMessageStreamWriter<ChatMessage>;
+  workspaceId: string;
 }
 
 export const queryRAG = (props: QueryRAGProps) => {
+  const { session, dataStream, workspaceId } = props;
   console.log(
     '[queryRAG] Creating tool with session user:',
     props.session?.user?.id,
@@ -257,10 +259,10 @@ export const queryRAG = (props: QueryRAGProps) => {
         // Build filter from parameters
         const filter = buildPineconeFilter(params);
 
-        // Always use userId as namespace for proper isolation
-        const namespace = props.session?.user?.id;
+        // Use workspaceId as namespace for proper isolation
+        const namespace = workspaceId;
         if (!namespace) {
-          throw new Error('User session required for RAG queries');
+          throw new Error('Workspace context required for RAG queries');
         }
 
         // Internal configuration (not exposed to LLM)

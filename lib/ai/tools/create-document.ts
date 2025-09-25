@@ -13,6 +13,7 @@ import { loadAllArtifactDefinitions } from '@/lib/artifacts';
 interface CreateDocumentProps {
   session: Session;
   dataStream: UIMessageStreamWriter<ChatMessage>;
+  workspaceId: string;
 }
 
 const createDocumentSchema = z.object({
@@ -55,7 +56,11 @@ When you see TRANSCRIPT_DOCUMENT markers in the chat, use those document IDs in 
   }
 }
 
-export const createDocument = ({ session, dataStream }: CreateDocumentProps) =>
+export const createDocument = ({
+  session,
+  dataStream,
+  workspaceId,
+}: CreateDocumentProps) =>
   tool({
     description: `Create a meeting summary document from uploaded transcript documents.
 IMPORTANT: This tool ONLY creates summaries, not transcripts. Transcripts are created via file upload.
@@ -169,6 +174,7 @@ The sourceDocumentIds parameter is REQUIRED - you must provide at least one tran
             title,
             dataStream,
             session,
+            workspaceId,
             metadata: {
               sourceDocumentIds: sourceDocumentIds || [],
               meetingDate: metadata?.meetingDate,
@@ -197,6 +203,7 @@ The sourceDocumentIds parameter is REQUIRED - you must provide at least one tran
             title,
             dataStream,
             session,
+            workspaceId,
           });
           console.log(`[CreateDocument] ${kind} handler completed`);
         }

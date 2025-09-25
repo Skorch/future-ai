@@ -29,7 +29,8 @@ export async function GET(request: Request) {
     return Response.json([], { status: 200 });
   }
 
-  if (suggestion.userId !== session.user.id) {
+  // TODO: Phase 4 - Check if user has access to this workspace
+  if (suggestion.suggestedByUserId !== session.user.id) {
     return new ChatSDKError('forbidden:api').toResponse();
   }
 

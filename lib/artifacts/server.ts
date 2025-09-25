@@ -24,6 +24,7 @@ export interface CreateDocumentCallbackProps {
   title: string;
   dataStream: UIMessageStreamWriter<ChatMessage>;
   session: Session;
+  workspaceId: string;
   metadata?: Record<string, unknown>;
 }
 
@@ -32,6 +33,7 @@ export interface UpdateDocumentCallbackProps {
   description: string;
   dataStream: UIMessageStreamWriter<ChatMessage>;
   session: Session;
+  workspaceId: string;
 }
 
 export interface DocumentHandler<T = ArtifactKind> {
@@ -81,6 +83,7 @@ export function createDocumentHandler<T extends ArtifactKind>(
         title: args.title,
         dataStream: args.dataStream,
         session: args.session,
+        workspaceId: args.workspaceId,
         metadata: args.metadata,
       });
 
@@ -126,6 +129,7 @@ export function createDocumentHandler<T extends ArtifactKind>(
           content: draftContent,
           kind: legacyConfig.kind,
           userId: args.session.user.id,
+          workspaceId: args.workspaceId,
           metadata: documentMetadata,
           sourceDocumentIds:
             (args.metadata?.sourceDocumentIds as string[] | undefined) || [],
@@ -140,6 +144,7 @@ export function createDocumentHandler<T extends ArtifactKind>(
         description: args.description,
         dataStream: args.dataStream,
         session: args.session,
+        workspaceId: args.workspaceId,
       });
 
       if (args.session?.user?.id) {
@@ -149,6 +154,7 @@ export function createDocumentHandler<T extends ArtifactKind>(
           content: draftContent,
           kind: legacyConfig.kind,
           userId: args.session.user.id,
+          workspaceId: args.workspaceId,
         });
       }
 
@@ -237,6 +243,7 @@ function createEnhancedDocumentHandler<T extends ArtifactKind>(
           content: draftContent,
           kind: config.kind,
           userId: args.session.user.id,
+          workspaceId: args.workspaceId,
           metadata: documentMetadata,
           sourceDocumentIds:
             (args.metadata?.sourceDocumentIds as string[] | undefined) || [],
@@ -256,6 +263,7 @@ function createEnhancedDocumentHandler<T extends ArtifactKind>(
               content: draftContent,
               kind: config.kind,
               userId: args.session.user.id,
+              workspaceId: args.workspaceId,
             });
           }
 

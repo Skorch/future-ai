@@ -29,6 +29,7 @@ import {
   type Chat,
   type ChatMode,
   stream,
+  workspace,
 } from './schema';
 import { syncDocumentToRAG, deleteFromRAG } from '@/lib/rag/sync';
 import type { ArtifactKind } from '@/components/artifact';
@@ -60,7 +61,22 @@ export async function createUser(email: string, password: string) {
   const hashedPassword = generateHashedPassword(password);
 
   try {
-    return await db.insert(user).values({ email, password: hashedPassword });
+    return await db.transaction(async (tx) => {
+      // Create user
+      const [newUser] = await tx
+        .insert(user)
+        .values({ email, password: hashedPassword })
+        .returning();
+
+      // Auto-create Personal workspace
+      await tx.insert(workspace).values({
+        userId: newUser.id,
+        name: 'Personal',
+        description: 'Your personal workspace',
+      });
+
+      return newUser;
+    });
   } catch (error) {
     throw new ChatSDKError('bad_request:database', 'Failed to create user');
   }
@@ -71,9 +87,24 @@ export async function createGuestUser() {
   const password = generateHashedPassword(generateUUID());
 
   try {
-    return await db.insert(user).values({ email, password }).returning({
-      id: user.id,
-      email: user.email,
+    return await db.transaction(async (tx) => {
+      // Create guest user
+      const [guestUser] = await tx
+        .insert(user)
+        .values({ email, password })
+        .returning({
+          id: user.id,
+          email: user.email,
+        });
+
+      // Auto-create Guest workspace
+      await tx.insert(workspace).values({
+        userId: guestUser.id,
+        name: 'Guest Workspace',
+        description: 'Temporary workspace for guest access',
+      });
+
+      return guestUser;
     });
   } catch (error) {
     throw new ChatSDKError(
@@ -88,11 +119,13 @@ export async function saveChat({
   userId,
   title,
   visibility,
+  workspaceId,
 }: {
   id: string;
   userId: string;
   title: string;
   visibility: VisibilityType;
+  workspaceId: string;
 }) {
   try {
     return await db.insert(chat).values({
@@ -101,6 +134,7 @@ export async function saveChat({
       userId,
       title,
       visibility,
+      workspaceId,
     });
   } catch (error) {
     throw new ChatSDKError('bad_request:database', 'Failed to save chat');
@@ -286,6 +320,7 @@ export async function saveDocument({
   kind,
   content,
   userId,
+  workspaceId,
   metadata,
   sourceDocumentIds,
 }: {
@@ -294,6 +329,7 @@ export async function saveDocument({
   kind: ArtifactKind;
   content: string;
   userId: string;
+  workspaceId: string;
   metadata?: Record<string, unknown>;
   sourceDocumentIds?: string[];
 }) {
@@ -307,7 +343,8 @@ export async function saveDocument({
         title,
         kind,
         content,
-        userId,
+        workspaceId,
+        createdByUserId: userId,
         createdAt: new Date(),
         metadata: (metadata || {}) as Record<string, unknown>,
         sourceDocumentIds: sourceDocumentIds || [],
@@ -433,7 +470,10 @@ export async function deleteDocumentsByIdAfterTimestamp({
   }
 }
 
-export async function getAllUserDocuments({ userId }: { userId: string }) {
+export async function getAllUserDocuments({
+  userId,
+  workspaceId,
+}: { userId: string; workspaceId: string }) {
   try {
     // Get the latest version of each document by using DISTINCT ON with document.id
     // This ensures we only get one row per document ID (the most recent one)
@@ -449,7 +489,7 @@ export async function getAllUserDocuments({ userId }: { userId: string }) {
         contentPreview: sql<string>`SUBSTRING(${document.content}, 1, 500)`,
       })
       .from(document)
-      .where(eq(document.userId, userId))
+      .where(eq(document.workspaceId, workspaceId))
       .orderBy(document.id, desc(document.createdAt));
 
     // Sort the final results by createdAt descending to show newest documents first
@@ -489,10 +529,12 @@ export async function getAllUserDocuments({ userId }: { userId: string }) {
 export async function getDocumentForUser({
   documentId,
   userId,
+  workspaceId,
   maxChars,
 }: {
   documentId: string;
   userId: string;
+  workspaceId: string;
   maxChars?: number;
 }) {
   try {
@@ -509,7 +551,9 @@ export async function getDocumentForUser({
         fullContentLength: sql<number>`LENGTH(${document.content})`,
       })
       .from(document)
-      .where(and(eq(document.id, documentId), eq(document.userId, userId)));
+      .where(
+        and(eq(document.id, documentId), eq(document.workspaceId, workspaceId)),
+      );
 
     const [doc] = await query;
 
@@ -535,10 +579,12 @@ export async function getDocumentForUser({
 export async function getDocumentsForUser({
   documentIds,
   userId,
+  workspaceId,
   maxCharsPerDoc,
 }: {
   documentIds: string[];
   userId: string;
+  workspaceId: string;
   maxCharsPerDoc?: number;
 }) {
   try {
@@ -560,7 +606,10 @@ export async function getDocumentsForUser({
       })
       .from(document)
       .where(
-        and(inArray(document.id, documentIds), eq(document.userId, userId)),
+        and(
+          inArray(document.id, documentIds),
+          eq(document.workspaceId, workspaceId),
+        ),
       );
 
     return documents.map((doc) => {
@@ -780,7 +829,8 @@ export async function deleteAllUserData(userId: string): Promise<void> {
     const chatIds = userChats.map((c) => c.id);
 
     // Delete suggestions (references documents and user)
-    await db.delete(suggestion).where(eq(suggestion.userId, userId));
+    // TODO: Phase 4 - Update to handle workspace-scoped suggestions
+    await db.delete(suggestion).where(eq(suggestion.suggestedByUserId, userId));
 
     // Delete votes for user's chats
     for (const chatId of chatIds) {
@@ -801,7 +851,8 @@ export async function deleteAllUserData(userId: string): Promise<void> {
     await db.delete(chat).where(eq(chat.userId, userId));
 
     // Delete documents
-    await db.delete(document).where(eq(document.userId, userId));
+    // TODO: Phase 4 - Update to handle workspace-scoped documents
+    await db.delete(document).where(eq(document.createdByUserId, userId));
   } catch (error) {
     console.error('[DAL] Error deleting user data:', error);
     throw new ChatSDKError(
