@@ -10,11 +10,13 @@ import { useState } from 'react';
 interface SaveDocumentButtonProps {
   documentId: string | null;
   session?: Session | null;
+  workspaceId?: string;
 }
 
 export function SaveDocumentButton({
   documentId,
   session: providedSession,
+  workspaceId,
 }: SaveDocumentButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { data: sessionData } = useSession();
@@ -35,9 +37,14 @@ export function SaveDocumentButton({
 
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/document/${documentId}/save`, {
-        method: 'POST',
-      });
+      const response = await fetch(
+        workspaceId
+          ? `/api/workspace/${workspaceId}/documents/${documentId}/save`
+          : `/api/document/${documentId}/save`,
+        {
+          method: 'POST',
+        },
+      );
 
       if (response.ok) {
         toast.success('Document saved to storage!');

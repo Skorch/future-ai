@@ -36,9 +36,9 @@ const prepareContent = (content: string, kind: string): Buffer | string => {
 
 export async function POST(
   _req: Request,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ workspaceId: string; id: string }> },
 ) {
-  const { id } = await params;
+  const { workspaceId, id } = await params;
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -47,12 +47,12 @@ export async function POST(
   const documents = await getDocumentsById({ id });
   const [document] = documents;
 
-  // TODO: Phase 4 - Check if user has access to this workspace
-  if (!document || document.createdByUserId !== session.user.id) {
+  // Validate document belongs to the workspace
+  if (!document || document.workspaceId !== workspaceId) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
-  const path = `docs/${session.user.id}/${document.id}.${getExtension(document.kind)}`;
+  const path = `docs/workspace/${workspaceId}/${document.id}.${getExtension(document.kind)}`;
   const content = prepareContent(document.content || '', document.kind);
   // addRandomSuffix: false ensures the file is overwritten at the same path
   const blob = await put(path, content, {

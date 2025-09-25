@@ -24,18 +24,25 @@ interface DocumentPreviewProps {
   isReadonly: boolean;
   result?: { id: string; title: string; kind: 'text' | 'code' };
   args?: { title: string; kind: 'text' | 'code' };
+  workspaceId?: string;
 }
 
 export function DocumentPreview({
   isReadonly,
   result,
   args,
+  workspaceId,
 }: DocumentPreviewProps) {
   const { artifact, setArtifact } = useArtifact();
 
   const { data: documents, isLoading: isDocumentsFetching } = useSWR<
     Array<Document>
-  >(result ? `/api/document?id=${result.id}` : null, fetcher);
+  >(
+    result && workspaceId
+      ? `/api/workspace/${workspaceId}/documents?id=${result.id}`
+      : null,
+    fetcher,
+  );
 
   const previewDocument = useMemo(() => documents?.[0], [documents]);
   const hitboxRef = useRef<HTMLDivElement>(null);
@@ -116,6 +123,7 @@ export function DocumentPreview({
         kind={document.kind}
         isStreaming={artifact.status === 'streaming'}
         documentId={document.id}
+        workspaceId={workspaceId}
       />
       <DocumentContent document={document} />
     </div>
@@ -206,11 +214,13 @@ const PureDocumentHeader = ({
   kind,
   isStreaming,
   documentId,
+  workspaceId,
 }: {
   title: string;
   kind: 'text' | 'code';
   isStreaming: boolean;
   documentId: string;
+  workspaceId?: string;
 }) => (
   <div className="p-4 border rounded-t-2xl flex flex-row gap-2 items-start sm:items-center justify-between dark:bg-muted border-b-0 dark:border-zinc-700">
     <div className="flex flex-row items-start sm:items-center gap-3">
@@ -227,7 +237,7 @@ const PureDocumentHeader = ({
     </div>
     <div className="flex flex-row items-center gap-2 relative z-20">
       {!isStreaming && documentId && (
-        <SaveDocumentButton documentId={documentId} />
+        <SaveDocumentButton documentId={documentId} workspaceId={workspaceId} />
       )}
       <div className="w-8" />
     </div>

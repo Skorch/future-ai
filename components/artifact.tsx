@@ -46,6 +46,7 @@ export interface UIArtifact {
 
 function PureArtifact({
   chatId,
+  workspaceId,
   input,
   setInput,
   status,
@@ -61,6 +62,7 @@ function PureArtifact({
   selectedVisibilityType,
 }: {
   chatId: string;
+  workspaceId?: string;
   input: string;
   setInput: Dispatch<SetStateAction<string>>;
   status: UseChatHelpers<ChatMessage>['status'];
@@ -89,9 +91,10 @@ function PureArtifact({
 
   const shouldFetchDocument =
     artifact.documentId !== 'init' && artifact.status !== 'streaming';
-  const fetchUrl = shouldFetchDocument
-    ? `/api/document?id=${artifact.documentId}`
-    : null;
+  const fetchUrl =
+    shouldFetchDocument && workspaceId
+      ? `/api/workspace/${workspaceId}/documents?id=${artifact.documentId}`
+      : null;
 
   console.log('[Artifact] Document fetch conditions:', {
     shouldFetchDocument,
@@ -168,14 +171,19 @@ function PureArtifact({
           }
 
           if (currentDocument.content !== updatedContent) {
-            await fetch(`/api/document?id=${artifact.documentId}`, {
-              method: 'POST',
-              body: JSON.stringify({
-                title: artifact.title,
-                content: updatedContent,
-                kind: artifact.kind,
-              }),
-            });
+            await fetch(
+              workspaceId
+                ? `/api/workspace/${workspaceId}/documents?id=${artifact.documentId}`
+                : `/api/document?id=${artifact.documentId}`,
+              {
+                method: 'POST',
+                body: JSON.stringify({
+                  title: artifact.title,
+                  content: updatedContent,
+                  kind: artifact.kind,
+                }),
+              },
+            );
 
             setIsContentDirty(false);
 
@@ -192,7 +200,7 @@ function PureArtifact({
         { revalidate: false },
       );
     },
-    [artifact, mutate],
+    [artifact, mutate, workspaceId],
   );
 
   const debouncedHandleContentChange = useDebounceCallback(
@@ -471,6 +479,7 @@ function PureArtifact({
                 mode={mode}
                 metadata={metadata}
                 setMetadata={setMetadata}
+                workspaceId={workspaceId}
               />
             </div>
 
@@ -516,6 +525,7 @@ function PureArtifact({
                   currentVersionIndex={currentVersionIndex}
                   documents={documents}
                   handleVersionChange={handleVersionChange}
+                  workspaceId={workspaceId}
                 />
               )}
             </AnimatePresence>

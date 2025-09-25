@@ -13,15 +13,13 @@ import { auth } from '@/app/(auth)/auth';
 import { type RequestHints, systemPrompt } from '@/lib/ai/prompts';
 import {
   createStreamId,
-  deleteChatById,
   getChatById,
   getMessagesByChatId,
   saveChat,
   saveMessages,
 } from '@/lib/db/queries';
 import { convertToUIMessages, generateUUID } from '@/lib/utils';
-import { generateTitleFromUserMessage } from '../../actions';
-import { getActiveWorkspace } from '@/lib/workspace/context';
+import { generateTitleFromUserMessage } from '@/app/(chat)/actions';
 import { createDocument } from '@/lib/ai/tools/create-document';
 import { updateDocument } from '@/lib/ai/tools/update-document';
 import { requestSuggestions } from '@/lib/ai/tools/request-suggestions';
@@ -76,7 +74,12 @@ export function getStreamContext() {
   return globalStreamContext;
 }
 
-export async function POST(request: Request) {
+export async function POST(
+  request: Request,
+  props: { params: Promise<{ workspaceId: string }> },
+) {
+  const params = await props.params;
+  const { workspaceId } = params;
   let requestBody: PostRequestBody;
 
   try {
@@ -115,8 +118,7 @@ export async function POST(request: Request) {
 
     const chat = await getChatById({ id });
 
-    // Get workspace context early
-    const workspaceId = await getActiveWorkspace(session.user.id);
+    // Workspace context now comes from route params
 
     if (!chat) {
       const title = await generateTitleFromUserMessage({
@@ -133,6 +135,11 @@ export async function POST(request: Request) {
     } else {
       if (chat.userId !== session.user.id) {
         return new ChatSDKError('forbidden:chat').toResponse();
+      }
+
+      // Validate chat belongs to the workspace
+      if (chat.workspaceId !== workspaceId) {
+        return new ChatSDKError('not_found:chat').toResponse();
       }
     }
 
@@ -917,29 +924,4 @@ export async function POST(request: Request) {
     console.error('[Chat API] Unhandled error:', error);
     return new ChatSDKError('offline:chat').toResponse();
   }
-}
-
-export async function DELETE(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const id = searchParams.get('id');
-
-  if (!id) {
-    return new ChatSDKError('bad_request:api').toResponse();
-  }
-
-  const session = await auth();
-
-  if (!session?.user) {
-    return new ChatSDKError('unauthorized:chat').toResponse();
-  }
-
-  const chat = await getChatById({ id });
-
-  if (chat.userId !== session.user.id) {
-    return new ChatSDKError('forbidden:chat').toResponse();
-  }
-
-  const deletedChat = await deleteChatById({ id });
-
-  return Response.json(deletedChat, { status: 200 });
 }

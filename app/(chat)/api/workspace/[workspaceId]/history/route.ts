@@ -1,9 +1,14 @@
 import { auth } from '@/app/(auth)/auth';
 import type { NextRequest } from 'next/server';
-import { getChatsByUserId } from '@/lib/db/queries';
+import { getChatsByWorkspaceAndUser } from '@/lib/db/queries';
 import { ChatSDKError } from '@/lib/errors';
 
-export async function GET(request: NextRequest) {
+export async function GET(
+  request: NextRequest,
+  props: { params: Promise<{ workspaceId: string }> },
+) {
+  const params = await props.params;
+  const { workspaceId } = params;
   const { searchParams } = request.nextUrl;
 
   const limit = Number.parseInt(searchParams.get('limit') || '10');
@@ -23,12 +28,20 @@ export async function GET(request: NextRequest) {
     return new ChatSDKError('unauthorized:chat').toResponse();
   }
 
-  const chats = await getChatsByUserId({
-    id: session.user.id,
+  const chats = await getChatsByWorkspaceAndUser({
+    workspaceId,
+    userId: session.user.id,
     limit,
     startingAfter,
     endingBefore,
   });
 
-  return Response.json(chats);
+  // Extract hasMore from the first chat if it exists
+  const hasMore = chats.length > 0 ? chats[0].hasMore : false;
+
+  // Return in the expected ChatHistory format
+  return Response.json({
+    chats,
+    hasMore,
+  });
 }

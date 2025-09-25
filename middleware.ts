@@ -37,12 +37,20 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/', request.url));
   }
 
+  // Workspace route validation
+  if (pathname.startsWith('/workspace/')) {
+    // The workspace layout will handle validation
+    // We just need to ensure the user is authenticated, which they are at this point
+    return NextResponse.next();
+  }
+
   return NextResponse.next();
 }
 
 export const config = {
   matcher: [
     '/',
+    '/workspace/:workspaceId*',
     '/chat/:id',
     '/api/:path*',
     '/login',

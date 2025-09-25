@@ -16,6 +16,7 @@ import {
 
 interface MessagesProps {
   chatId: string;
+  workspaceId?: string;
   status: UseChatHelpers<ChatMessage>['status'];
   votes: Array<Vote> | undefined;
   messages: ChatMessage[];
@@ -27,6 +28,7 @@ interface MessagesProps {
 
 function PureMessages({
   chatId,
+  workspaceId,
   status,
   votes,
   messages,
@@ -58,6 +60,7 @@ function PureMessages({
             <PreviewMessage
               key={message.id}
               chatId={chatId}
+              workspaceId={workspaceId}
               message={message}
               isLoading={
                 status === 'streaming' && messages.length - 1 === index

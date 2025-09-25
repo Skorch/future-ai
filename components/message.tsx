@@ -383,6 +383,7 @@ const RAGQueryResult = memo(function RAGQueryResult({
 
 const PurePreviewMessage = ({
   chatId,
+  workspaceId,
   message,
   vote,
   isLoading,
@@ -393,6 +394,7 @@ const PurePreviewMessage = ({
   isArtifactVisible,
 }: {
   chatId: string;
+  workspaceId?: string;
   message: ChatMessage;
   vote: Vote | undefined;
   isLoading: boolean;
@@ -569,6 +571,7 @@ const PurePreviewMessage = ({
                     key={toolCallId}
                     isReadonly={isReadonly}
                     result={part.output}
+                    workspaceId={workspaceId}
                   />
                 );
               }
@@ -593,6 +596,7 @@ const PurePreviewMessage = ({
                       isReadonly={isReadonly}
                       result={part.output}
                       args={part.output}
+                      workspaceId={workspaceId}
                     />
                   </div>
                 );

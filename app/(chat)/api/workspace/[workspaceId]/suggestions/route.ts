@@ -2,7 +2,12 @@ import { auth } from '@/app/(auth)/auth';
 import { getSuggestionsByDocumentId } from '@/lib/db/queries';
 import { ChatSDKError } from '@/lib/errors';
 
-export async function GET(request: Request) {
+export async function GET(
+  request: Request,
+  props: { params: Promise<{ workspaceId: string }> },
+) {
+  const params = await props.params;
+  const { workspaceId } = params;
   const { searchParams } = new URL(request.url);
   const documentId = searchParams.get('documentId');
 
@@ -29,9 +34,9 @@ export async function GET(request: Request) {
     return Response.json([], { status: 200 });
   }
 
-  // TODO: Phase 4 - Check if user has access to this workspace
-  if (suggestion.suggestedByUserId !== session.user.id) {
-    return new ChatSDKError('forbidden:api').toResponse();
+  // Validate suggestion belongs to the workspace
+  if (suggestion.workspaceId !== workspaceId) {
+    return new ChatSDKError('not_found:suggestions').toResponse();
   }
 
   return Response.json(suggestions, { status: 200 });

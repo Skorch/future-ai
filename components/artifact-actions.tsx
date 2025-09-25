@@ -15,6 +15,7 @@ interface ArtifactActionsProps {
   mode: 'edit' | 'diff';
   metadata: unknown;
   setMetadata: Dispatch<SetStateAction<unknown>>;
+  workspaceId?: string;
 }
 
 function PureArtifactActions({
@@ -25,6 +26,7 @@ function PureArtifactActions({
   mode,
   metadata,
   setMetadata,
+  workspaceId,
 }: ArtifactActionsProps) {
   const [isLoading, setIsLoading] = useState(false);
 
@@ -87,7 +89,10 @@ function PureArtifactActions({
           <TooltipContent>{action.description}</TooltipContent>
         </Tooltip>
       ))}
-      <SaveDocumentButton documentId={artifact.documentId} />
+      <SaveDocumentButton
+        documentId={artifact.documentId}
+        workspaceId={workspaceId}
+      />
     </div>
   );
 }

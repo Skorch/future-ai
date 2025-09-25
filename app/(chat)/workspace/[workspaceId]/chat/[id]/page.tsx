@@ -6,9 +6,11 @@ import { getChatById, getMessagesByChatId } from '@/lib/db/queries';
 import { DataStreamHandler } from '@/components/data-stream-handler';
 import { convertToUIMessages } from '@/lib/utils';
 
-export default async function Page(props: { params: Promise<{ id: string }> }) {
+export default async function Page(props: {
+  params: Promise<{ workspaceId: string; id: string }>;
+}) {
   const params = await props.params;
-  const { id } = params;
+  const { workspaceId, id } = params;
   const chat = await getChatById({ id });
 
   if (!chat) {
@@ -19,6 +21,11 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
 
   if (!session) {
     redirect('/api/auth/guest');
+  }
+
+  // Validate chat belongs to the workspace
+  if (chat.workspaceId !== workspaceId) {
+    notFound();
   }
 
   if (chat.visibility === 'private') {
@@ -41,6 +48,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
     <>
       <Chat
         id={chat.id}
+        workspaceId={workspaceId}
         initialMessages={uiMessages}
         initialVisibilityType={chat.visibility}
         isReadonly={session?.user?.id !== chat.userId}

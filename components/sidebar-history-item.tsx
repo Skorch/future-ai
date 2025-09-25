@@ -42,10 +42,13 @@ const PureChatItem = ({
     initialVisibilityType: chat.visibility,
   });
 
+  // Workspace is always available from the chat's workspaceId
+  const chatUrl = `/workspace/${chat.workspaceId}/chat/${chat.id}`;
+
   return (
     <SidebarMenuItem>
       <SidebarMenuButton asChild isActive={isActive}>
-        <Link href={`/chat/${chat.id}`} onClick={() => setOpenMobile(false)}>
+        <Link href={chatUrl} onClick={() => setOpenMobile(false)}>
           <span>{chat.title}</span>
         </Link>
       </SidebarMenuButton>

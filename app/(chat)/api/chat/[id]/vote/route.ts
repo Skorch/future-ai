@@ -2,16 +2,12 @@ import { auth } from '@/app/(auth)/auth';
 import { getChatById, getVotesByChatId, voteMessage } from '@/lib/db/queries';
 import { ChatSDKError } from '@/lib/errors';
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const chatId = searchParams.get('chatId');
-
-  if (!chatId) {
-    return new ChatSDKError(
-      'bad_request:api',
-      'Parameter chatId is required.',
-    ).toResponse();
-  }
+export async function GET(
+  request: Request,
+  props: { params: Promise<{ id: string }> },
+) {
+  const params = await props.params;
+  const chatId = params.id;
 
   const session = await auth();
 
@@ -34,18 +30,19 @@ export async function GET(request: Request) {
   return Response.json(votes, { status: 200 });
 }
 
-export async function PATCH(request: Request) {
-  const {
-    chatId,
-    messageId,
-    type,
-  }: { chatId: string; messageId: string; type: 'up' | 'down' } =
+export async function PATCH(
+  request: Request,
+  props: { params: Promise<{ id: string }> },
+) {
+  const params = await props.params;
+  const chatId = params.id;
+  const { messageId, type }: { messageId: string; type: 'up' | 'down' } =
     await request.json();
 
-  if (!chatId || !messageId || !type) {
+  if (!messageId || !type) {
     return new ChatSDKError(
       'bad_request:api',
-      'Parameters chatId, messageId, and type are required.',
+      'Parameters messageId and type are required.',
     ).toResponse();
   }
 

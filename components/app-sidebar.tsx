@@ -18,9 +18,14 @@ import {
 import Link from 'next/link';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
-export function AppSidebar({ user }: { user: User | undefined }) {
+export function AppSidebar({
+  user,
+  workspaceId,
+}: { user: User | undefined; workspaceId: string }) {
   const router = useRouter();
   const { setOpenMobile } = useSidebar();
+
+  const newChatUrl = `/workspace/${workspaceId}`;
 
   return (
     <Sidebar className="group-data-[side=left]:border-r-0">
@@ -28,7 +33,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
         <SidebarMenu>
           <div className="flex flex-row justify-between items-center">
             <Link
-              href="/"
+              href={newChatUrl}
               onClick={() => {
                 setOpenMobile(false);
               }}
@@ -46,7 +51,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                   className="p-2 h-fit"
                   onClick={() => {
                     setOpenMobile(false);
-                    router.push('/');
+                    router.push(newChatUrl);
                     router.refresh();
                   }}
                 >
@@ -59,7 +64,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <SidebarHistory user={user} />
+        <SidebarHistory user={user} workspaceId={workspaceId} />
       </SidebarContent>
       <SidebarFooter>{user && <SidebarUserNav user={user} />}</SidebarFooter>
     </Sidebar>

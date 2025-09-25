@@ -12,8 +12,6 @@ import { MultimodalInput } from './multimodal-input';
 import { Messages } from './messages';
 import type { VisibilityType } from './visibility-selector';
 import { useArtifactSelector } from '@/hooks/use-artifact';
-import { unstable_serialize } from 'swr/infinite';
-import { getChatHistoryPaginationKey } from './sidebar-history';
 import { toast } from './toast';
 import type { Session } from 'next-auth';
 import { useSearchParams } from 'next/navigation';
@@ -25,6 +23,7 @@ import { useDataStream } from './data-stream-provider';
 
 export function Chat({
   id,
+  workspaceId,
   initialMessages,
   initialVisibilityType,
   isReadonly,
@@ -33,6 +32,7 @@ export function Chat({
   chat,
 }: {
   id: string;
+  workspaceId?: string;
   initialMessages: ChatMessage[];
   initialVisibilityType: VisibilityType;
   isReadonly: boolean;
@@ -64,7 +64,7 @@ export function Chat({
     experimental_throttle: 100,
     generateId: generateUUID,
     transport: new DefaultChatTransport({
-      api: '/api/chat',
+      api: workspaceId ? `/api/workspace/${workspaceId}/chat` : '/api/chat',
       fetch: fetchWithErrorHandlers,
       prepareSendMessagesRequest({ messages, id, body }) {
         return {
@@ -81,7 +81,8 @@ export function Chat({
       setDataStream((ds) => (ds ? [...ds, dataPart] : []));
     },
     onFinish: () => {
-      mutate(unstable_serialize(getChatHistoryPaginationKey));
+      // Mutate all chat history keys since we can't determine the specific workspace key here
+      mutate((key) => typeof key === 'string' && key.includes('/history'));
     },
     onError: (error) => {
       console.error('[Chat] Error received:', error);
@@ -147,12 +148,15 @@ export function Chat({
       });
 
       setHasAppendedQuery(true);
-      window.history.replaceState({}, '', `/chat/${id}`);
+      const newUrl = workspaceId
+        ? `/workspace/${workspaceId}/chat/${id}`
+        : `/chat/${id}`;
+      window.history.replaceState({}, '', newUrl);
     }
-  }, [query, sendMessage, hasAppendedQuery, id]);
+  }, [query, sendMessage, hasAppendedQuery, id, workspaceId]);
 
   const { data: votes } = useSWR<Array<Vote>>(
-    messages.length >= 2 ? `/api/vote?chatId=${id}` : null,
+    messages.length >= 2 ? `/api/chat/${id}/vote` : null,
     fetcher,
   );
 
@@ -178,6 +182,7 @@ export function Chat({
 
         <Messages
           chatId={id}
+          workspaceId={workspaceId}
           status={status}
           votes={votes}
           messages={messages}
@@ -209,6 +214,7 @@ export function Chat({
 
       <Artifact
         chatId={id}
+        workspaceId={workspaceId}
         input={input}
         setInput={setInput}
         status={status}

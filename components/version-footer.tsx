@@ -17,12 +17,14 @@ interface VersionFooterProps {
   handleVersionChange: (type: 'next' | 'prev' | 'toggle' | 'latest') => void;
   documents: Array<Document> | undefined;
   currentVersionIndex: number;
+  workspaceId?: string;
 }
 
 export const VersionFooter = ({
   handleVersionChange,
   documents,
   currentVersionIndex,
+  workspaceId,
 }: VersionFooterProps) => {
   const { artifact } = useArtifact();
 
@@ -56,12 +58,19 @@ export const VersionFooter = ({
             setIsMutating(true);
 
             mutate(
-              `/api/document?id=${artifact.documentId}`,
+              workspaceId
+                ? `/api/workspace/${workspaceId}/documents?id=${artifact.documentId}`
+                : `/api/document?id=${artifact.documentId}`,
               await fetch(
-                `/api/document?id=${artifact.documentId}&timestamp=${getDocumentTimestampByIndex(
-                  documents,
-                  currentVersionIndex,
-                )}`,
+                workspaceId
+                  ? `/api/workspace/${workspaceId}/documents?id=${artifact.documentId}&timestamp=${getDocumentTimestampByIndex(
+                      documents,
+                      currentVersionIndex,
+                    )}`
+                  : `/api/document?id=${artifact.documentId}&timestamp=${getDocumentTimestampByIndex(
+                      documents,
+                      currentVersionIndex,
+                    )}`,
                 {
                   method: 'DELETE',
                 },

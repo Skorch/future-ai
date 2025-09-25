@@ -6,9 +6,13 @@ import {
   saveDocument,
 } from '@/lib/db/queries';
 import { ChatSDKError } from '@/lib/errors';
-import { getActiveWorkspace } from '@/lib/workspace/context';
 
-export async function GET(request: Request) {
+export async function GET(
+  request: Request,
+  props: { params: Promise<{ workspaceId: string }> },
+) {
+  const params = await props.params;
+  const { workspaceId } = params;
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
 
@@ -48,17 +52,22 @@ export async function GET(request: Request) {
     return new ChatSDKError('not_found:document').toResponse();
   }
 
-  // TODO: Phase 4 - Check if user has access to this workspace
-  if (document.createdByUserId !== session.user.id) {
-    console.log('[Document API] Error: Forbidden - wrong user');
-    return new ChatSDKError('forbidden:document').toResponse();
+  // Validate document belongs to the workspace
+  if (document.workspaceId !== workspaceId) {
+    console.log('[Document API] Error: Document not in this workspace');
+    return new ChatSDKError('not_found:document').toResponse();
   }
 
   console.log('[Document API] Returning documents successfully');
   return Response.json(documents, { status: 200 });
 }
 
-export async function POST(request: Request) {
+export async function POST(
+  request: Request,
+  props: { params: Promise<{ workspaceId: string }> },
+) {
+  const params = await props.params;
+  const { workspaceId } = params;
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
 
@@ -87,14 +96,11 @@ export async function POST(request: Request) {
   if (documents.length > 0) {
     const [document] = documents;
 
-    // TODO: Phase 4 - Check if user has access to this workspace
-    if (document.createdByUserId !== session.user.id) {
-      return new ChatSDKError('forbidden:document').toResponse();
+    // Validate document belongs to the workspace
+    if (document.workspaceId !== workspaceId) {
+      return new ChatSDKError('not_found:document').toResponse();
     }
   }
-
-  // Get workspace from cookie/context
-  const workspaceId = await getActiveWorkspace(session.user.id);
 
   const document = await saveDocument({
     id,
@@ -108,7 +114,12 @@ export async function POST(request: Request) {
   return Response.json(document, { status: 200 });
 }
 
-export async function DELETE(request: Request) {
+export async function DELETE(
+  request: Request,
+  props: { params: Promise<{ workspaceId: string }> },
+) {
+  const params = await props.params;
+  const { workspaceId } = params;
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
   const timestamp = searchParams.get('timestamp');
@@ -137,9 +148,9 @@ export async function DELETE(request: Request) {
 
   const [document] = documents;
 
-  // TODO: Phase 4 - Check if user has access to this workspace
-  if (document.createdByUserId !== session.user.id) {
-    return new ChatSDKError('forbidden:document').toResponse();
+  // Validate document belongs to the workspace
+  if (document.workspaceId !== workspaceId) {
+    return new ChatSDKError('not_found:document').toResponse();
   }
 
   const documentsDeleted = await deleteDocumentsByIdAfterTimestamp({

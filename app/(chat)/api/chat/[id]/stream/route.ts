@@ -8,7 +8,10 @@ import type { Chat } from '@/lib/db/schema';
 import { ChatSDKError } from '@/lib/errors';
 import type { ChatMessage } from '@/lib/types';
 import { createUIMessageStream, JsonToSseTransformStream } from 'ai';
-import { getStreamContext } from '../../route';
+// Note: getStreamContext is workspace-specific now, but stream API is not workspace-aware yet
+// This will need refactoring when streams become workspace-scoped
+// For now, importing from first workspace route as a workaround
+import { getStreamContext } from '@/app/(chat)/api/workspace/[workspaceId]/chat/route';
 import { differenceInSeconds } from 'date-fns';
 
 export async function GET(

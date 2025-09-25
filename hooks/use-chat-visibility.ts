@@ -2,12 +2,8 @@
 
 import { useMemo } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
-import { unstable_serialize } from 'swr/infinite';
 import { updateChatVisibility } from '@/app/(chat)/actions';
-import {
-  getChatHistoryPaginationKey,
-  type ChatHistory,
-} from '@/components/sidebar-history';
+import type { ChatHistory } from '@/components/sidebar-history';
 import type { VisibilityType } from '@/components/visibility-selector';
 
 export function useChatVisibility({
@@ -37,7 +33,8 @@ export function useChatVisibility({
 
   const setVisibilityType = (updatedVisibilityType: VisibilityType) => {
     setLocalVisibility(updatedVisibilityType);
-    mutate(unstable_serialize(getChatHistoryPaginationKey));
+    // Mutate all history-related keys when visibility changes
+    mutate((key) => typeof key === 'string' && key.includes('/history'));
 
     updateChatVisibility({
       chatId: chatId,

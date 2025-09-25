@@ -68,8 +68,10 @@ export async function createUser(email: string, password: string) {
         .values({ email, password: hashedPassword })
         .returning();
 
-      // Auto-create Personal workspace
+      // Auto-create Personal workspace with UUID
+      const workspaceId = generateUUID();
       await tx.insert(workspace).values({
+        id: workspaceId,
         userId: newUser.id,
         name: 'Personal',
         description: 'Your personal workspace',
@@ -97,8 +99,10 @@ export async function createGuestUser() {
           email: user.email,
         });
 
-      // Auto-create Guest workspace
+      // Auto-create Guest workspace with UUID
+      const workspaceId = generateUUID();
       await tx.insert(workspace).values({
+        id: workspaceId,
         userId: guestUser.id,
         name: 'Guest Workspace',
         description: 'Temporary workspace for guest access',
@@ -156,6 +160,77 @@ export async function deleteChatById({ id }: { id: string }) {
     throw new ChatSDKError(
       'bad_request:database',
       'Failed to delete chat by id',
+    );
+  }
+}
+
+export async function getChatsByWorkspaceAndUser({
+  workspaceId,
+  userId,
+  limit,
+  startingAfter,
+  endingBefore,
+}: {
+  workspaceId: string;
+  userId: string;
+  limit: number;
+  startingAfter: string | null;
+  endingBefore: string | null;
+}) {
+  try {
+    const extendedLimit = limit + 1;
+
+    const query = (whereCondition?: SQL<unknown>) =>
+      db
+        .select()
+        .from(chat)
+        .where(
+          whereCondition
+            ? and(
+                whereCondition,
+                eq(chat.workspaceId, workspaceId),
+                eq(chat.userId, userId),
+              )
+            : and(eq(chat.workspaceId, workspaceId), eq(chat.userId, userId)),
+        )
+        .orderBy(desc(chat.createdAt))
+        .limit(extendedLimit);
+
+    let filteredChats: Array<Chat> = [];
+
+    if (startingAfter) {
+      const [selectedChat] = await db
+        .select()
+        .from(chat)
+        .where(eq(chat.id, startingAfter));
+
+      filteredChats = await query(gt(chat.createdAt, selectedChat.createdAt));
+    } else if (endingBefore) {
+      const [selectedChat] = await db
+        .select()
+        .from(chat)
+        .where(eq(chat.id, endingBefore));
+
+      filteredChats = await query(lt(chat.createdAt, selectedChat.createdAt));
+    } else {
+      filteredChats = await query();
+    }
+
+    const hasMore = filteredChats.length > limit;
+
+    return filteredChats.slice(0, limit).map((chat) => ({
+      ...chat,
+      hasMore,
+      hasBefore: startingAfter ? true : !!endingBefore,
+    }));
+  } catch (error) {
+    console.error(
+      '[Database] Error getting chats by workspace and user:',
+      error,
+    );
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get chats by workspace and user',
     );
   }
 }
