@@ -2,13 +2,11 @@ import { z } from 'zod';
 import type { getWeather } from './ai/tools/get-weather';
 import type { createDocument } from './ai/tools/create-document';
 import type { updateDocument } from './ai/tools/update-document';
-import type { requestSuggestions } from './ai/tools/request-suggestions';
 import type { setMode } from './ai/tools/set-mode';
 import type { askUser } from './ai/tools/ask-user';
 import type { InferUITool, UIMessage } from 'ai';
 
 import type { ArtifactKind } from '@/components/artifact';
-import type { Suggestion } from './db/schema';
 
 export type DataPart = { type: 'append-message'; message: string };
 
@@ -21,9 +19,6 @@ export type MessageMetadata = z.infer<typeof messageMetadataSchema>;
 type weatherTool = InferUITool<typeof getWeather>;
 type createDocumentTool = InferUITool<ReturnType<typeof createDocument>>;
 type updateDocumentTool = InferUITool<ReturnType<typeof updateDocument>>;
-type requestSuggestionsTool = InferUITool<
-  ReturnType<typeof requestSuggestions>
->;
 type setModeTool = InferUITool<ReturnType<typeof setMode>>;
 type askUserTool = InferUITool<ReturnType<typeof askUser>>;
 
@@ -31,7 +26,6 @@ export type ChatTools = {
   getWeather: weatherTool;
   createDocument: createDocumentTool;
   updateDocument: updateDocumentTool;
-  requestSuggestions: requestSuggestionsTool;
   setMode: setModeTool;
   askUser: askUserTool;
 };
@@ -41,7 +35,6 @@ export type CustomUIDataTypes = {
   imageDelta: string;
   sheetDelta: string;
   codeDelta: string;
-  suggestion: Suggestion;
   appendMessage: string;
   id: string;
   title: string;

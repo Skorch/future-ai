@@ -11,7 +11,7 @@ export default async function Page(props: {
 }) {
   const params = await props.params;
   const { workspaceId, id } = params;
-  const chat = await getChatById({ id });
+  const chat = await getChatById({ id, workspaceId });
 
   if (!chat) {
     notFound();
@@ -21,11 +21,6 @@ export default async function Page(props: {
 
   if (!session) {
     redirect('/api/auth/guest');
-  }
-
-  // Validate chat belongs to the workspace
-  if (chat.workspaceId !== workspaceId) {
-    notFound();
   }
 
   if (chat.visibility === 'private') {

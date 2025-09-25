@@ -479,7 +479,6 @@ function PureArtifact({
                 mode={mode}
                 metadata={metadata}
                 setMetadata={setMetadata}
-                workspaceId={workspaceId}
               />
             </div>
 
@@ -494,7 +493,6 @@ function PureArtifact({
                 mode={mode}
                 status={artifact.status}
                 currentVersionIndex={currentVersionIndex}
-                suggestions={[]}
                 onSaveContent={saveContent}
                 isInline={false}
                 isCurrentVersion={isCurrentVersion}

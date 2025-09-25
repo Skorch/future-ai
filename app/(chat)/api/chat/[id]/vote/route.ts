@@ -1,6 +1,7 @@
 import { auth } from '@/app/(auth)/auth';
 import { getChatById, getVotesByChatId, voteMessage } from '@/lib/db/queries';
 import { ChatSDKError } from '@/lib/errors';
+import { getActiveWorkspace } from '@/lib/workspace/context';
 
 export async function GET(
   request: Request,
@@ -15,7 +16,8 @@ export async function GET(
     return new ChatSDKError('unauthorized:vote').toResponse();
   }
 
-  const chat = await getChatById({ id: chatId });
+  const workspaceId = await getActiveWorkspace(session.user.id);
+  const chat = await getChatById({ id: chatId, workspaceId });
 
   if (!chat) {
     return new ChatSDKError('not_found:chat').toResponse();
@@ -52,7 +54,8 @@ export async function PATCH(
     return new ChatSDKError('unauthorized:vote').toResponse();
   }
 
-  const chat = await getChatById({ id: chatId });
+  const workspaceId = await getActiveWorkspace(session.user.id);
+  const chat = await getChatById({ id: chatId, workspaceId });
 
   if (!chat) {
     return new ChatSDKError('not_found:vote').toResponse();

@@ -18,7 +18,6 @@ import { Editor } from './text-editor';
 import { DocumentToolCall, DocumentToolResult } from './document';
 import { useArtifact } from '@/hooks/use-artifact';
 import equal from 'fast-deep-equal';
-import { SaveDocumentButton } from './save-document-button';
 
 interface DocumentPreviewProps {
   isReadonly: boolean;
@@ -236,9 +235,6 @@ const PureDocumentHeader = ({
       <div className="-translate-y-1 sm:translate-y-0 font-medium">{title}</div>
     </div>
     <div className="flex flex-row items-center gap-2 relative z-20">
-      {!isStreaming && documentId && (
-        <SaveDocumentButton documentId={documentId} workspaceId={workspaceId} />
-      )}
       <div className="w-8" />
     </div>
   </div>

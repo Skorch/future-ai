@@ -52,9 +52,25 @@ const pineconeClient = new PineconeClient({
 /**
  * Sync a document to RAG (UPSERT pattern)
  */
-export async function syncDocumentToRAG(documentId: string): Promise<void> {
+export async function syncDocumentToRAG(
+  documentId: string,
+  workspaceId?: string,
+): Promise<void> {
   try {
-    const doc = await getDocumentById({ id: documentId });
+    // First try with provided workspaceId if available
+    // This is a temporary fix - ideally we should always have workspaceId
+    const doc = workspaceId
+      ? await getDocumentById({ id: documentId, workspaceId })
+      : null;
+
+    // If no workspaceId provided or document not found, we can't proceed safely
+    if (!doc) {
+      console.log(
+        `[RAG Sync] Cannot sync document ${documentId} without workspace context`,
+      );
+      return;
+    }
+
     if (!doc?.content || !doc?.workspaceId) {
       console.log(
         `[RAG Sync] No content or workspaceId for document ${documentId}`,
@@ -80,8 +96,7 @@ export async function syncDocumentToRAG(documentId: string): Promise<void> {
     );
 
     // Delete existing chunks for this document
-    // TODO: Phase 4 - Change namespace from userId to workspaceId
-    await deleteFromRAG(documentId, doc.createdByUserId || 'default');
+    await deleteFromRAG(documentId, doc.workspaceId);
 
     // Chunk based on document type - pass all document info for rich metadata
     const chunks = await chunkDocument(doc.content, documentId, documentType, {
@@ -99,9 +114,8 @@ export async function syncDocumentToRAG(documentId: string): Promise<void> {
     }
 
     // Store in Pinecone
-    // TODO: Phase 4 - Change namespace from userId to workspaceId
     await pineconeClient.writeDocuments(chunks, {
-      namespace: doc.createdByUserId || 'default',
+      namespace: doc.workspaceId,
     });
 
     console.log(`[RAG Sync] Stored ${chunks.length} chunks for ${documentId}`);
@@ -119,17 +133,15 @@ export async function deleteFromRAG(
   namespace?: string,
 ): Promise<void> {
   try {
-    // If no namespace provided, we need to get the document to find the workspaceId
-    let workspaceId = namespace;
+    // If no namespace provided, we can't safely delete
+    const workspaceId = namespace;
     if (!workspaceId) {
-      const doc = await getDocumentById({ id: documentId });
-      workspaceId = doc?.workspaceId;
-      if (!workspaceId) {
-        console.log(
-          `[RAG Sync] No workspaceId found for document ${documentId}, skipping delete`,
-        );
-        return;
-      }
+      // Cannot get document without workspaceId - this is a limitation
+      // that should be fixed by always passing namespace/workspaceId
+      console.log(
+        `[RAG Sync] No workspaceId found for document ${documentId}, skipping delete`,
+      );
+      return;
     }
 
     // Use MongoDB-style operator for metadata filtering

@@ -6,6 +6,7 @@ import {
 } from '@/lib/db/queries';
 import type { Chat } from '@/lib/db/schema';
 import { ChatSDKError } from '@/lib/errors';
+import { getActiveWorkspace } from '@/lib/workspace/context';
 import type { ChatMessage } from '@/lib/types';
 import { createUIMessageStream, JsonToSseTransformStream } from 'ai';
 // Note: getStreamContext is workspace-specific now, but stream API is not workspace-aware yet
@@ -37,10 +38,11 @@ export async function GET(
     return new ChatSDKError('unauthorized:chat').toResponse();
   }
 
+  const workspaceId = await getActiveWorkspace(session.user.id);
   let chat: Chat;
 
   try {
-    chat = await getChatById({ id: chatId });
+    chat = await getChatById({ id: chatId, workspaceId });
   } catch {
     return new ChatSDKError('not_found:chat').toResponse();
   }

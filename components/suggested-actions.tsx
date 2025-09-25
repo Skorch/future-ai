@@ -5,7 +5,29 @@ import { memo } from 'react';
 import type { UseChatHelpers } from '@ai-sdk/react';
 import type { VisibilityType } from './visibility-selector';
 import type { ChatMessage } from '@/lib/types';
-import { Suggestion } from './elements/suggestion';
+
+// Simple suggestion button component for UI prompt suggestions
+function Suggestion({
+  suggestion,
+  onClick,
+  className,
+  children,
+}: {
+  suggestion: string;
+  onClick: (suggestion: string) => void;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onClick(suggestion)}
+      className={`bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-300 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer ${className || ''}`}
+    >
+      {children}
+    </button>
+  );
+}
 
 interface SuggestedActionsProps {
   chatId: string;

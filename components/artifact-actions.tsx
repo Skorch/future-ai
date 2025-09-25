@@ -5,7 +5,6 @@ import { type Dispatch, memo, type SetStateAction, useState } from 'react';
 import type { ArtifactActionContext } from './create-artifact';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { SaveDocumentButton } from './save-document-button';
 
 interface ArtifactActionsProps {
   artifact: UIArtifact;
@@ -15,7 +14,6 @@ interface ArtifactActionsProps {
   mode: 'edit' | 'diff';
   metadata: unknown;
   setMetadata: Dispatch<SetStateAction<unknown>>;
-  workspaceId?: string;
 }
 
 function PureArtifactActions({
@@ -26,7 +24,6 @@ function PureArtifactActions({
   mode,
   metadata,
   setMetadata,
-  workspaceId,
 }: ArtifactActionsProps) {
   const [isLoading, setIsLoading] = useState(false);
 
@@ -65,7 +62,6 @@ function PureArtifactActions({
                 setIsLoading(true);
 
                 try {
-                  // @ts-expect-error - Generic metadata type mismatch with specific artifact types
                   await Promise.resolve(action.onClick(actionContext));
                 } catch (error) {
                   toast.error('Failed to execute action');
@@ -77,8 +73,7 @@ function PureArtifactActions({
                 isLoading || artifact.status === 'streaming'
                   ? true
                   : action.isDisabled
-                    ? // @ts-expect-error - Generic metadata type mismatch with specific artifact types
-                      action.isDisabled(actionContext)
+                    ? action.isDisabled(actionContext)
                     : false
               }
             >
@@ -89,10 +84,6 @@ function PureArtifactActions({
           <TooltipContent>{action.description}</TooltipContent>
         </Tooltip>
       ))}
-      <SaveDocumentButton
-        documentId={artifact.documentId}
-        workspaceId={workspaceId}
-      />
     </div>
   );
 }

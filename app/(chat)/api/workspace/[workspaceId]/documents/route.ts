@@ -34,7 +34,7 @@ export async function GET(
   }
 
   console.log('[Document API] Fetching documents for ID:', id);
-  const documents = await getDocumentsById({ id });
+  const documents = await getDocumentsById({ id, workspaceId });
 
   console.log('[Document API] Documents fetched:', {
     count: documents.length,
@@ -49,12 +49,6 @@ export async function GET(
 
   if (!document) {
     console.log('[Document API] Error: Document not found');
-    return new ChatSDKError('not_found:document').toResponse();
-  }
-
-  // Validate document belongs to the workspace
-  if (document.workspaceId !== workspaceId) {
-    console.log('[Document API] Error: Document not in this workspace');
     return new ChatSDKError('not_found:document').toResponse();
   }
 
@@ -91,15 +85,10 @@ export async function POST(
   }: { content: string; title: string; kind: ArtifactKind } =
     await request.json();
 
-  const documents = await getDocumentsById({ id });
+  const documents = await getDocumentsById({ id, workspaceId });
 
   if (documents.length > 0) {
     const [document] = documents;
-
-    // Validate document belongs to the workspace
-    if (document.workspaceId !== workspaceId) {
-      return new ChatSDKError('not_found:document').toResponse();
-    }
   }
 
   const document = await saveDocument({
@@ -144,14 +133,9 @@ export async function DELETE(
     return new ChatSDKError('unauthorized:document').toResponse();
   }
 
-  const documents = await getDocumentsById({ id });
+  const documents = await getDocumentsById({ id, workspaceId });
 
   const [document] = documents;
-
-  // Validate document belongs to the workspace
-  if (document.workspaceId !== workspaceId) {
-    return new ChatSDKError('not_found:document').toResponse();
-  }
 
   const documentsDeleted = await deleteDocumentsByIdAfterTimestamp({
     id,

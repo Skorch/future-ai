@@ -5,38 +5,18 @@ import { Editor } from '@/components/text-editor';
 import {
   ClockRewind,
   CopyIcon,
-  MessageIcon,
   PenIcon,
   RedoIcon,
   UndoIcon,
 } from '@/components/icons';
-import type { Suggestion } from '@/lib/db/schema';
 import { toast } from 'sonner';
-import { getSuggestions } from '../actions';
 
-interface TextArtifactMetadata {
-  suggestions: Array<Suggestion>;
-}
+type TextArtifactMetadata = {};
 
 export const textArtifact = new Artifact<'text', TextArtifactMetadata>({
   kind: 'text',
   description: 'Useful for text content, like drafting essays and emails.',
-  initialize: async ({ documentId, setMetadata }) => {
-    const suggestions = await getSuggestions({ documentId });
-
-    setMetadata({
-      suggestions,
-    });
-  },
-  onStreamPart: ({ streamPart, setMetadata, setArtifact }) => {
-    if (streamPart.type === 'data-suggestion') {
-      setMetadata((metadata) => {
-        return {
-          suggestions: [...metadata.suggestions, streamPart.data],
-        };
-      });
-    }
-
+  onStreamPart: ({ streamPart, setArtifact }) => {
     if (streamPart.type === 'data-textDelta') {
       setArtifact((draftArtifact) => {
         return {
@@ -80,16 +60,11 @@ export const textArtifact = new Artifact<'text', TextArtifactMetadata>({
         <div className="flex flex-row py-8 md:p-20 px-4">
           <Editor
             content={content}
-            suggestions={metadata ? metadata.suggestions : []}
             isCurrentVersion={isCurrentVersion}
             currentVersionIndex={currentVersionIndex}
             status={status}
             onSaveContent={onSaveContent}
           />
-
-          {metadata?.suggestions && metadata.suggestions.length > 0 ? (
-            <div className="md:hidden h-dvh w-12 shrink-0" />
-          ) : null}
         </div>
       </>
     );
@@ -157,21 +132,6 @@ export const textArtifact = new Artifact<'text', TextArtifactMetadata>({
             {
               type: 'text',
               text: 'Please add final polish and check for grammar, add section titles for better structure, and ensure everything reads smoothly.',
-            },
-          ],
-        });
-      },
-    },
-    {
-      icon: <MessageIcon />,
-      description: 'Request suggestions',
-      onClick: ({ sendMessage }) => {
-        sendMessage({
-          role: 'user',
-          parts: [
-            {
-              type: 'text',
-              text: 'Please add suggestions you have that could improve the writing.',
             },
           ],
         });

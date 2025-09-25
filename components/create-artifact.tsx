@@ -1,4 +1,3 @@
-import type { Suggestion } from '@/lib/db/schema';
 import type { UseChatHelpers } from '@ai-sdk/react';
 import type { ComponentType, Dispatch, ReactNode, SetStateAction } from 'react';
 import type { UIArtifact } from './artifact';
@@ -40,7 +39,6 @@ interface ArtifactContent<M = Record<string, unknown>> {
   isCurrentVersion: boolean;
   currentVersionIndex: number;
   status: 'streaming' | 'idle';
-  suggestions: Array<Suggestion>;
   onSaveContent: (updatedContent: string, debounce: boolean) => void;
   isInline: boolean;
   getDocumentContentById: (index: number) => string;

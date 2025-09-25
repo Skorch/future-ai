@@ -2,7 +2,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { memo, useState, useEffect } from 'react';
 import type { Vote } from '@/lib/db/schema';
-import { DocumentToolResult } from './document';
 import { DocumentToolResult as DocumentToolResultDisplay } from './elements/document-tool-result';
 import { PencilEditIcon, SparklesIcon } from './icons';
 import { Response } from './elements/response';
@@ -599,39 +598,6 @@ const PurePreviewMessage = ({
                       workspaceId={workspaceId}
                     />
                   </div>
-                );
-              }
-
-              if (type === 'tool-requestSuggestions') {
-                const { toolCallId, state } = part;
-
-                return (
-                  <Tool key={toolCallId} defaultOpen={true}>
-                    <ToolHeader type="tool-requestSuggestions" state={state} />
-                    <ToolContent>
-                      {state === 'input-available' && (
-                        <ToolInput input={part.input} />
-                      )}
-                      {state === 'output-available' && (
-                        <ToolOutput
-                          output={
-                            'error' in part.output ? (
-                              <div className="p-2 text-red-500 rounded border">
-                                Error: {String(part.output.error)}
-                              </div>
-                            ) : (
-                              <DocumentToolResult
-                                type="request-suggestions"
-                                result={part.output}
-                                isReadonly={isReadonly}
-                              />
-                            )
-                          }
-                          errorText={undefined}
-                        />
-                      )}
-                    </ToolContent>
-                  </Tool>
                 );
               }
 

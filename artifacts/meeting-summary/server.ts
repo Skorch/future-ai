@@ -16,7 +16,12 @@ interface MeetingSummaryMetadata {
 export const meetingSummaryHandler = createDocumentHandler<'text'>({
   kind: 'text',
   metadata,
-  onCreateDocument: async ({ title, dataStream, metadata: docMetadata }) => {
+  onCreateDocument: async ({
+    title,
+    dataStream,
+    metadata: docMetadata,
+    workspaceId,
+  }) => {
     const handlerStartTime = Date.now();
     // Cast metadata to our expected type
     const typedMetadata = docMetadata as MeetingSummaryMetadata | undefined;
@@ -46,7 +51,7 @@ export const meetingSummaryHandler = createDocumentHandler<'text'>({
       // Fetch source documents
       const sourceDocuments = await Promise.all(
         typedMetadata.sourceDocumentIds.map((docId) =>
-          getDocumentById({ id: docId }),
+          getDocumentById({ id: docId, workspaceId }),
         ),
       );
 

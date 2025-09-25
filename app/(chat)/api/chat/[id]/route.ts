@@ -1,6 +1,7 @@
 import { auth } from '@/app/(auth)/auth';
 import { deleteChatById, getChatById } from '@/lib/db/queries';
 import { ChatSDKError } from '@/lib/errors';
+import { getActiveWorkspace } from '@/lib/workspace/context';
 
 export async function GET(
   request: Request,
@@ -14,8 +15,10 @@ export async function GET(
     return new ChatSDKError('unauthorized:api').toResponse();
   }
 
+  const workspaceId = await getActiveWorkspace(session.user.id);
+
   try {
-    const chat = await getChatById({ id: chatId });
+    const chat = await getChatById({ id: chatId, workspaceId });
 
     if (!chat) {
       return new ChatSDKError('not_found:chat').toResponse();
@@ -43,8 +46,10 @@ export async function DELETE(
     return new ChatSDKError('unauthorized:api').toResponse();
   }
 
+  const workspaceId = await getActiveWorkspace(session.user.id);
+
   try {
-    await deleteChatById({ id: chatId });
+    await deleteChatById({ id: chatId, workspaceId });
     return Response.json({ success: true });
   } catch (error) {
     console.error('Failed to delete chat:', error);

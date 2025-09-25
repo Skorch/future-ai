@@ -133,7 +133,9 @@ The sourceDocumentIds parameter is REQUIRED - you must provide at least one tran
           >[];
           try {
             transcriptDocuments = await Promise.all(
-              sourceDocumentIds.map((docId) => getDocumentById({ id: docId })),
+              sourceDocumentIds.map((docId) =>
+                getDocumentById({ id: docId, workspaceId }),
+              ),
             );
 
             // Check if any documents are missing

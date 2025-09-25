@@ -22,7 +22,6 @@ import { convertToUIMessages, generateUUID } from '@/lib/utils';
 import { generateTitleFromUserMessage } from '@/app/(chat)/actions';
 import { createDocument } from '@/lib/ai/tools/create-document';
 import { updateDocument } from '@/lib/ai/tools/update-document';
-import { requestSuggestions } from '@/lib/ai/tools/request-suggestions';
 import { getWeather } from '@/lib/ai/tools/get-weather';
 import { queryRAG } from '@/lib/ai/tools/query-rag';
 import { listDocuments } from '@/lib/ai/tools/list-documents';
@@ -116,7 +115,7 @@ export async function POST(
 
     // Rate limiting removed - no message limits
 
-    const chat = await getChatById({ id });
+    const chat = await getChatById({ id, workspaceId });
 
     // Workspace context now comes from route params
 
@@ -286,7 +285,6 @@ export async function POST(
                 'getWeather',
                 'createDocument',
                 'updateDocument',
-                'requestSuggestions',
                 'queryRAG',
                 'listDocuments',
                 'loadDocument',
@@ -441,11 +439,6 @@ export async function POST(
                       workspaceId,
                     }),
                     updateDocument: updateDocument({
-                      session,
-                      dataStream,
-                      workspaceId,
-                    }),
-                    requestSuggestions: requestSuggestions({
                       session,
                       dataStream,
                       workspaceId,

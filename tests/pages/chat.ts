@@ -62,12 +62,6 @@ export class ChatPage {
     );
   }
 
-  async sendUserMessageFromSuggestion() {
-    await this.page
-      .getByRole('button', { name: 'What are the advantages of' })
-      .click();
-  }
-
   async isElementVisible(elementId: string) {
     await expect(this.page.getByTestId(elementId)).toBeVisible();
   }

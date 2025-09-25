@@ -8,6 +8,13 @@
       "when": 1758820061799,
       "tag": "0000_outgoing_electro",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1758836846455,
+      "tag": "0001_known_sprite",
+      "breakpoints": true
     }
   ]
 }

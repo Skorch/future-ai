@@ -25,7 +25,7 @@ export const updateDocument = ({
         .describe('The description of changes that need to be made'),
     }),
     execute: async ({ id, description }) => {
-      const document = await getDocumentById({ id });
+      const document = await getDocumentById({ id, workspaceId });
 
       if (!document) {
         return {
