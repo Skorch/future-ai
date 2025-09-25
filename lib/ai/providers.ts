@@ -20,8 +20,30 @@ const getAnthropic = () => {
       process.env.ANTHROPIC_API_KEY ? 'present' : 'missing',
     );
 
+    // Get timeout from env variable, default to 10 minutes if not set
+    const timeoutMs = process.env.ANTHROPIC_TIMEOUT_MS
+      ? Number.parseInt(process.env.ANTHROPIC_TIMEOUT_MS, 10)
+      : 600000; // Default: 10 minutes (600 seconds)
+
+    const timeoutSeconds = Math.round(timeoutMs / 1000);
+    console.log(
+      '[Providers] Anthropic timeout configured:',
+      `${timeoutSeconds} seconds (${timeoutMs}ms)`,
+    );
+
     anthropicInstance = createAnthropic({
       apiKey: process.env.ANTHROPIC_API_KEY,
+      // Configure custom fetch with extended timeout to prevent 60-second undici default timeout
+      // Default is 10 minutes, but can be configured via ANTHROPIC_TIMEOUT_MS env variable
+      fetch: (url, options = {}) => {
+        console.log(
+          `[Providers] Anthropic fetch initiated with ${timeoutSeconds}-second timeout`,
+        );
+        return fetch(url, {
+          ...options,
+          signal: AbortSignal.timeout(timeoutMs),
+        });
+      },
     });
   }
   return anthropicInstance;

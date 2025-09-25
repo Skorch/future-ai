@@ -69,118 +69,242 @@ The sourceDocumentIds parameter is REQUIRED - you must provide at least one tran
       sourceDocumentIds,
       metadata,
     }) => {
+      const startTime = Date.now();
       console.log('[CreateDocument] Tool executed', {
         title,
         kind,
         documentType,
         sourceDocumentIds,
         hasSourceDocs: !!sourceDocumentIds?.length,
+        startTime: new Date(startTime).toISOString(),
       });
 
       const id = generateUUID();
+      let isStreamInitialized = false;
 
-      // sourceDocumentIds is now enforced by schema, no need for runtime check
+      try {
+        // sourceDocumentIds is now enforced by schema, no need for runtime check
 
-      dataStream.write({
-        type: 'data-kind',
-        data: kind,
-        transient: true,
-      });
-
-      dataStream.write({
-        type: 'data-id',
-        data: id,
-        transient: true,
-      });
-
-      dataStream.write({
-        type: 'data-title',
-        data: title,
-        transient: true,
-      });
-
-      dataStream.write({
-        type: 'data-clear',
-        data: null,
-        transient: true,
-      });
-
-      // Use document handlers for all document types
-      if (documentType === 'meeting-summary') {
-        console.log('[CreateDocument] Using meeting-summary handler');
-
-        // Fetch transcript content from source documents
-        console.log(
-          '[CreateDocument] Fetching transcript content from documents:',
-          sourceDocumentIds,
-        );
-        const transcriptDocuments = await Promise.all(
-          sourceDocumentIds.map((docId) => getDocumentById({ id: docId })),
-        );
-
-        // Import the meeting summary handler directly
-        const { meetingSummaryHandler } = await import(
-          '@/artifacts/meeting-summary/server'
-        );
-
-        // The handler will fetch transcripts from sourceDocumentIds itself
-        // We don't need to pass transcript content at all
-        await meetingSummaryHandler.onCreateDocument({
-          id,
-          title,
-          dataStream,
-          session,
-          metadata: {
-            sourceDocumentIds: sourceDocumentIds || [],
-            meetingDate: metadata?.meetingDate,
-            participants: metadata?.participants,
-          },
+        // Initialize stream with artifact info
+        dataStream.write({
+          type: 'data-kind',
+          data: kind,
+          transient: true,
         });
-        console.log('[CreateDocument] Meeting summary handler completed');
-      } else {
-        console.log(`[CreateDocument] Using ${kind} document handler`);
-        // Use the existing document handler system for other types
-        const documentHandler = documentHandlersByArtifactKind.find(
-          (documentHandlerByArtifactKind) =>
-            documentHandlerByArtifactKind.kind === kind,
-        );
 
-        if (!documentHandler) {
-          throw new Error(`No document handler found for kind: ${kind}`);
+        dataStream.write({
+          type: 'data-id',
+          data: id,
+          transient: true,
+        });
+
+        dataStream.write({
+          type: 'data-title',
+          data: title,
+          transient: true,
+        });
+
+        dataStream.write({
+          type: 'data-clear',
+          data: null,
+          transient: true,
+        });
+
+        isStreamInitialized = true;
+
+        // Use document handlers for all document types
+        if (documentType === 'meeting-summary') {
+          console.log('[CreateDocument] Using meeting-summary handler');
+
+          // Fetch transcript content from source documents
+          console.log(
+            '[CreateDocument] Fetching transcript content from documents:',
+            sourceDocumentIds,
+          );
+
+          // Validate source documents exist
+          let transcriptDocuments: Awaited<
+            ReturnType<typeof getDocumentById>
+          >[];
+          try {
+            transcriptDocuments = await Promise.all(
+              sourceDocumentIds.map((docId) => getDocumentById({ id: docId })),
+            );
+
+            // Check if any documents are missing
+            const missingDocs = transcriptDocuments
+              .map((doc, idx) => (!doc ? sourceDocumentIds[idx] : null))
+              .filter(Boolean);
+
+            if (missingDocs.length > 0) {
+              throw new Error(
+                `Source documents not found: ${missingDocs.join(', ')}`,
+              );
+            }
+          } catch (error) {
+            console.error(
+              '[CreateDocument] Error fetching source documents:',
+              error,
+            );
+            throw new Error(
+              `Failed to fetch source documents: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            );
+          }
+
+          // Import the meeting summary handler directly
+          const { meetingSummaryHandler } = await import(
+            '@/artifacts/meeting-summary/server'
+          );
+
+          const handlerStartTime = Date.now();
+          console.log('[CreateDocument] Starting meeting summary handler', {
+            elapsedBeforeHandler: Date.now() - startTime,
+            handlerStartTime: new Date(handlerStartTime).toISOString(),
+          });
+
+          // The handler will fetch transcripts from sourceDocumentIds itself
+          // We don't need to pass transcript content at all
+          await meetingSummaryHandler.onCreateDocument({
+            id,
+            title,
+            dataStream,
+            session,
+            metadata: {
+              sourceDocumentIds: sourceDocumentIds || [],
+              meetingDate: metadata?.meetingDate,
+              participants: metadata?.participants,
+            },
+          });
+          const handlerDuration = Date.now() - handlerStartTime;
+          console.log('[CreateDocument] Meeting summary handler completed', {
+            handlerDuration,
+            totalElapsed: Date.now() - startTime,
+          });
+        } else {
+          console.log(`[CreateDocument] Using ${kind} document handler`);
+          // Use the existing document handler system for other types
+          const documentHandler = documentHandlersByArtifactKind.find(
+            (documentHandlerByArtifactKind) =>
+              documentHandlerByArtifactKind.kind === kind,
+          );
+
+          if (!documentHandler) {
+            throw new Error(`No document handler found for kind: ${kind}`);
+          }
+
+          await documentHandler.onCreateDocument({
+            id,
+            title,
+            dataStream,
+            session,
+          });
+          console.log(`[CreateDocument] ${kind} handler completed`);
         }
 
-        await documentHandler.onCreateDocument({
+        dataStream.write({ type: 'data-finish', data: null, transient: true });
+        console.log('[CreateDocument] Sent data-finish signal');
+
+        // Return a clear message that prompts the AI to respond
+        const responseMessage = `I've created a meeting summary titled "${title}". The summary is now displayed above.`;
+
+        const returnValue = {
           id,
           title,
-          dataStream,
-          session,
+          kind,
+          documentType: 'meeting-summary',
+          sourceDocumentIds: sourceDocumentIds || [],
+          message: responseMessage,
+          success: true,
+        };
+
+        const totalDuration = Date.now() - startTime;
+        console.log('[CreateDocument] Tool returning success', {
+          id,
+          title,
+          documentType: returnValue.documentType,
+          messageLength: responseMessage.length,
+          totalDuration,
+          durationSeconds: (totalDuration / 1000).toFixed(2),
         });
-        console.log(`[CreateDocument] ${kind} handler completed`);
+
+        return returnValue;
+      } catch (error) {
+        const errorDuration = Date.now() - startTime;
+        console.error(
+          '[CreateDocument] Error during document creation:',
+          error,
+        );
+        console.error('[CreateDocument] Error occurred after', {
+          errorDuration,
+          durationSeconds: (errorDuration / 1000).toFixed(2),
+        });
+
+        // Clean up artifact display on error
+        if (isStreamInitialized) {
+          // Reset the artifact to idle state with error message
+          dataStream.write({
+            type: 'data-title',
+            data: `Error: ${title}`,
+            transient: true,
+          });
+
+          dataStream.write({
+            type: 'data-finish',
+            data: null,
+            transient: true,
+          });
+        }
+
+        // Determine error message based on error type
+        let errorMessage =
+          'An unexpected error occurred while creating the document';
+        let errorDetails = '';
+
+        if (error instanceof Error) {
+          if (error.message.includes('Source documents not found')) {
+            errorMessage =
+              'Unable to create summary: Some source documents could not be found';
+            errorDetails = error.message;
+          } else if (
+            error.message.includes('timeout') ||
+            error.message.includes('maxDuration')
+          ) {
+            errorMessage =
+              'Document creation timed out. The summary may be too complex or the source documents too large';
+            errorDetails =
+              'Consider breaking down the content into smaller sections';
+          } else if (error.message.includes('No document handler')) {
+            errorMessage = `Unsupported document type: ${kind}`;
+            errorDetails = error.message;
+          } else {
+            errorDetails = error.message;
+          }
+        }
+
+        // Log full error for debugging
+        console.error('[CreateDocument] Full error details:', {
+          message: errorMessage,
+          details: errorDetails,
+          error: error instanceof Error ? error.stack : error,
+          documentId: id,
+          title,
+          kind,
+          documentType,
+          sourceDocumentIds,
+        });
+
+        // Return error response that the AI can understand and relay to the user
+        return {
+          id,
+          title,
+          kind,
+          documentType: documentType || 'meeting-summary',
+          sourceDocumentIds: sourceDocumentIds || [],
+          success: false,
+          error: errorMessage,
+          errorDetails,
+          message: `I encountered an error while creating the document "${title}". ${errorMessage}. ${errorDetails ? `Details: ${errorDetails}` : ''}`,
+        };
       }
-
-      dataStream.write({ type: 'data-finish', data: null, transient: true });
-      console.log('[CreateDocument] Sent data-finish signal');
-
-      // Return a clear message that prompts the AI to respond
-      const responseMessage = `I've created a meeting summary titled "${title}". The summary is now displayed above.`;
-
-      const returnValue = {
-        id,
-        title,
-        kind,
-        documentType: 'meeting-summary',
-        sourceDocumentIds: sourceDocumentIds || [],
-        message: responseMessage,
-        success: true,
-      };
-
-      console.log('[CreateDocument] Tool returning', {
-        id,
-        title,
-        documentType: returnValue.documentType,
-        messageLength: responseMessage.length,
-      });
-
-      return returnValue;
     },
   });

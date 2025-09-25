@@ -17,6 +17,7 @@ export const meetingSummaryHandler = createDocumentHandler<'text'>({
   kind: 'text',
   metadata,
   onCreateDocument: async ({ title, dataStream, metadata: docMetadata }) => {
+    const handlerStartTime = Date.now();
     // Cast metadata to our expected type
     const typedMetadata = docMetadata as MeetingSummaryMetadata | undefined;
     console.log('[MeetingSummaryHandler] Starting document creation', {
@@ -26,6 +27,7 @@ export const meetingSummaryHandler = createDocumentHandler<'text'>({
       sourceDocumentIds: typedMetadata?.sourceDocumentIds,
       meetingDate: typedMetadata?.meetingDate,
       participants: typedMetadata?.participants,
+      startTime: new Date(handlerStartTime).toISOString(),
     });
 
     let draftContent = '';
@@ -66,6 +68,11 @@ export const meetingSummaryHandler = createDocumentHandler<'text'>({
         '[MeetingSummaryHandler] Combined transcripts from',
         validDocuments.length,
         'documents',
+        {
+          transcriptLength: transcript.length,
+          estimatedTokens: Math.ceil(transcript.length / 4),
+          elapsedSoFar: Date.now() - handlerStartTime,
+        },
       );
     } else {
       // Summaries MUST have source documents
@@ -80,6 +87,9 @@ export const meetingSummaryHandler = createDocumentHandler<'text'>({
 
     console.log(
       '[MeetingSummaryHandler] Preparing to stream with artifact-model',
+      {
+        elapsedBeforeStream: Date.now() - handlerStartTime,
+      },
     );
 
     // Compose: Artifact system prompt + Meeting summary specific instructions + Template
@@ -108,7 +118,10 @@ ${transcript}`,
     });
 
     let chunkCount = 0;
-    console.log('[MeetingSummaryHandler] Starting stream processing');
+    const streamStartTime = Date.now();
+    console.log('[MeetingSummaryHandler] Starting stream processing', {
+      elapsedBeforeStream: streamStartTime - handlerStartTime,
+    });
 
     for await (const delta of fullStream) {
       const { type } = delta;
@@ -127,17 +140,28 @@ ${transcript}`,
 
         // Log every 10th chunk to avoid spam
         if (chunkCount % 10 === 0) {
+          const streamElapsed = Date.now() - streamStartTime;
           console.log(
             `[MeetingSummaryHandler] Streamed ${chunkCount} chunks, ${draftContent.length} chars total`,
+            {
+              streamDuration: streamElapsed,
+              streamSeconds: (streamElapsed / 1000).toFixed(2),
+            },
           );
         }
       }
     }
 
+    const totalDuration = Date.now() - handlerStartTime;
+    const streamDuration = Date.now() - streamStartTime;
     console.log('[MeetingSummaryHandler] Stream completed', {
       totalChunks: chunkCount,
       contentLength: draftContent.length,
       firstChars: draftContent.substring(0, 100),
+      streamDuration,
+      streamSeconds: (streamDuration / 1000).toFixed(2),
+      totalDuration,
+      totalSeconds: (totalDuration / 1000).toFixed(2),
     });
 
     return draftContent;
