@@ -28,7 +28,7 @@ export const meetingSummaryHandler = createDocumentHandler<'text'>({
     const handlerStartTime = Date.now();
     // Cast metadata to our expected type
     const typedMetadata = docMetadata as MeetingSummaryMetadata | undefined;
-    logger.info('[MeetingSummaryHandler] Starting document creation', {
+    logger.debug('[MeetingSummaryHandler] Starting document creation', {
       title,
       hasTranscript: !!typedMetadata?.transcript,
       transcriptLength: typedMetadata?.transcript?.length || 0,
@@ -46,7 +46,7 @@ export const meetingSummaryHandler = createDocumentHandler<'text'>({
       typedMetadata?.sourceDocumentIds?.length &&
       typedMetadata.sourceDocumentIds.length > 0
     ) {
-      logger.info(
+      logger.debug(
         '[MeetingSummaryHandler] Fetching source documents:',
         typedMetadata.sourceDocumentIds,
       );
@@ -72,7 +72,7 @@ export const meetingSummaryHandler = createDocumentHandler<'text'>({
         .map((doc) => `\n--- ${doc.title} ---\n${doc.content}\n`)
         .join('\n');
 
-      logger.info(
+      logger.debug(
         '[MeetingSummaryHandler] Combined transcripts from',
         validDocuments.length,
         'documents',
@@ -93,7 +93,7 @@ export const meetingSummaryHandler = createDocumentHandler<'text'>({
       typedMetadata?.meetingDate || new Date().toISOString().split('T')[0];
     const participants = typedMetadata?.participants || [];
 
-    logger.info(
+    logger.debug(
       '[MeetingSummaryHandler] Preparing to stream with artifact-model',
       {
         elapsedBeforeStream: Date.now() - handlerStartTime,
@@ -127,7 +127,7 @@ ${transcript}`,
 
     let chunkCount = 0;
     const streamStartTime = Date.now();
-    logger.info('[MeetingSummaryHandler] Starting stream processing', {
+    logger.debug('[MeetingSummaryHandler] Starting stream processing', {
       elapsedBeforeStream: streamStartTime - handlerStartTime,
     });
 
@@ -149,7 +149,7 @@ ${transcript}`,
         // Log every 10th chunk to avoid spam
         if (chunkCount % 10 === 0) {
           const streamElapsed = Date.now() - streamStartTime;
-          logger.info(
+          logger.debug(
             `[MeetingSummaryHandler] Streamed ${chunkCount} chunks, ${draftContent.length} chars total`,
             {
               streamDuration: streamElapsed,
@@ -162,7 +162,7 @@ ${transcript}`,
 
     const totalDuration = Date.now() - handlerStartTime;
     const streamDuration = Date.now() - streamStartTime;
-    logger.info('[MeetingSummaryHandler] Stream completed', {
+    logger.debug('[MeetingSummaryHandler] Stream completed', {
       totalChunks: chunkCount,
       contentLength: draftContent.length,
       firstChars: draftContent.substring(0, 100),

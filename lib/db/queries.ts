@@ -432,7 +432,7 @@ export async function saveDocument({
       .returning();
 
     // Automatically sync to RAG (async, don't await)
-    logger.info('[saveDocument] Starting RAG sync', {
+    logger.debug('[saveDocument] Starting RAG sync', {
       documentId,
       workspaceId,
       title,
@@ -440,7 +440,7 @@ export async function saveDocument({
     });
     syncDocumentToRAG(documentId, workspaceId)
       .then(() => {
-        logger.info('[saveDocument] RAG sync completed successfully', {
+        logger.debug('[saveDocument] RAG sync completed successfully', {
           documentId,
           workspaceId,
         });

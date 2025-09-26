@@ -109,7 +109,7 @@ export async function POST(request: Request) {
       },
     });
 
-    logger.info('Created transcript document', {
+    logger.debug('Created transcript document', {
       documentId,
       // fileName removed - may contain sensitive info
       fileSize: file.size,

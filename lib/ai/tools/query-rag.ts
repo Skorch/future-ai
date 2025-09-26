@@ -233,7 +233,7 @@ interface QueryRAGProps {
 
 export const queryRAG = (props: QueryRAGProps) => {
   const { session, dataStream, workspaceId } = props;
-  logger.info(
+  logger.debug(
     '[queryRAG] Creating tool with session user:',
     props.session?.user?.id,
   );

@@ -67,7 +67,7 @@ export function createPrepareStep(
     stepNumber,
     messages,
   }: PrepareStepInput): PrepareStepResult => {
-    logger.info(
+    logger.debug(
       `[prepareStep] Step ${stepNumber}, Mode: ${state.currentMode}, Complete: ${state.isComplete}, History: ${state.modeHistory.length} entries`,
     );
 
@@ -181,7 +181,7 @@ export function createPrepareStep(
 
     const modeSystemPrompt = baseSystemPrompt + completionStatus;
 
-    logger.info(
+    logger.debug(
       `[prepareStep] Applying ${state.currentMode} mode: ${modeConfig.experimental_activeTools.length} active tools, Complete: ${state.isComplete}`,
     );
 

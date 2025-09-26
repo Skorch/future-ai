@@ -73,7 +73,7 @@ export class VoyageAIClient {
     // Default to 1024 dimensions (voyage-3-large default)
     this.defaultOutputDimension = config?.outputDimension || 1024;
 
-    logger.info('Client initialized:', {
+    logger.debug('Client initialized:', {
       model: this.model,
       baseUrl: this.baseUrl,
       defaultOutputDimension: this.defaultOutputDimension,
@@ -339,7 +339,7 @@ export class VoyageAIClient {
       }
     }
 
-    logger.info(
+    logger.debug(
       `Batch embedding complete: ${allEmbeddings.length} embeddings generated`,
     );
     return allEmbeddings;

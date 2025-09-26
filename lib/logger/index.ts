@@ -1,11 +1,10 @@
 // Simple logger facade that wraps console methods with environment-based filtering
-const isDevelopment = process.env.NODE_ENV === 'development';
 const isProduction = process.env.NODE_ENV === 'production';
 
 // Simple logger facade that wraps console methods
 export const logger = {
   // Debug only logs in development
-  debug: isProduction ? (...args: unknown[]) => {} : console.log,
+  debug: isProduction ? (..._args: unknown[]) => {} : console.log,
 
   // Info, warn, error always log (using proper console methods)
   info: console.info,

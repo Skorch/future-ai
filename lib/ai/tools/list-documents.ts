@@ -44,13 +44,13 @@ PRO TIP: For time-period queries, loading ALL summaries gives more complete cont
 than RAG search, which might miss important topics.`,
     inputSchema: z.object({}),
     execute: async () => {
-      logger.info('[ListDocuments Tool] Executing list-documents tool call');
+      logger.debug('[ListDocuments Tool] Executing list-documents tool call');
       const documents = await getAllUserDocuments({
         userId: session.user.id,
         workspaceId,
       });
 
-      logger.info('[ListDocuments Tool] Retrieved documents:', {
+      logger.debug('[ListDocuments Tool] Retrieved documents:', {
         count: documents.length,
         types: documents.reduce(
           (acc, d) => {
@@ -77,7 +77,6 @@ than RAG search, which might miss important topics.`,
       };
 
       if (documents.length === 0) {
-        logger.info('[ListDocuments Tool] No documents found for user');
         return {
           documents: [],
           summary,
@@ -86,7 +85,7 @@ than RAG search, which might miss important topics.`,
         };
       }
 
-      logger.info(
+      logger.debug(
         '[ListDocuments Tool] Returning',
         documents.length,
         'documents with summary',

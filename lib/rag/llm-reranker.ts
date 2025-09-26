@@ -115,7 +115,7 @@ export async function rerankWithLLM(
   };
 
   // Log which provider is being used
-  logger.info(
+  logger.debug(
     `Using ${USE_OPENAI_FOR_RERANKING ? `OpenAI GPT-5-${OPENAI_RERANK_CONFIG.modelVariant}` : 'Anthropic Claude'} for reranking`,
   );
   perfLog('Initialized');

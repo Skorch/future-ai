@@ -119,7 +119,7 @@ export async function syncDocumentToRAG(
     });
 
     if (chunks.length === 0) {
-      logger.info(`No chunks generated for ${documentId}`);
+      logger.debug(`No chunks generated for ${documentId}`);
       return;
     }
 
@@ -177,7 +177,7 @@ export async function deleteFromRAG(
       workspaceId,
     ); // Use workspaceId as namespace
 
-    logger.info(
+    logger.debug(
       `Deleted all chunks for ${documentId} in namespace ${workspaceId}`,
     );
   } catch (error) {
@@ -283,7 +283,7 @@ async function chunkDocument(
   ) {
     // Simple section-based chunking for summaries and generic documents
     const sections = parseDocument(content);
-    logger.info(`Parsed ${sections.length} sections from document`);
+    logger.debug(`Parsed ${sections.length} sections from document`);
 
     sections.forEach((section, index) => {
       const chunkMetadata: RAGMetadata = {

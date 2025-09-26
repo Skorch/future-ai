@@ -103,7 +103,7 @@ The tool returns an array of loaded documents with their content and metadata.`,
             otherCount ? `, ${otherCount} other` : ''
           }). Total: ${totalCharsLoaded.toLocaleString()} characters (~${estimatedTokensLoaded.toLocaleString()} tokens)`;
 
-      logger.info('[LoadDocuments Tool] Documents loaded successfully:', {
+      logger.debug('[LoadDocuments Tool] Documents loaded successfully:', {
         count: documents.length,
         summaries: summaryCount,
         transcripts: transcriptCount,

@@ -137,26 +137,28 @@ export function logTokenStats(
 ): void {
   const iteration = iterationNumber || 'Current';
 
-  logger.info(
+  logger.debug(
     `\n========== TOKEN USAGE STATS (Iteration: ${iteration}) ==========`,
   );
-  logger.info(
+  logger.debug(
     `Total Tokens: ${stats.totalTokens.toLocaleString()} / 200,000 (${stats.utilizationPercent}% used)`,
   );
-  logger.info(`Remaining: ${stats.remaining.toLocaleString()} tokens`);
-  logger.info(
+  logger.debug(`Remaining: ${stats.remaining.toLocaleString()} tokens`);
+  logger.debug(
     `Status: ${stats.isOverLimit ? '⛔ OVER LIMIT' : stats.isApproachingLimit ? '⚠️  APPROACHING LIMIT' : '✅ OK'}`,
   );
-  logger.info('Breakdown:');
-  logger.info(
+  logger.debug('Breakdown:');
+  logger.debug(
     `  - System Prompt: ${stats.systemPromptTokens.toLocaleString()} tokens`,
   );
-  logger.info(`  - User Messages: ${stats.userTokens.toLocaleString()} tokens`);
-  logger.info(
+  logger.debug(
+    `  - User Messages: ${stats.userTokens.toLocaleString()} tokens`,
+  );
+  logger.debug(
     `  - Assistant Messages: ${stats.assistantTokens.toLocaleString()} tokens`,
   );
-  logger.info(`  - Total Messages: ${stats.messageCount}`);
-  logger.info('=====================================================\n');
+  logger.debug(`  - Total Messages: ${stats.messageCount}`);
+  logger.debug('=====================================================\n');
 
   if (stats.isOverLimit) {
     logger.error(
@@ -189,10 +191,10 @@ export function logTokenGrowth(
   const percentGrowth =
     beforeTokens > 0 ? Math.round((growth / beforeTokens) * 100) : 0;
 
-  logger.info(`[Token Growth] ${operation}:`);
-  logger.info(`  Before: ${beforeTokens.toLocaleString()} tokens`);
-  logger.info(`  After: ${afterTokens.toLocaleString()} tokens`);
-  logger.info(
+  logger.debug(`[Token Growth] ${operation}:`);
+  logger.debug(`  Before: ${beforeTokens.toLocaleString()} tokens`);
+  logger.debug(`  After: ${afterTokens.toLocaleString()} tokens`);
+  logger.debug(
     `  Growth: +${growth.toLocaleString()} tokens (${percentGrowth}% increase)`,
   );
 }

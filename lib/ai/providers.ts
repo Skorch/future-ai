@@ -97,7 +97,6 @@ const buildLanguageModels = () => {
 
   // Add OpenAI models for reranking ONLY - not exposed to chat interface
   // These models are exclusively for tool use, particularly the LLM reranker
-  logger.info('[Providers] Registering OpenAI models for reranking...');
 
   // GPT-5 family
   models['openai-gpt-5-reranker'] = getOpenAI()('gpt-5');
@@ -109,8 +108,6 @@ const buildLanguageModels = () => {
   models['openai-gpt-4.1-mini-reranker'] = getOpenAI()('gpt-4.1-mini');
   models['openai-gpt-4.1-nano-reranker'] = getOpenAI()('gpt-4.1-nano');
 
-  logger.info('[Providers] OpenAI models registered');
-
   return models;
 };
 
@@ -119,7 +116,6 @@ let builtModels: Record<string, LanguageModel> | null = null;
 
 const getLanguageModels = () => {
   if (!builtModels) {
-    logger.info('[Providers] Building language models...');
     builtModels = buildLanguageModels();
   }
   return builtModels;
@@ -138,14 +134,13 @@ export const myProvider = isTestEnvironment
     })
   : {
       languageModel: (modelId: string) => {
-        logger.info(`[Providers] Requesting model: ${modelId}`);
+        logger.debug(`[Providers] Requesting model: ${modelId}`);
         const models = getLanguageModels();
         const model = models[modelId];
         if (!model) {
           logger.error(`[Providers] Available models:`, Object.keys(models));
           throw new Error(`Model ${modelId} not found in provider`);
         }
-        logger.info(`[Providers] Model ${modelId} retrieved successfully`);
         return model;
       },
     };

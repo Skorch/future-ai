@@ -47,7 +47,7 @@ Reserve space for user messages, your responses, and other tool outputs.`,
         ),
     }),
     execute: async ({ documentId, maxChars }) => {
-      logger.info('[LoadDocument Tool] Executing load-document tool call:', {
+      logger.debug('[LoadDocument Tool] Executing load-document tool call:', {
         documentId,
         maxChars: maxChars || 'full',
         userId: session.user.id,
@@ -61,7 +61,7 @@ Reserve space for user messages, your responses, and other tool outputs.`,
       });
 
       if (!document) {
-        logger.info(
+        logger.debug(
           '[LoadDocument Tool] Document not found or access denied:',
           documentId,
         );
@@ -94,7 +94,7 @@ Reserve space for user messages, your responses, and other tool outputs.`,
         [key: string]: unknown;
       } | null;
 
-      logger.info('[LoadDocument Tool] Document loaded successfully:', {
+      logger.debug('[LoadDocument Tool] Document loaded successfully:', {
         id: document.id,
         title: document.title,
         type: metadata?.documentType || 'document',

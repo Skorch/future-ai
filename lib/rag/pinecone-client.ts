@@ -44,7 +44,7 @@ export class PineconeClient {
     // Initialize VoyageAI client for embeddings
     this.voyageClient = getVoyageAIClient();
 
-    logger.info('Client initialized with:', {
+    logger.debug('Client initialized with:', {
       indexName: this.indexName,
       hasApiKey: !!apiKey,
       apiKeyLength: apiKey.length,
@@ -82,7 +82,7 @@ export class PineconeClient {
       }
 
       const indexInfo = await this.client.describeIndex(this.indexName);
-      logger.info('Index verified:', {
+      logger.debug('Index verified:', {
         name: this.indexName,
         dimension: indexInfo.dimension,
         metric: indexInfo.metric,
@@ -129,7 +129,6 @@ export class PineconeClient {
 
     try {
       const index = this.client.index(this.indexName);
-      logger.info('Got index handle for:', this.indexName);
 
       // Process documents in batches
       for (let i = 0; i < documents.length; i += batchSize) {
@@ -155,7 +154,7 @@ export class PineconeClient {
           // Use VoyageAI to generate embeddings
           const embeddings = await this.voyageClient.embedDocuments(texts);
 
-          logger.info('VoyageAI embeddings generated:', {
+          logger.debug('VoyageAI embeddings generated:', {
             count: embeddings.length,
             dimension: embeddings[0]?.length || 0,
           });
@@ -174,7 +173,6 @@ export class PineconeClient {
             `Upserting ${records.length} records with VoyageAI embeddings to namespace: ${namespace}`,
           );
           await ns.upsert(records);
-          logger.info('Upsert completed successfully');
 
           written += batch.length;
           logger.debug(`Written so far: ${written}/${documents.length}`);
@@ -202,7 +200,7 @@ export class PineconeClient {
         errors: errors.length > 0 ? errors : undefined,
       };
 
-      logger.info('writeDocuments completed:', {
+      logger.debug('writeDocuments completed:', {
         success: result.success,
         documentsWritten: result.documentsWritten,
         namespace: result.namespace,
@@ -485,7 +483,7 @@ export class PineconeClient {
       // The filter should use MongoDB-style operators like $eq
       await index.namespace(namespace).deleteMany(filter);
 
-      logger.info(
+      logger.debug(
         'Deleted vectors with filter:',
         filter,
         'in namespace:',

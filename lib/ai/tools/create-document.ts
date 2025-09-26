@@ -77,7 +77,7 @@ The sourceDocumentIds parameter is REQUIRED - you must provide at least one tran
       metadata,
     }) => {
       const startTime = Date.now();
-      logger.info('Tool executed', {
+      logger.debug('Tool executed', {
         title,
         kind,
         documentType,
@@ -183,10 +183,6 @@ The sourceDocumentIds parameter is REQUIRED - you must provide at least one tran
             },
           });
           const handlerDuration = Date.now() - handlerStartTime;
-          logger.info('Meeting summary handler completed', {
-            handlerDuration,
-            totalElapsed: Date.now() - startTime,
-          });
         } else {
           logger.debug(`Using ${kind} document handler`);
           // Use the existing document handler system for other types
@@ -206,7 +202,6 @@ The sourceDocumentIds parameter is REQUIRED - you must provide at least one tran
             session,
             workspaceId,
           });
-          logger.info(`${kind} handler completed`);
         }
 
         dataStream.write({ type: 'data-finish', data: null, transient: true });
@@ -226,7 +221,7 @@ The sourceDocumentIds parameter is REQUIRED - you must provide at least one tran
         };
 
         const totalDuration = Date.now() - startTime;
-        logger.info('Tool returning success', {
+        logger.debug('Tool returning success', {
           id,
           title,
           documentType: returnValue.documentType,
