@@ -1,7 +1,7 @@
 'use server';
 
 import { z } from 'zod';
-import { auth } from '@/app/(auth)/auth';
+import { auth } from '@clerk/nextjs/server';
 import {
   createWorkspace,
   updateWorkspace,
@@ -25,8 +25,8 @@ const updateWorkspaceSchema = z.object({
  * Server action to create a new workspace
  */
 export async function createWorkspaceAction(formData: FormData) {
-  const session = await auth();
-  if (!session?.user) {
+  const { userId } = await auth();
+  if (!userId) {
     throw new Error('Unauthorized');
   }
 
@@ -36,7 +36,7 @@ export async function createWorkspaceAction(formData: FormData) {
   const validated = createWorkspaceSchema.parse({ name, description });
 
   const ws = await createWorkspace(
-    session.user.id,
+    userId,
     validated.name,
     validated.description,
   );
@@ -54,8 +54,8 @@ export async function updateWorkspaceAction(
   workspaceId: string,
   formData: FormData,
 ) {
-  const session = await auth();
-  if (!session?.user) {
+  const { userId } = await auth();
+  if (!userId) {
     throw new Error('Unauthorized');
   }
 
@@ -64,7 +64,7 @@ export async function updateWorkspaceAction(
 
   const validated = updateWorkspaceSchema.parse({ name, description });
 
-  const ws = await updateWorkspace(workspaceId, session.user.id, validated);
+  const ws = await updateWorkspace(workspaceId, userId, validated);
 
   return ws;
 }
@@ -73,12 +73,12 @@ export async function updateWorkspaceAction(
  * Server action to delete a workspace
  */
 export async function deleteWorkspaceAction(workspaceId: string) {
-  const session = await auth();
-  if (!session?.user) {
+  const { userId } = await auth();
+  if (!userId) {
     throw new Error('Unauthorized');
   }
 
-  const ws = await deleteWorkspace(workspaceId, session.user.id);
+  const ws = await deleteWorkspace(workspaceId, userId);
 
   // Clear active workspace cookie if this was the active one
   await clearActiveWorkspace();
@@ -90,13 +90,13 @@ export async function deleteWorkspaceAction(workspaceId: string) {
  * Server action to switch active workspace
  */
 export async function switchWorkspaceAction(workspaceId: string) {
-  const session = await auth();
-  if (!session?.user) {
+  const { userId } = await auth();
+  if (!userId) {
     throw new Error('Unauthorized');
   }
 
   // Validate workspace belongs to user
-  const ws = await getWorkspaceById(workspaceId, session.user.id);
+  const ws = await getWorkspaceById(workspaceId, userId);
   if (!ws) {
     throw new Error('Workspace not found');
   }

@@ -1,5 +1,5 @@
 {
-  "id": "067205f4-d1a6-4242-bd98-b838078459de",
+  "id": "46f726e9-9314-4093-bc61-accab70b8dfb",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -29,7 +29,7 @@
         },
         "userId": {
           "name": "userId",
-          "type": "uuid",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true
         },
@@ -138,7 +138,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         },
         "Chat_workspaceId_Workspace_id_fk": {
@@ -151,7 +151,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
@@ -202,7 +202,7 @@
         },
         "createdByUserId": {
           "name": "createdByUserId",
-          "type": "uuid",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": false
         },
@@ -249,7 +249,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         },
         "Document_createdByUserId_User_id_fk": {
@@ -262,7 +262,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -331,7 +331,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
@@ -374,7 +374,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
@@ -388,165 +388,60 @@
       },
       "uniqueConstraints": {}
     },
-    "public.Suggestion": {
-      "name": "Suggestion",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "documentId": {
-          "name": "documentId",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "documentCreatedAt": {
-          "name": "documentCreatedAt",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "originalText": {
-          "name": "originalText",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "suggestedText": {
-          "name": "suggestedText",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "description": {
-          "name": "description",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "isResolved": {
-          "name": "isResolved",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "workspaceId": {
-          "name": "workspaceId",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "suggestedByUserId": {
-          "name": "suggestedByUserId",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "createdAt": {
-          "name": "createdAt",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "suggestion_workspace_idx": {
-          "name": "suggestion_workspace_idx",
-          "columns": [
-            {
-              "expression": "workspaceId",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "Suggestion_workspaceId_Workspace_id_fk": {
-          "name": "Suggestion_workspaceId_Workspace_id_fk",
-          "tableFrom": "Suggestion",
-          "tableTo": "Workspace",
-          "columnsFrom": [
-            "workspaceId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "Suggestion_suggestedByUserId_User_id_fk": {
-          "name": "Suggestion_suggestedByUserId_User_id_fk",
-          "tableFrom": "Suggestion",
-          "tableTo": "User",
-          "columnsFrom": [
-            "suggestedByUserId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "Suggestion_documentId_documentCreatedAt_Document_id_createdAt_fk": {
-          "name": "Suggestion_documentId_documentCreatedAt_Document_id_createdAt_fk",
-          "tableFrom": "Suggestion",
-          "tableTo": "Document",
-          "columnsFrom": [
-            "documentId",
-            "documentCreatedAt"
-          ],
-          "columnsTo": [
-            "id",
-            "createdAt"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "Suggestion_id_pk": {
-          "name": "Suggestion_id_pk",
-          "columns": [
-            "id"
-          ]
-        }
-      },
-      "uniqueConstraints": {}
-    },
     "public.User": {
       "name": "User",
       "schema": "",
       "columns": {
         "id": {
           "name": "id",
-          "type": "uuid",
+          "type": "varchar(255)",
           "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
+          "notNull": true
         },
         "email": {
           "name": "email",
-          "type": "varchar(64)",
+          "type": "varchar(256)",
           "primaryKey": false,
           "notNull": true
         },
-        "password": {
-          "name": "password",
-          "type": "varchar(64)",
+        "firstName": {
+          "name": "firstName",
+          "type": "varchar(256)",
           "primaryKey": false,
           "notNull": false
+        },
+        "lastName": {
+          "name": "lastName",
+          "type": "varchar(256)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "imageUrl": {
+          "name": "imageUrl",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "emailVerified": {
+          "name": "emailVerified",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
         }
       },
       "indexes": {},
@@ -589,7 +484,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         },
         "Vote_messageId_Message_id_fk": {
@@ -602,7 +497,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
@@ -630,7 +525,7 @@
         },
         "userId": {
           "name": "userId",
-          "type": "uuid",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true
         },
@@ -701,7 +596,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },

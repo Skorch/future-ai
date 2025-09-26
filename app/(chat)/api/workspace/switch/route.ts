@@ -1,4 +1,4 @@
-import { auth } from '@/app/(auth)/auth';
+import { auth } from '@clerk/nextjs/server';
 import { switchWorkspaceAction } from '@/lib/workspace/actions';
 import { z } from 'zod';
 
@@ -7,9 +7,9 @@ const switchSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const session = await auth();
+  const { userId } = await auth();
 
-  if (!session?.user) {
+  if (!userId) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

@@ -1,4 +1,4 @@
-import { auth } from '@/app/(auth)/auth';
+import { auth } from '@clerk/nextjs/server';
 import { deleteChatById, getChatById } from '@/lib/db/queries';
 import { ChatSDKError } from '@/lib/errors';
 import { getActiveWorkspace } from '@/lib/workspace/context';
@@ -9,13 +9,13 @@ export async function GET(
 ) {
   const params = await props.params;
   const chatId = params.id;
-  const session = await auth();
+  const { userId } = await auth();
 
-  if (!session?.user) {
+  if (!userId) {
     return new ChatSDKError('unauthorized:api').toResponse();
   }
 
-  const workspaceId = await getActiveWorkspace(session.user.id);
+  const workspaceId = await getActiveWorkspace(userId);
 
   try {
     const chat = await getChatById({ id: chatId, workspaceId });
@@ -40,13 +40,13 @@ export async function DELETE(
 ) {
   const params = await props.params;
   const chatId = params.id;
-  const session = await auth();
+  const { userId } = await auth();
 
-  if (!session?.user) {
+  if (!userId) {
     return new ChatSDKError('unauthorized:api').toResponse();
   }
 
-  const workspaceId = await getActiveWorkspace(session.user.id);
+  const workspaceId = await getActiveWorkspace(userId);
 
   try {
     await deleteChatById({ id: chatId, workspaceId });

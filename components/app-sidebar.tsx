@@ -1,6 +1,5 @@
 'use client';
 
-import type { User } from 'next-auth';
 import { useRouter } from 'next/navigation';
 
 import { PlusIcon } from '@/components/icons';
@@ -18,10 +17,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 
-export function AppSidebar({
-  user,
-  workspaceId,
-}: { user: User | undefined; workspaceId: string }) {
+export function AppSidebar({ workspaceId }: { workspaceId: string }) {
   const router = useRouter();
   const { setOpenMobile } = useSidebar();
 
@@ -51,9 +47,11 @@ export function AppSidebar({
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <SidebarHistory user={user} workspaceId={workspaceId} />
+        <SidebarHistory workspaceId={workspaceId} />
       </SidebarContent>
-      <SidebarFooter>{user && <SidebarUserNav user={user} />}</SidebarFooter>
+      <SidebarFooter>
+        <SidebarUserNav />
+      </SidebarFooter>
     </Sidebar>
   );
 }

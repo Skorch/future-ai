@@ -13,9 +13,14 @@ import {
 } from 'drizzle-orm/pg-core';
 
 export const user = pgTable('User', {
-  id: uuid('id').primaryKey().notNull().defaultRandom(),
-  email: varchar('email', { length: 64 }).notNull(),
-  password: varchar('password', { length: 64 }),
+  id: varchar('id', { length: 255 }).primaryKey(), // Clerk user ID directly
+  email: varchar('email', { length: 256 }).notNull(),
+  firstName: varchar('firstName', { length: 256 }),
+  lastName: varchar('lastName', { length: 256 }),
+  imageUrl: text('imageUrl'),
+  emailVerified: boolean('emailVerified').default(false),
+  createdAt: timestamp('createdAt').notNull().defaultNow(),
+  updatedAt: timestamp('updatedAt').notNull().defaultNow(),
 });
 
 export type User = InferSelectModel<typeof user>;
@@ -25,7 +30,7 @@ export const workspace = pgTable(
   'Workspace',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    userId: uuid('userId')
+    userId: varchar('userId', { length: 255 })
       .references(() => user.id, { onDelete: 'cascade' })
       .notNull(),
     name: varchar('name', { length: 255 }).notNull(),
@@ -48,7 +53,7 @@ export const chat = pgTable(
     id: uuid('id').primaryKey().notNull().defaultRandom(),
     createdAt: timestamp('createdAt').notNull(),
     title: text('title').notNull(),
-    userId: uuid('userId')
+    userId: varchar('userId', { length: 255 })
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
     workspaceId: uuid('workspaceId')
@@ -130,9 +135,12 @@ export const document = pgTable(
     workspaceId: uuid('workspaceId')
       .references(() => workspace.id, { onDelete: 'cascade' })
       .notNull(), // CHANGED from userId
-    createdByUserId: uuid('createdByUserId').references(() => user.id, {
-      onDelete: 'set null',
-    }), // NEW - track creator
+    createdByUserId: varchar('createdByUserId', { length: 255 }).references(
+      () => user.id,
+      {
+        onDelete: 'set null',
+      },
+    ), // NEW - track creator
     // NEW FIELDS for RAG simplification
     metadata: json('metadata')
       .$type<{

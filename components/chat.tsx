@@ -13,7 +13,6 @@ import { Messages } from './messages';
 import type { VisibilityType } from './visibility-selector';
 import { useArtifactSelector } from '@/hooks/use-artifact';
 import { toast } from './toast';
-import type { Session } from 'next-auth';
 import { useSearchParams } from 'next/navigation';
 import { useChatVisibility } from '@/hooks/use-chat-visibility';
 import { useAutoResume } from '@/hooks/use-auto-resume';
@@ -27,7 +26,6 @@ export function Chat({
   initialMessages,
   initialVisibilityType,
   isReadonly,
-  session,
   autoResume,
   chat,
 }: {
@@ -36,7 +34,6 @@ export function Chat({
   initialMessages: ChatMessage[];
   initialVisibilityType: VisibilityType;
   isReadonly: boolean;
-  session: Session;
   autoResume: boolean;
   chat?: ChatType | null;
 }) {
@@ -175,7 +172,6 @@ export function Chat({
           chatId={id}
           selectedVisibilityType={initialVisibilityType}
           isReadonly={isReadonly}
-          session={session}
         />
 
         <Messages

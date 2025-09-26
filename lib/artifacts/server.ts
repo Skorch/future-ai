@@ -3,7 +3,6 @@ import { meetingSummaryHandler } from '@/artifacts/meeting-summary/server';
 import type { ArtifactKind } from '@/components/artifact';
 import type { Document } from '../db/schema';
 import { saveDocument } from '../db/queries';
-import type { Session } from 'next-auth';
 import type { UIMessageStreamWriter } from 'ai';
 import type { ChatMessage } from '../types';
 import { smoothStream, streamText } from 'ai';
@@ -23,7 +22,7 @@ export interface CreateDocumentCallbackProps {
   id: string;
   title: string;
   dataStream: UIMessageStreamWriter<ChatMessage>;
-  session: Session;
+  session: { user: { id: string } };
   workspaceId: string;
   metadata?: Record<string, unknown>;
 }
@@ -32,7 +31,7 @@ export interface UpdateDocumentCallbackProps {
   document: Document;
   description: string;
   dataStream: UIMessageStreamWriter<ChatMessage>;
-  session: Session;
+  session: { user: { id: string } };
   workspaceId: string;
 }
 

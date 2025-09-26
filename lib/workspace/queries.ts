@@ -78,9 +78,18 @@ export async function updateWorkspace(
 }
 
 /**
- * Soft delete a workspace
+ * Soft delete a workspace - prevents deletion if it's the last workspace
  */
 export async function deleteWorkspace(workspaceId: string, userId: string) {
+  // Check if this is the last workspace
+  const workspaces = await getWorkspacesByUserId(userId);
+
+  if (workspaces.length <= 1) {
+    throw new Error(
+      'Cannot delete your last workspace. You must have at least one workspace.',
+    );
+  }
+
   const [ws] = await db
     .update(workspace)
     .set({ deletedAt: new Date() })
@@ -110,9 +119,24 @@ export async function getDefaultWorkspace(userId: string) {
 }
 
 /**
- * Get the default workspace for a user (alias for getDefaultWorkspace)
- * Throws an error if user has no workspaces (should never happen as workspaces are created during user registration)
+ * Ensure user has at least one workspace, create if missing
+ * This is defensive programming - should rarely be needed
  */
 export async function ensureUserHasWorkspace(userId: string): Promise<string> {
-  return getDefaultWorkspace(userId);
+  const workspaces = await getWorkspacesByUserId(userId);
+
+  if (workspaces.length === 0) {
+    // This shouldn't happen, but create a workspace as defensive measure
+    console.error(
+      `User ${userId} had no workspaces - creating default workspace`,
+    );
+    const ws = await createWorkspace(
+      userId,
+      'Personal Workspace',
+      'Automatically created workspace',
+    );
+    return ws.id;
+  }
+
+  return workspaces[0].id;
 }

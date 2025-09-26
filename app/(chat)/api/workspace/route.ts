@@ -1,15 +1,15 @@
-import { auth } from '@/app/(auth)/auth';
+import { auth } from '@clerk/nextjs/server';
 import { getWorkspacesByUserId } from '@/lib/workspace/queries';
 
 export async function GET() {
-  const session = await auth();
+  const { userId } = await auth();
 
-  if (!session?.user) {
+  if (!userId) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
-    const workspaces = await getWorkspacesByUserId(session.user.id);
+    const workspaces = await getWorkspacesByUserId(userId);
     return Response.json(workspaces);
   } catch (error) {
     console.error('Failed to fetch workspaces:', error);

@@ -1,7 +1,7 @@
 import { Chat } from '@/components/chat';
 import { generateUUID } from '@/lib/utils';
 import { DataStreamHandler } from '@/components/data-stream-handler';
-import { auth } from '@/app/(auth)/auth';
+import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 
 export default async function Page({
@@ -9,11 +9,11 @@ export default async function Page({
 }: {
   params: Promise<{ workspaceId: string }>;
 }) {
-  const session = await auth();
+  const { userId } = await auth();
   const { workspaceId } = await params;
 
-  if (!session) {
-    redirect('/api/auth/guest');
+  if (!userId) {
+    redirect('/login');
   }
 
   const id = generateUUID();
@@ -27,7 +27,6 @@ export default async function Page({
         initialMessages={[]}
         initialVisibilityType="private"
         isReadonly={false}
-        session={session}
         autoResume={false}
       />
       <DataStreamHandler />

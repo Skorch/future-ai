@@ -1,6 +1,6 @@
 import { notFound, redirect } from 'next/navigation';
 
-import { auth } from '@/app/(auth)/auth';
+import { auth } from '@clerk/nextjs/server';
 import { Chat } from '@/components/chat';
 import { getChatById, getMessagesByChatId } from '@/lib/db/queries';
 import { DataStreamHandler } from '@/components/data-stream-handler';
@@ -17,18 +17,14 @@ export default async function Page(props: {
     notFound();
   }
 
-  const session = await auth();
+  const { userId } = await auth();
 
-  if (!session) {
-    redirect('/api/auth/guest');
+  if (!userId) {
+    redirect('/login');
   }
 
   if (chat.visibility === 'private') {
-    if (!session.user) {
-      return notFound();
-    }
-
-    if (session.user.id !== chat.userId) {
+    if (userId !== chat.userId) {
       return notFound();
     }
   }
@@ -46,8 +42,7 @@ export default async function Page(props: {
         workspaceId={workspaceId}
         initialMessages={uiMessages}
         initialVisibilityType={chat.visibility}
-        isReadonly={session?.user?.id !== chat.userId}
-        session={session}
+        isReadonly={userId !== chat.userId}
         autoResume={true}
         chat={chat}
       />

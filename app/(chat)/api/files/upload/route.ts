@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
-import { auth } from '@/app/(auth)/auth';
+import { auth } from '@clerk/nextjs/server';
 import { saveDocument } from '@/lib/db/queries';
 import { generateUUID } from '@/lib/utils';
 import { getActiveWorkspace } from '@/lib/workspace/context';
@@ -20,9 +20,9 @@ const FileSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const session = await auth();
+  const { userId } = await auth();
 
-  if (!session?.user) {
+  if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -78,7 +78,7 @@ export async function POST(request: Request) {
       title: filename,
       contentLength: content.length,
       kind: 'text',
-      userId: session.user.id,
+      userId: userId,
       metadata: {
         documentType: 'transcript',
         fileName: filename,
@@ -88,7 +88,7 @@ export async function POST(request: Request) {
     });
 
     // Get workspace from cookie/context
-    const workspaceId = await getActiveWorkspace(session.user.id);
+    const workspaceId = await getActiveWorkspace(userId);
 
     // Create transcript document directly in database
     await saveDocument({
@@ -96,7 +96,7 @@ export async function POST(request: Request) {
       title: filename,
       content: content,
       kind: 'text',
-      userId: session.user.id,
+      userId: userId,
       workspaceId,
       metadata: {
         documentType: 'transcript',
@@ -110,7 +110,7 @@ export async function POST(request: Request) {
       documentId,
       fileName: filename,
       fileSize: file.size,
-      userId: session.user.id,
+      userId: userId,
     });
 
     // Return document ID with explicit transcript marker for chat

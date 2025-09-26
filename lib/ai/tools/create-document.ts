@@ -1,7 +1,6 @@
 import { generateUUID } from '@/lib/utils';
 import { tool, type UIMessageStreamWriter } from 'ai';
 import { z } from 'zod';
-import type { Session } from 'next-auth';
 import {
   artifactKinds,
   documentHandlersByArtifactKind,
@@ -11,7 +10,7 @@ import { getDocumentById } from '@/lib/db/queries';
 import { loadAllArtifactDefinitions } from '@/lib/artifacts';
 
 interface CreateDocumentProps {
-  session: Session;
+  session: { user: { id: string } };
   dataStream: UIMessageStreamWriter<ChatMessage>;
   workspaceId: string;
 }

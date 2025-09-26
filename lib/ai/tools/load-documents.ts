@@ -1,10 +1,9 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 import { getDocumentsForUser } from '@/lib/db/queries';
-import type { Session } from 'next-auth';
 
 interface LoadDocumentsProps {
-  session: Session;
+  session: { user: { id: string } };
   workspaceId: string;
 }
 

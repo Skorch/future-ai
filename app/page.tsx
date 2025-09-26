@@ -1,17 +1,17 @@
 import { redirect } from 'next/navigation';
-import { auth } from '@/app/(auth)/auth';
+import { auth } from '@clerk/nextjs/server';
 import { getActiveWorkspace } from '@/lib/workspace/context';
 
 export default async function RootPage() {
-  const session = await auth();
+  const { userId } = await auth();
 
-  if (!session?.user) {
-    // For unauthenticated users, redirect to guest auth which will handle workspace creation
-    redirect('/api/auth/guest');
+  if (!userId) {
+    // For unauthenticated users, redirect to login
+    redirect('/login');
   }
 
   // Get the active workspace for authenticated user
-  const workspaceId = await getActiveWorkspace(session.user.id);
+  const workspaceId = await getActiveWorkspace(userId);
 
   // Redirect to the workspace
   redirect(`/workspace/${workspaceId}`);

@@ -1,4 +1,4 @@
-import { auth } from '@/app/(auth)/auth';
+import { auth } from '@clerk/nextjs/server';
 import { getWorkspaceById } from '@/lib/workspace/queries';
 import { getChatsByWorkspaceAndUser, db } from '@/lib/db/queries';
 import { document } from '@/lib/db/schema';
@@ -8,16 +8,16 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ workspaceId: string }> },
 ) {
-  const session = await auth();
+  const { userId } = await auth();
   const { workspaceId } = await params;
 
-  if (!session?.user) {
+  if (!userId) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
     // Verify workspace belongs to user
-    const workspace = await getWorkspaceById(workspaceId, session.user.id);
+    const workspace = await getWorkspaceById(workspaceId, userId);
     if (!workspace) {
       return Response.json({ error: 'Workspace not found' }, { status: 404 });
     }
@@ -25,7 +25,7 @@ export async function GET(
     // Get chat count
     const chats = await getChatsByWorkspaceAndUser({
       workspaceId: workspaceId,
-      userId: session.user.id,
+      userId: userId,
       limit: 1000, // Get all for count
       startingAfter: null,
       endingBefore: null,

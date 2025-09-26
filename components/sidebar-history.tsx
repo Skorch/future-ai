@@ -2,7 +2,6 @@
 
 import { isToday, isYesterday, subMonths, subWeeks } from 'date-fns';
 import { useParams, useRouter } from 'next/navigation';
-import type { User } from 'next-auth';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
@@ -100,10 +99,7 @@ export function getChatHistoryPaginationKey(
   return `/api/workspace/${workspaceId}/history?ending_before=${firstChatFromPage.id}&limit=${PAGE_SIZE}`;
 }
 
-export function SidebarHistory({
-  user,
-  workspaceId,
-}: { user: User | undefined; workspaceId: string }) {
+export function SidebarHistory({ workspaceId }: { workspaceId: string }) {
   const { setOpenMobile } = useSidebar();
   const { id } = useParams();
 
@@ -159,18 +155,6 @@ export function SidebarHistory({
       router.push(`/workspace/${workspaceId}`);
     }
   };
-
-  if (!user) {
-    return (
-      <SidebarGroup>
-        <SidebarGroupContent>
-          <div className="flex flex-row gap-2 justify-center items-center px-2 w-full text-sm text-zinc-500">
-            Login to save and revisit previous chats!
-          </div>
-        </SidebarGroupContent>
-      </SidebarGroup>
-    );
-  }
 
   if (isLoading) {
     return (

@@ -4,7 +4,6 @@ import { PineconeClient } from '../../rag/pinecone-client';
 import { createReranker } from '../../rag/reranker';
 import { rerankWithLLM, type LLMRerankResult } from '../../rag/llm-reranker';
 import type { QueryResult, QueryMatch, RAGMetadata } from '../../rag/types';
-import type { Session } from 'next-auth';
 import type { ChatMessage } from '@/lib/types';
 
 // Tool parameter schema - only expose what LLM needs to control
@@ -224,7 +223,7 @@ function formatResultsForLLM(matches: QueryMatch[]): string {
  * Searches the vector database for relevant content
  */
 interface QueryRAGProps {
-  session: Session;
+  session: { user: { id: string } };
   dataStream: UIMessageStreamWriter<ChatMessage>;
   workspaceId: string;
 }

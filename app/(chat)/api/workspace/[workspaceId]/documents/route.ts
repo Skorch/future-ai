@@ -1,4 +1,4 @@
-import { auth } from '@/app/(auth)/auth';
+import { auth } from '@clerk/nextjs/server';
 import type { ArtifactKind } from '@/components/artifact';
 import {
   deleteDocumentsByIdAfterTimestamp,
@@ -26,9 +26,9 @@ export async function GET(
     ).toResponse();
   }
 
-  const session = await auth();
+  const { userId } = await auth();
 
-  if (!session?.user) {
+  if (!userId) {
     console.log('[Document API] Error: Unauthorized - no session');
     return new ChatSDKError('unauthorized:document').toResponse();
   }
@@ -72,9 +72,9 @@ export async function POST(
     ).toResponse();
   }
 
-  const session = await auth();
+  const { userId } = await auth();
 
-  if (!session?.user) {
+  if (!userId) {
     return new ChatSDKError('not_found:document').toResponse();
   }
 
@@ -96,7 +96,7 @@ export async function POST(
     content,
     title,
     kind,
-    userId: session.user.id,
+    userId: userId,
     workspaceId,
   });
 
@@ -127,9 +127,9 @@ export async function DELETE(
     ).toResponse();
   }
 
-  const session = await auth();
+  const { userId } = await auth();
 
-  if (!session?.user) {
+  if (!userId) {
     return new ChatSDKError('unauthorized:document').toResponse();
   }
 

@@ -1,19 +1,16 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/app/(auth)/auth';
+import { auth } from '@clerk/nextjs/server';
 import { cleanupTranscriptsFromMetadata } from '@/lib/db/cleanup-metadata';
 
 export async function POST() {
   try {
     // Check authentication
-    const session = await auth();
-    if (!session?.user) {
+    const { userId } = await auth();
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log(
-      '[API] Starting metadata cleanup for user:',
-      session.user.email,
-    );
+    console.log('[API] Starting metadata cleanup for user:', userId);
 
     // Run the cleanup
     const result = await cleanupTranscriptsFromMetadata();

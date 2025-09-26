@@ -1,4 +1,4 @@
-import { auth } from '@/app/(auth)/auth';
+import { auth } from '@clerk/nextjs/server';
 import {
   getChatById,
   getMessagesByChatId,
@@ -34,13 +34,13 @@ export async function GET(
     return new ChatSDKError('bad_request:api').toResponse();
   }
 
-  const session = await auth();
+  const { userId } = await auth();
 
-  if (!session?.user) {
+  if (!userId) {
     return new ChatSDKError('unauthorized:chat').toResponse();
   }
 
-  const workspaceId = await getActiveWorkspace(session.user.id);
+  const workspaceId = await getActiveWorkspace(userId);
   let chat: Chat;
 
   try {
@@ -53,7 +53,7 @@ export async function GET(
     return new ChatSDKError('not_found:chat').toResponse();
   }
 
-  if (chat.visibility === 'private' && chat.userId !== session.user.id) {
+  if (chat.visibility === 'private' && chat.userId !== userId) {
     return new ChatSDKError('forbidden:chat').toResponse();
   }
 

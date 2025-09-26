@@ -19,7 +19,6 @@ import { sql as vercelSql } from '@vercel/postgres';
 import {
   user,
   chat,
-  type User,
   document,
   message,
   vote,
@@ -27,12 +26,10 @@ import {
   type Chat,
   type ChatMode,
   stream,
-  workspace,
 } from './schema';
 import { syncDocumentToRAG, deleteFromRAG } from '@/lib/rag/sync';
 import type { ArtifactKind } from '@/components/artifact';
 import { generateUUID } from '../utils';
-import { generateHashedPassword } from './utils';
 import type { VisibilityType } from '@/components/visibility-selector';
 import { ChatSDKError } from '../errors';
 
@@ -46,73 +43,56 @@ const db = drizzle(vercelSql);
 // Export db instance for use in other files
 export { db };
 
-export async function getUser(email: string): Promise<Array<User>> {
+// Get user by Clerk ID (which is now the primary key)
+export async function getUserById(userId: string) {
   try {
-    return await db.select().from(user).where(eq(user.email, email));
+    const [foundUser] = await db
+      .select()
+      .from(user)
+      .where(eq(user.id, userId))
+      .limit(1);
+    return foundUser;
   } catch (error) {
-    throw new ChatSDKError(
-      'bad_request:database',
-      'Failed to get user by email',
-    );
+    throw new ChatSDKError('bad_request:database', 'Failed to get user by id');
   }
 }
 
-export async function createUser(email: string, password: string) {
-  const hashedPassword = generateHashedPassword(password);
-
+// Upsert user data (for welcome page sync and webhook handler)
+export async function upsertUser(userData: {
+  id: string;
+  email: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  imageUrl?: string | null;
+  emailVerified?: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
+}) {
   try {
-    // Create user first
-    const [newUser] = await db
+    const [upsertedUser] = await db
       .insert(user)
-      .values({ email, password: hashedPassword })
+      .values(userData)
+      .onConflictDoUpdate({
+        target: user.id,
+        set: {
+          email: userData.email,
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          imageUrl: userData.imageUrl,
+          emailVerified: userData.emailVerified,
+          updatedAt: userData.updatedAt || new Date(),
+        },
+      })
       .returning();
 
-    // Then create workspace - both are awaited so they complete before returning
-    const workspaceId = generateUUID();
-    await db.insert(workspace).values({
-      id: workspaceId,
-      userId: newUser.id,
-      name: 'Personal',
-      description: 'Your personal workspace',
-    });
-
-    return newUser;
+    return upsertedUser;
   } catch (error) {
-    throw new ChatSDKError('bad_request:database', 'Failed to create user');
+    throw new ChatSDKError('bad_request:database', 'Failed to upsert user');
   }
 }
 
-export async function createGuestUser() {
-  const email = `guest-${Date.now()}`;
-  const password = generateHashedPassword(generateUUID());
-
-  try {
-    // Create guest user first
-    const [guestUser] = await db
-      .insert(user)
-      .values({ email, password })
-      .returning({
-        id: user.id,
-        email: user.email,
-      });
-
-    // Then create workspace - both are awaited so they complete before returning
-    const workspaceId = generateUUID();
-    await db.insert(workspace).values({
-      id: workspaceId,
-      userId: guestUser.id,
-      name: 'Guest Workspace',
-      description: 'Temporary workspace for guest access',
-    });
-
-    return guestUser;
-  } catch (error) {
-    throw new ChatSDKError(
-      'bad_request:database',
-      'Failed to create guest user',
-    );
-  }
-}
+// No longer needed - all users must authenticate with Clerk
+// export async function createGuestUser() - REMOVED
 
 export async function saveChat({
   id,

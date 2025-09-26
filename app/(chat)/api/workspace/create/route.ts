@@ -1,10 +1,10 @@
-import { auth } from '@/app/(auth)/auth';
+import { auth } from '@clerk/nextjs/server';
 import { createWorkspaceAction } from '@/lib/workspace/actions';
 
 export async function POST(request: Request) {
-  const session = await auth();
+  const { userId } = await auth();
 
-  if (!session?.user) {
+  if (!userId) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

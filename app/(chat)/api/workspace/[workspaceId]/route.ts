@@ -1,14 +1,14 @@
-import { auth } from '@/app/(auth)/auth';
+import { auth } from '@clerk/nextjs/server';
 import { deleteWorkspaceAction } from '@/lib/workspace/actions';
 
 export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ workspaceId: string }> },
 ) {
-  const session = await auth();
+  const { userId } = await auth();
   const { workspaceId } = await params;
 
-  if (!session?.user) {
+  if (!userId) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

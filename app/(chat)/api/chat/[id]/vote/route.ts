@@ -1,4 +1,4 @@
-import { auth } from '@/app/(auth)/auth';
+import { auth } from '@clerk/nextjs/server';
 import { getChatById, getVotesByChatId, voteMessage } from '@/lib/db/queries';
 import { ChatSDKError } from '@/lib/errors';
 import { getActiveWorkspace } from '@/lib/workspace/context';
@@ -10,20 +10,20 @@ export async function GET(
   const params = await props.params;
   const chatId = params.id;
 
-  const session = await auth();
+  const { userId } = await auth();
 
-  if (!session?.user) {
+  if (!userId) {
     return new ChatSDKError('unauthorized:vote').toResponse();
   }
 
-  const workspaceId = await getActiveWorkspace(session.user.id);
+  const workspaceId = await getActiveWorkspace(userId);
   const chat = await getChatById({ id: chatId, workspaceId });
 
   if (!chat) {
     return new ChatSDKError('not_found:chat').toResponse();
   }
 
-  if (chat.userId !== session.user.id) {
+  if (chat.userId !== userId) {
     return new ChatSDKError('forbidden:vote').toResponse();
   }
 
@@ -48,20 +48,20 @@ export async function PATCH(
     ).toResponse();
   }
 
-  const session = await auth();
+  const { userId } = await auth();
 
-  if (!session?.user) {
+  if (!userId) {
     return new ChatSDKError('unauthorized:vote').toResponse();
   }
 
-  const workspaceId = await getActiveWorkspace(session.user.id);
+  const workspaceId = await getActiveWorkspace(userId);
   const chat = await getChatById({ id: chatId, workspaceId });
 
   if (!chat) {
     return new ChatSDKError('not_found:vote').toResponse();
   }
 
-  if (chat.userId !== session.user.id) {
+  if (chat.userId !== userId) {
     return new ChatSDKError('forbidden:vote').toResponse();
   }
 

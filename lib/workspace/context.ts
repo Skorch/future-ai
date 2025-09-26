@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
 import { getWorkspaceById, ensureUserHasWorkspace } from './queries';
 
-const WORKSPACE_COOKIE_NAME = 'activeWorkspace';
+const WORKSPACE_COOKIE_NAME = 'clerk-active-workspace';
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 
 /**

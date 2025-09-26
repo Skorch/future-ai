@@ -9,7 +9,7 @@ import {
   analyzeTokenUsage,
   logTokenStats,
 } from '@/lib/ai/utils/token-analyzer';
-import { auth } from '@/app/(auth)/auth';
+import { auth } from '@clerk/nextjs/server';
 import { type RequestHints, systemPrompt } from '@/lib/ai/prompts';
 import {
   createStreamId,
@@ -107,11 +107,14 @@ export async function POST(
       hasFileParts: message.parts?.some((p) => p.type === 'file'),
     });
 
-    const session = await auth();
+    const { userId } = await auth();
 
-    if (!session?.user) {
+    if (!userId) {
       return new ChatSDKError('unauthorized:chat').toResponse();
     }
+
+    // Create session object for AI tools
+    const session = { user: { id: userId } };
 
     // Rate limiting removed - no message limits
 
@@ -126,13 +129,13 @@ export async function POST(
 
       await saveChat({
         id,
-        userId: session.user.id,
+        userId: userId,
         title,
         visibility: selectedVisibilityType,
         workspaceId,
       });
     } else {
-      if (chat.userId !== session.user.id) {
+      if (chat.userId !== userId) {
         return new ChatSDKError('forbidden:chat').toResponse();
       }
 
