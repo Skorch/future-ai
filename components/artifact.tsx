@@ -1,5 +1,6 @@
 import { formatDistance } from 'date-fns';
 import { AnimatePresence, motion } from 'framer-motion';
+import { getLogger } from '@/lib/logger';
 import {
   type Dispatch,
   memo,
@@ -22,6 +23,8 @@ import { useSidebar } from './ui/sidebar';
 import { useArtifact } from '@/hooks/use-artifact';
 import { textArtifact } from '@/artifacts/text/client';
 import equal from 'fast-deep-equal';
+
+const logger = getLogger('Artifact');
 import type { UseChatHelpers } from '@ai-sdk/react';
 import type { VisibilityType } from './visibility-selector';
 import type { Attachment, ChatMessage } from '@/lib/types';
@@ -80,7 +83,7 @@ function PureArtifact({
   const { artifact, setArtifact, metadata, setMetadata } = useArtifact();
 
   // Debug logging for artifact state
-  console.log('[Artifact] Current artifact state:', {
+  logger.debug('Current artifact state:', {
     documentId: artifact.documentId,
     status: artifact.status,
     hasContent: !!artifact.content,
@@ -96,7 +99,7 @@ function PureArtifact({
       ? `/api/workspace/${workspaceId}/documents?id=${artifact.documentId}`
       : null;
 
-  console.log('[Artifact] Document fetch conditions:', {
+  logger.debug('Document fetch conditions:', {
     shouldFetchDocument,
     fetchUrl,
     documentId: artifact.documentId,
@@ -116,7 +119,7 @@ function PureArtifact({
   const { open: isSidebarOpen } = useSidebar();
 
   useEffect(() => {
-    console.log('[Artifact] Documents loaded:', {
+    logger.debug(' Documents loaded:', {
       documentsCount: documents?.length || 0,
       isLoading: isDocumentsFetching,
       hasDocuments: !!documents,
@@ -125,7 +128,7 @@ function PureArtifact({
     if (documents && documents.length > 0) {
       const mostRecentDocument = documents.at(-1);
 
-      console.log('[Artifact] Most recent document:', {
+      logger.debug(' Most recent document:', {
         hasContent: !!mostRecentDocument?.content,
         contentLength: mostRecentDocument?.content?.length || 0,
         documentId: mostRecentDocument?.id,
@@ -136,14 +139,14 @@ function PureArtifact({
         setDocument(mostRecentDocument);
         setCurrentVersionIndex(documents.length - 1);
 
-        console.log('[Artifact] Updating artifact with document content');
+        logger.debug(' Updating artifact with document content');
         setArtifact((currentArtifact) => ({
           ...currentArtifact,
           content: mostRecentDocument.content ?? '',
         }));
       }
     } else {
-      console.log('[Artifact] No documents loaded or empty documents array');
+      logger.debug(' No documents loaded or empty documents array');
     }
   }, [documents, setArtifact, isDocumentsFetching]);
 

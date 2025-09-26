@@ -1,5 +1,8 @@
 import { auth } from '@clerk/nextjs/server';
 import { deleteWorkspaceAction } from '@/lib/workspace/actions';
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('WorkspaceAPI');
 
 export async function DELETE(
   _request: Request,
@@ -16,7 +19,7 @@ export async function DELETE(
     await deleteWorkspaceAction(workspaceId);
     return Response.json({ success: true });
   } catch (error) {
-    console.error('Failed to delete workspace:', error);
+    logger.error('Failed to delete workspace:', error);
     return Response.json(
       {
         error: 'Failed to delete workspace',

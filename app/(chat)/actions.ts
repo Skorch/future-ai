@@ -8,6 +8,9 @@ import {
 } from '@/lib/db/queries';
 import type { VisibilityType } from '@/components/visibility-selector';
 import { myProvider } from '@/lib/ai/providers';
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('ChatActions');
 
 export async function generateTitleFromUserMessage({
   message,
@@ -31,7 +34,7 @@ export async function deleteTrailingMessages({ id }: { id: string }) {
   const [message] = await getMessageById({ id });
 
   if (!message) {
-    console.error(`[deleteTrailingMessages] Message not found with id: ${id}`);
+    logger.error(`Message not found with id: ${id}`);
     throw new Error(`Message not found with id: ${id}`);
   }
 

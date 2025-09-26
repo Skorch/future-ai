@@ -5,12 +5,15 @@ import { eq } from 'drizzle-orm';
 import { db, upsertUser } from '@/lib/db/queries';
 import { user as userTable } from '@/lib/db/schema';
 import { createWorkspace } from '@/lib/workspace/queries';
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('ClerkWebhook');
 
 export async function POST(req: Request) {
   const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
 
   if (!WEBHOOK_SECRET) {
-    console.error('CLERK_WEBHOOK_SECRET not set');
+    logger.error('CLERK_WEBHOOK_SECRET not set');
     return new Response('Error: Webhook secret not configured', {
       status: 500,
     });
@@ -40,7 +43,7 @@ export async function POST(req: Request) {
       'svix-signature': svix_signature,
     }) as WebhookEvent;
   } catch (err) {
-    console.error('Error verifying webhook:', err);
+    logger.error('Error verifying webhook:', err);
     return new Response('Error: Invalid signature', { status: 400 });
   }
 
@@ -78,7 +81,7 @@ export async function POST(req: Request) {
           'Your personal workspace',
         );
       } catch (error) {
-        console.error('Error processing user.created webhook:', error);
+        logger.error('Error processing user.created webhook:', error);
         return new Response('Error processing webhook', { status: 500 });
       }
       break;
@@ -98,7 +101,7 @@ export async function POST(req: Request) {
           updatedAt: new Date(),
         });
       } catch (error) {
-        console.error('Error processing user.updated webhook:', error);
+        logger.error('Error processing user.updated webhook:', error);
         return new Response('Error processing webhook', { status: 500 });
       }
       break;
@@ -112,13 +115,13 @@ export async function POST(req: Request) {
           await db.delete(userTable).where(eq(userTable.id, deletedUserId));
         }
       } catch (error) {
-        console.error('Error processing user.deleted webhook:', error);
+        logger.error('Error processing user.deleted webhook:', error);
         return new Response('Error processing webhook', { status: 500 });
       }
       break;
 
     default:
-      console.log(`Unhandled webhook event: ${eventType}`);
+      logger.info(`Unhandled webhook event: ${eventType}`);
   }
 
   return new Response('Webhook processed', { status: 200 });

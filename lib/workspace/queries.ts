@@ -1,3 +1,6 @@
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('WorkspaceQueries');
 import { and, desc, eq, isNull } from 'drizzle-orm';
 import { workspace } from '@/lib/db/schema';
 import { db } from '@/lib/db/queries';
@@ -127,7 +130,7 @@ export async function ensureUserHasWorkspace(userId: string): Promise<string> {
 
   if (workspaces.length === 0) {
     // This shouldn't happen, but create a workspace as defensive measure
-    console.error(
+    logger.error(
       `User ${userId} had no workspaces - creating default workspace`,
     );
     const ws = await createWorkspace(

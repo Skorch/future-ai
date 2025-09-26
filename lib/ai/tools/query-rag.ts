@@ -1,3 +1,6 @@
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('QueryRAG');
 import { tool, type UIMessageStreamWriter } from 'ai';
 import { z } from 'zod';
 import { PineconeClient } from '../../rag/pinecone-client';
@@ -141,7 +144,7 @@ async function expandChunkContext(
           }
         }
       } catch (error) {
-        console.error('Failed to fetch adjacent chunks:', error);
+        logger.error('Failed to fetch adjacent chunks:', error);
       }
     }
   }
@@ -230,7 +233,7 @@ interface QueryRAGProps {
 
 export const queryRAG = (props: QueryRAGProps) => {
   const { session, dataStream, workspaceId } = props;
-  console.log(
+  logger.info(
     '[queryRAG] Creating tool with session user:',
     props.session?.user?.id,
   );
@@ -306,7 +309,7 @@ export const queryRAG = (props: QueryRAGProps) => {
                 ...(m.merged && { merged: m.merged }),
               }));
             } catch (error) {
-              console.error(
+              logger.error(
                 '[queryRAG] LLM reranking failed, falling back to Voyage',
               );
               // Fall back to Voyage on error

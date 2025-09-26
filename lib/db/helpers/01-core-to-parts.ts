@@ -1,4 +1,6 @@
-// This is a helper for an older version of ai, v4.3.13
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('01-core-to-parts'); // This is a helper for an older version of ai, v4.3.13
 
 // import { config } from 'dotenv';
 // import postgres from 'postgres';
@@ -210,7 +212,7 @@
 //             }
 //           }
 //         } catch (error) {
-//           console.error(`Error processing chat ${chat.id}: ${error}`);
+//           logger.error(`Error processing chat ${chat.id}: ${error}`);
 //         }
 //       }
 //     }
@@ -248,6 +250,6 @@
 //     process.exit(0);
 //   })
 //   .catch((error) => {
-//     console.error('Script failed:', error);
+//     logger.error('Script failed:', error);
 //     process.exit(1);
 //   });

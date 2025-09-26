@@ -1,3 +1,6 @@
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('MeetingSummary');
 import { smoothStream, streamText } from 'ai';
 import { myProvider } from '@/lib/ai/providers';
 import { createDocumentHandler } from '@/lib/artifacts/server';
@@ -25,7 +28,7 @@ export const meetingSummaryHandler = createDocumentHandler<'text'>({
     const handlerStartTime = Date.now();
     // Cast metadata to our expected type
     const typedMetadata = docMetadata as MeetingSummaryMetadata | undefined;
-    console.log('[MeetingSummaryHandler] Starting document creation', {
+    logger.info('[MeetingSummaryHandler] Starting document creation', {
       title,
       hasTranscript: !!typedMetadata?.transcript,
       transcriptLength: typedMetadata?.transcript?.length || 0,
@@ -43,7 +46,7 @@ export const meetingSummaryHandler = createDocumentHandler<'text'>({
       typedMetadata?.sourceDocumentIds?.length &&
       typedMetadata.sourceDocumentIds.length > 0
     ) {
-      console.log(
+      logger.info(
         '[MeetingSummaryHandler] Fetching source documents:',
         typedMetadata.sourceDocumentIds,
       );
@@ -69,7 +72,7 @@ export const meetingSummaryHandler = createDocumentHandler<'text'>({
         .map((doc) => `\n--- ${doc.title} ---\n${doc.content}\n`)
         .join('\n');
 
-      console.log(
+      logger.info(
         '[MeetingSummaryHandler] Combined transcripts from',
         validDocuments.length,
         'documents',
@@ -90,7 +93,7 @@ export const meetingSummaryHandler = createDocumentHandler<'text'>({
       typedMetadata?.meetingDate || new Date().toISOString().split('T')[0];
     const participants = typedMetadata?.participants || [];
 
-    console.log(
+    logger.info(
       '[MeetingSummaryHandler] Preparing to stream with artifact-model',
       {
         elapsedBeforeStream: Date.now() - handlerStartTime,
@@ -124,7 +127,7 @@ ${transcript}`,
 
     let chunkCount = 0;
     const streamStartTime = Date.now();
-    console.log('[MeetingSummaryHandler] Starting stream processing', {
+    logger.info('[MeetingSummaryHandler] Starting stream processing', {
       elapsedBeforeStream: streamStartTime - handlerStartTime,
     });
 
@@ -146,7 +149,7 @@ ${transcript}`,
         // Log every 10th chunk to avoid spam
         if (chunkCount % 10 === 0) {
           const streamElapsed = Date.now() - streamStartTime;
-          console.log(
+          logger.info(
             `[MeetingSummaryHandler] Streamed ${chunkCount} chunks, ${draftContent.length} chars total`,
             {
               streamDuration: streamElapsed,
@@ -159,7 +162,7 @@ ${transcript}`,
 
     const totalDuration = Date.now() - handlerStartTime;
     const streamDuration = Date.now() - streamStartTime;
-    console.log('[MeetingSummaryHandler] Stream completed', {
+    logger.info('[MeetingSummaryHandler] Stream completed', {
       totalChunks: chunkCount,
       contentLength: draftContent.length,
       firstChars: draftContent.substring(0, 100),

@@ -17,6 +17,9 @@ import {
   MIN_SCORE_THRESHOLD,
 } from './types';
 import { getVoyageAIClient, type VoyageAIClient } from './embeddings';
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('PineconeClient');
 
 /**
  * Wrapper for Pinecone vector database operations
@@ -41,7 +44,7 @@ export class PineconeClient {
     // Initialize VoyageAI client for embeddings
     this.voyageClient = getVoyageAIClient();
 
-    console.log('[Pinecone] Client initialized with:', {
+    logger.info('Client initialized with:', {
       indexName: this.indexName,
       hasApiKey: !!apiKey,
       apiKeyLength: apiKey.length,
@@ -55,7 +58,7 @@ export class PineconeClient {
 
     // Verify index exists (async, don't block constructor)
     this.verifyIndex().catch((err) => {
-      console.error('[Pinecone] Index verification failed:', err);
+      logger.error('Index verification failed:', err);
     });
   }
 
@@ -70,19 +73,16 @@ export class PineconeClient {
       );
 
       if (!indexExists) {
-        console.error(
-          '[Pinecone] WARNING: Index does not exist:',
-          this.indexName,
-        );
-        console.error(
-          '[Pinecone] Available indexes:',
+        logger.error('WARNING: Index does not exist:', this.indexName);
+        logger.error(
+          'Available indexes:',
           indexList.indexes?.map((i) => i.name),
         );
         return;
       }
 
       const indexInfo = await this.client.describeIndex(this.indexName);
-      console.log('[Pinecone] Index verified:', {
+      logger.info('Index verified:', {
         name: this.indexName,
         dimension: indexInfo.dimension,
         metric: indexInfo.metric,
@@ -90,7 +90,7 @@ export class PineconeClient {
         status: indexInfo.status,
       });
     } catch (error) {
-      console.error('[Pinecone] Failed to verify index:', error);
+      logger.error('Failed to verify index:', error);
     }
   }
 
@@ -108,7 +108,7 @@ export class PineconeClient {
       progressCallback,
     } = options;
 
-    console.log('[Pinecone] writeDocuments called with:', {
+    logger.info('writeDocuments called with:', {
       documentCount: documents.length,
       namespace,
       batchSize,
@@ -129,7 +129,7 @@ export class PineconeClient {
 
     try {
       const index = this.client.index(this.indexName);
-      console.log('[Pinecone] Got index handle for:', this.indexName);
+      logger.info('Got index handle for:', this.indexName);
 
       // Process documents in batches
       for (let i = 0; i < documents.length; i += batchSize) {
@@ -139,26 +139,23 @@ export class PineconeClient {
         );
 
         try {
-          console.log(
-            `[Pinecone] Processing batch ${i / batchSize + 1}, size: ${batch.length}`,
+          logger.debug(
+            `Processing batch ${i / batchSize + 1}, size: ${batch.length}`,
           );
 
           // Always use VoyageAI for embeddings
           const ns = index.namespace(namespace);
           const texts = batch.map((doc) => doc.content);
 
-          console.log(
-            `[Pinecone] Generating VoyageAI embeddings for ${texts.length} documents`,
+          logger.debug(
+            `Generating VoyageAI embeddings for ${texts.length} documents`,
           );
-          console.log(
-            '[Pinecone] First text sample (100 chars):',
-            texts[0]?.substring(0, 100),
-          );
+          // Text sample removed - contains document content
 
           // Use VoyageAI to generate embeddings
           const embeddings = await this.voyageClient.embedDocuments(texts);
 
-          console.log('[Pinecone] VoyageAI embeddings generated:', {
+          logger.info('VoyageAI embeddings generated:', {
             count: embeddings.length,
             dimension: embeddings[0]?.length || 0,
           });
@@ -173,16 +170,14 @@ export class PineconeClient {
             } as RecordMetadata,
           }));
 
-          console.log(
-            `[Pinecone] Upserting ${records.length} records with VoyageAI embeddings to namespace: ${namespace}`,
+          logger.debug(
+            `Upserting ${records.length} records with VoyageAI embeddings to namespace: ${namespace}`,
           );
           await ns.upsert(records);
-          console.log('[Pinecone] Upsert completed successfully');
+          logger.info('Upsert completed successfully');
 
           written += batch.length;
-          console.log(
-            `[Pinecone] Written so far: ${written}/${documents.length}`,
-          );
+          logger.debug(`Written so far: ${written}/${documents.length}`);
 
           // Report progress
           if (progressCallback) {
@@ -195,7 +190,7 @@ export class PineconeClient {
         } catch (error) {
           const message =
             error instanceof Error ? error.message : 'Unknown error';
-          console.error(`[Pinecone] Batch ${i / batchSize + 1} failed:`, error);
+          logger.error(`Batch ${i / batchSize + 1} failed:`, error);
           errors.push(`Batch ${i / batchSize + 1}: ${message}`);
         }
       }
@@ -207,7 +202,7 @@ export class PineconeClient {
         errors: errors.length > 0 ? errors : undefined,
       };
 
-      console.log('[Pinecone] writeDocuments completed:', {
+      logger.info('writeDocuments completed:', {
         success: result.success,
         documentsWritten: result.documentsWritten,
         namespace: result.namespace,
@@ -217,7 +212,7 @@ export class PineconeClient {
 
       return result;
     } catch (error) {
-      console.error('[Pinecone] writeDocuments failed with exception:', error);
+      logger.error('writeDocuments failed with exception:', error);
       throw new PineconeError(
         `Failed to write documents: ${error instanceof Error ? error.message : 'Unknown error'}`,
         error,
@@ -333,8 +328,8 @@ export class PineconeClient {
       minScore = MIN_SCORE_THRESHOLD,
     } = options;
 
-    console.log('[Pinecone] queryByText called with:', {
-      text: text.substring(0, 100),
+    logger.debug('queryByText called with:', {
+      // text removed - contains user search query
       namespace,
       topK,
       filter,
@@ -345,11 +340,11 @@ export class PineconeClient {
       const index = this.client.index(this.indexName);
 
       // Use VoyageAI to generate query embedding
-      console.log('[Pinecone] Generating VoyageAI query embedding');
+      logger.debug('Generating VoyageAI query embedding');
       const vector = await this.voyageClient.embedQuery(text);
 
-      console.log(
-        '[Pinecone] VoyageAI query embedding generated, dimensions:',
+      logger.debug(
+        'VoyageAI query embedding generated, dimensions:',
         vector.length,
       );
 
@@ -369,7 +364,7 @@ export class PineconeClient {
         queryParams.filter = filter;
       }
 
-      console.log('[Pinecone] Querying with params:', {
+      logger.debug('Querying with params:', {
         namespace,
         topK: queryParams.topK,
         hasFilter: !!queryParams.filter,
@@ -378,7 +373,7 @@ export class PineconeClient {
 
       const response = await index.namespace(namespace).query(queryParams);
 
-      console.log('[Pinecone] Query response:', {
+      logger.debug('Query response:', {
         matchCount: response.matches?.length || 0,
         firstMatchScore: response.matches?.[0]?.score,
         namespace: response.namespace,
@@ -490,8 +485,8 @@ export class PineconeClient {
       // The filter should use MongoDB-style operators like $eq
       await index.namespace(namespace).deleteMany(filter);
 
-      console.log(
-        '[Pinecone] Deleted vectors with filter:',
+      logger.info(
+        'Deleted vectors with filter:',
         filter,
         'in namespace:',
         namespace,
@@ -501,15 +496,12 @@ export class PineconeClient {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
       if (errorMessage.includes('404') || errorMessage.includes('not found')) {
-        console.log(
-          '[Pinecone] Namespace does not exist (OK to ignore):',
-          namespace,
-        );
+        logger.debug('Namespace does not exist (OK to ignore):', namespace);
         return;
       }
 
       // For other errors, log and throw
-      console.error('[Pinecone] Delete by metadata failed:', error);
+      logger.error('Delete by metadata failed:', error);
       throw new PineconeError(
         `Delete by metadata failed: ${errorMessage}`,
         error,

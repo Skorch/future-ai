@@ -1,3 +1,6 @@
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('LoadDocuments');
 import { tool } from 'ai';
 import { z } from 'zod';
 import { getDocumentsForUser } from '@/lib/db/queries';
@@ -100,7 +103,7 @@ The tool returns an array of loaded documents with their content and metadata.`,
             otherCount ? `, ${otherCount} other` : ''
           }). Total: ${totalCharsLoaded.toLocaleString()} characters (~${estimatedTokensLoaded.toLocaleString()} tokens)`;
 
-      console.log('[LoadDocuments Tool] Documents loaded successfully:', {
+      logger.info('[LoadDocuments Tool] Documents loaded successfully:', {
         count: documents.length,
         summaries: summaryCount,
         transcripts: transcriptCount,
@@ -126,7 +129,7 @@ The tool returns an array of loaded documents with their content and metadata.`,
               unknown
             > & { transcript?: unknown };
             cleanedMetadata = rest;
-            console.warn(
+            logger.warn(
               `[LoadDocuments Tool] Removed transcript from metadata for document: ${doc.id}`,
             );
           }

@@ -3,6 +3,9 @@ import { z } from 'zod';
 import type { UIMessageStreamWriter } from 'ai';
 import type { ChatMessage } from '@/lib/types';
 import { updateChatMode } from '@/lib/db/queries';
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('SetMode');
 
 const setModeSchema = z.object({
   mode: z.enum(['discovery', 'build']).describe('The mode to switch to'),
@@ -55,7 +58,7 @@ The mode change will:
       reason,
       nextMessage,
     }: z.infer<typeof setModeSchema>) => {
-      console.log(`[setMode] Switching to ${mode} mode: ${reason}`);
+      logger.info(`Switching to ${mode} mode: ${reason}`);
 
       // Update database for persistence across sessions
       await updateChatMode({ id: chatId, mode });

@@ -1,3 +1,6 @@
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('rag-chunker');
 import { generateObject } from 'ai';
 import { z } from 'zod';
 import type {
@@ -64,7 +67,7 @@ async function getTopicChunks(
   }
 
   try {
-    console.log(
+    logger.info(
       `[RAG Chunker] Attempting AI chunking with model: ${model}, items: ${items.length}, topics: ${topics.length}`,
     );
     const result = await generateObject({
@@ -73,15 +76,15 @@ async function getTopicChunks(
       prompt: buildChunkingPrompt(items, topics),
     });
 
-    console.log(
+    logger.info(
       `[RAG Chunker] AI chunking successful, got ${result.object.chunks.length} chunks`,
     );
     // Validate and fix if needed
     return validateAndFixChunks(result.object.chunks, items.length);
   } catch (error) {
-    console.error('[RAG Chunker] AI chunking failed, using fallback:', error);
+    logger.error('[RAG Chunker] AI chunking failed, using fallback:', error);
     const fallbackChunks = createFallbackChunks(items, topics);
-    console.log(
+    logger.info(
       `[RAG Chunker] Fallback generated ${fallbackChunks.length} chunks`,
     );
     return fallbackChunks;
@@ -202,7 +205,7 @@ function validateAndFixChunks(
 
   // Ensure first chunk starts at 0
   if (fixed[0].startIdx !== 0) {
-    console.warn(`Fixing first chunk start: ${fixed[0].startIdx} -> 0`);
+    logger.warn(`Fixing first chunk start: ${fixed[0].startIdx} -> 0`);
     fixed[0].startIdx = 0;
   }
 
@@ -210,7 +213,7 @@ function validateAndFixChunks(
   for (let i = 1; i < fixed.length; i++) {
     const expectedStart = fixed[i - 1].endIdx + 1;
     if (fixed[i].startIdx !== expectedStart) {
-      console.warn(
+      logger.warn(
         `Fixing gap at chunk ${i}: ${fixed[i].startIdx} -> ${expectedStart}`,
       );
       fixed[i].startIdx = expectedStart;
@@ -220,7 +223,7 @@ function validateAndFixChunks(
   // Ensure last chunk ends at totalItems - 1
   const lastChunk = fixed[fixed.length - 1];
   if (lastChunk.endIdx !== totalItems - 1) {
-    console.warn(
+    logger.warn(
       `Fixing last chunk end: ${lastChunk.endIdx} -> ${totalItems - 1}`,
     );
     lastChunk.endIdx = totalItems - 1;

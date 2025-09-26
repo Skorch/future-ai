@@ -5,6 +5,9 @@ import { auth } from '@clerk/nextjs/server';
 import { saveDocument } from '@/lib/db/queries';
 import { generateUUID } from '@/lib/utils';
 import { getActiveWorkspace } from '@/lib/workspace/context';
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('FileUploadAPI');
 
 // Only transcript-related file extensions
 const ALLOWED_EXTENSIONS = ['.txt', '.md', '.vtt', '.srt', '.transcript'];
@@ -73,15 +76,15 @@ export async function POST(request: Request) {
     // Generate document ID
     const documentId = generateUUID();
 
-    console.log('[Upload] Attempting to save document:', {
+    logger.debug('Attempting to save document:', {
       id: documentId,
-      title: filename,
+      // title removed - may contain sensitive filename
       contentLength: content.length,
       kind: 'text',
       userId: userId,
       metadata: {
         documentType: 'transcript',
-        fileName: filename,
+        // fileName removed - may contain sensitive info
         fileSize: file.size,
         uploadedAt: new Date().toISOString(),
       },
@@ -106,9 +109,9 @@ export async function POST(request: Request) {
       },
     });
 
-    console.log('[Upload] Created transcript document', {
+    logger.info('Created transcript document', {
       documentId,
-      fileName: filename,
+      // fileName removed - may contain sensitive info
       fileSize: file.size,
       userId: userId,
     });
@@ -122,7 +125,7 @@ export async function POST(request: Request) {
       message: `TRANSCRIPT_DOCUMENT: ${documentId}\nFILENAME: ${filename}`,
     });
   } catch (error) {
-    console.error('[File Upload] Error:', error);
+    logger.error('File upload error:', error);
     return NextResponse.json(
       { error: 'Failed to process transcript upload' },
       { status: 500 },

@@ -1,6 +1,9 @@
 import { auth } from '@clerk/nextjs/server';
 import { switchWorkspaceAction } from '@/lib/workspace/actions';
 import { z } from 'zod';
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('WorkspaceSwitchAPI');
 
 const switchSchema = z.object({
   workspaceId: z.string().uuid(),
@@ -21,7 +24,7 @@ export async function POST(request: Request) {
 
     return Response.json({ success: true });
   } catch (error) {
-    console.error('Failed to switch workspace:', error);
+    logger.error('Failed to switch workspace:', error);
     if (error instanceof z.ZodError) {
       return Response.json({ error: 'Invalid workspace ID' }, { status: 400 });
     }

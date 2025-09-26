@@ -1,3 +1,6 @@
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('ListDocuments');
 import { tool } from 'ai';
 import { z } from 'zod';
 import { getAllUserDocuments } from '@/lib/db/queries';
@@ -41,13 +44,13 @@ PRO TIP: For time-period queries, loading ALL summaries gives more complete cont
 than RAG search, which might miss important topics.`,
     inputSchema: z.object({}),
     execute: async () => {
-      console.log('[ListDocuments Tool] Executing list-documents tool call');
+      logger.info('[ListDocuments Tool] Executing list-documents tool call');
       const documents = await getAllUserDocuments({
         userId: session.user.id,
         workspaceId,
       });
 
-      console.log('[ListDocuments Tool] Retrieved documents:', {
+      logger.info('[ListDocuments Tool] Retrieved documents:', {
         count: documents.length,
         types: documents.reduce(
           (acc, d) => {
@@ -74,7 +77,7 @@ than RAG search, which might miss important topics.`,
       };
 
       if (documents.length === 0) {
-        console.log('[ListDocuments Tool] No documents found for user');
+        logger.info('[ListDocuments Tool] No documents found for user');
         return {
           documents: [],
           summary,
@@ -83,7 +86,7 @@ than RAG search, which might miss important topics.`,
         };
       }
 
-      console.log(
+      logger.info(
         '[ListDocuments Tool] Returning',
         documents.length,
         'documents with summary',
@@ -120,7 +123,7 @@ than RAG search, which might miss important topics.`,
 
       // Only log if we actually removed transcripts
       if (transcriptsRemoved > 0) {
-        console.warn(
+        logger.warn(
           `[ListDocuments Tool] Removed transcript from metadata for ${transcriptsRemoved} documents`,
         );
       }

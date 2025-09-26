@@ -1,3 +1,6 @@
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('queries');
 import 'server-only';
 
 import {
@@ -214,7 +217,7 @@ export async function getChatsByWorkspaceAndUser({
       hasBefore: startingAfter ? true : !!endingBefore,
     }));
   } catch (error) {
-    console.error(
+    logger.error(
       '[Database] Error getting chats by workspace and user:',
       error,
     );
@@ -429,7 +432,7 @@ export async function saveDocument({
       .returning();
 
     // Automatically sync to RAG (async, don't await)
-    console.log('[saveDocument] Starting RAG sync', {
+    logger.info('[saveDocument] Starting RAG sync', {
       documentId,
       workspaceId,
       title,
@@ -437,13 +440,13 @@ export async function saveDocument({
     });
     syncDocumentToRAG(documentId, workspaceId)
       .then(() => {
-        console.log('[saveDocument] RAG sync completed successfully', {
+        logger.info('[saveDocument] RAG sync completed successfully', {
           documentId,
           workspaceId,
         });
       })
       .catch((err) => {
-        console.error('[saveDocument] RAG sync failed', {
+        logger.error('[saveDocument] RAG sync failed', {
           documentId,
           workspaceId,
           title,
@@ -456,7 +459,7 @@ export async function saveDocument({
 
     return result;
   } catch (error) {
-    console.error('[saveDocument] Database error:', error);
+    logger.error('[saveDocument] Database error:', error);
     throw new ChatSDKError('bad_request:database', 'Failed to save document');
   }
 }
@@ -476,7 +479,7 @@ export async function updateDocument(
 
     // Automatically sync to RAG (async, don't await)
     syncDocumentToRAG(id).catch((err) =>
-      console.error('[updateDocument] RAG sync failed:', err),
+      logger.error('[updateDocument] RAG sync failed:', err),
     );
 
     return result[0];

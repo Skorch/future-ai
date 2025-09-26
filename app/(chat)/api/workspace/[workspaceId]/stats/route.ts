@@ -3,6 +3,9 @@ import { getWorkspaceById } from '@/lib/workspace/queries';
 import { getChatsByWorkspaceAndUser, db } from '@/lib/db/queries';
 import { document } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('WorkspaceStatsAPI');
 
 export async function GET(
   _request: Request,
@@ -42,7 +45,7 @@ export async function GET(
       documentCount: documents.length,
     });
   } catch (error) {
-    console.error('Failed to get workspace stats:', error);
+    logger.error('Failed to get workspace stats:', error);
     return Response.json(
       { error: 'Failed to get workspace stats' },
       { status: 500 },

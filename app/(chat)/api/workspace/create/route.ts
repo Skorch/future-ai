@@ -1,5 +1,8 @@
 import { auth } from '@clerk/nextjs/server';
 import { createWorkspaceAction } from '@/lib/workspace/actions';
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('WorkspaceCreateAPI');
 
 export async function POST(request: Request) {
   const { userId } = await auth();
@@ -14,7 +17,7 @@ export async function POST(request: Request) {
 
     return Response.json(workspace);
   } catch (error) {
-    console.error('Failed to create workspace:', error);
+    logger.error('Failed to create workspace:', error);
     return Response.json(
       {
         error: 'Failed to create workspace',

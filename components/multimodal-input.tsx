@@ -1,5 +1,8 @@
 'use client';
 
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('multimodal-input');
 import type { UIMessage } from 'ai';
 import {
   useRef,
@@ -322,7 +325,7 @@ function PureMultimodalInput({
           ...successfullyUploadedAttachments,
         ]);
       } catch (error) {
-        console.error('Error uploading files!', error);
+        logger.error('Error uploading files!', error);
       } finally {
         setUploadQueue([]);
       }

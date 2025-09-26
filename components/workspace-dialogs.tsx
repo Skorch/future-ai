@@ -1,5 +1,8 @@
 'use client';
 
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('workspace-dialogs');
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { z } from 'zod';
@@ -90,7 +93,7 @@ export function CreateWorkspaceDialog({
       const newWorkspace = await response.json();
       onSuccess(newWorkspace);
     } catch (error) {
-      console.error('Failed to create workspace:', error);
+      logger.error('Failed to create workspace:', error);
       toast.error(
         error instanceof Error ? error.message : 'Failed to create workspace',
       );
@@ -214,7 +217,7 @@ export function DeleteWorkspaceDialog({
 
       onSuccess(workspace.id);
     } catch (error) {
-      console.error('Failed to delete workspace:', error);
+      logger.error('Failed to delete workspace:', error);
       toast.error(
         error instanceof Error ? error.message : 'Failed to delete workspace',
       );

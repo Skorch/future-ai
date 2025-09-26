@@ -1,5 +1,8 @@
 'use client';
 
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('mode-indicator');
 import { useEffect, useState, useRef } from 'react';
 import { useDataStream } from './data-stream-provider';
 
@@ -28,7 +31,7 @@ export function ModeIndicator({
         const todoList = JSON.parse(todos);
         setTodoCount(todoList.todos?.length || 0);
       } catch (e) {
-        console.error('Failed to parse todos:', e);
+        logger.error('Failed to parse todos:', e);
       }
     }
   }, [todos]);

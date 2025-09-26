@@ -1,3 +1,6 @@
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('LoadDocument');
 import { tool } from 'ai';
 import { z } from 'zod';
 import { getDocumentForUser } from '@/lib/db/queries';
@@ -44,7 +47,7 @@ Reserve space for user messages, your responses, and other tool outputs.`,
         ),
     }),
     execute: async ({ documentId, maxChars }) => {
-      console.log('[LoadDocument Tool] Executing load-document tool call:', {
+      logger.info('[LoadDocument Tool] Executing load-document tool call:', {
         documentId,
         maxChars: maxChars || 'full',
         userId: session.user.id,
@@ -58,7 +61,7 @@ Reserve space for user messages, your responses, and other tool outputs.`,
       });
 
       if (!document) {
-        console.log(
+        logger.info(
           '[LoadDocument Tool] Document not found or access denied:',
           documentId,
         );
@@ -91,7 +94,7 @@ Reserve space for user messages, your responses, and other tool outputs.`,
         [key: string]: unknown;
       } | null;
 
-      console.log('[LoadDocument Tool] Document loaded successfully:', {
+      logger.info('[LoadDocument Tool] Document loaded successfully:', {
         id: document.id,
         title: document.title,
         type: metadata?.documentType || 'document',
@@ -107,7 +110,7 @@ Reserve space for user messages, your responses, and other tool outputs.`,
       if (metadata && 'transcript' in metadata) {
         const { transcript, ...rest } = metadata;
         cleanedMetadata = rest;
-        console.warn(
+        logger.warn(
           `[LoadDocument Tool] Removed transcript from metadata for document: ${document.id}`,
         );
       }

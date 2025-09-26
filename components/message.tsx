@@ -1,4 +1,8 @@
 'use client';
+
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('message');
 import { AnimatePresence, motion } from 'framer-motion';
 import { memo, useState, useEffect } from 'react';
 import type { Vote } from '@/lib/db/schema';
@@ -919,7 +923,7 @@ const PurePreviewMessage = ({
                   | 'loadDocument'
                   | 'loadDocuments';
 
-                console.log(`[Message] Found ${toolName} tool:`, {
+                logger.info(`[Message] Found ${toolName} tool:`, {
                   state,
                   hasOutput: !!toolPart.output,
                   outputKeys: toolPart.output

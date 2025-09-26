@@ -2,6 +2,9 @@ import { auth } from '@clerk/nextjs/server';
 import { deleteChatById, getChatById } from '@/lib/db/queries';
 import { ChatSDKError } from '@/lib/errors';
 import { getActiveWorkspace } from '@/lib/workspace/context';
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('ChatAPI');
 
 export async function GET(
   request: Request,
@@ -26,7 +29,7 @@ export async function GET(
 
     return Response.json(chat);
   } catch (error) {
-    console.error('Failed to get chat:', error);
+    logger.error('Failed to get chat:', error);
     return new ChatSDKError(
       'internal_server_error:chat',
       'Failed to get chat',
@@ -52,7 +55,7 @@ export async function DELETE(
     await deleteChatById({ id: chatId, workspaceId });
     return Response.json({ success: true });
   } catch (error) {
-    console.error('Failed to delete chat:', error);
+    logger.error('Failed to delete chat:', error);
     return new ChatSDKError(
       'internal_server_error:chat',
       'Failed to delete chat',

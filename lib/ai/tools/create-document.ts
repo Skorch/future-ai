@@ -8,6 +8,9 @@ import {
 import type { ChatMessage } from '@/lib/types';
 import { getDocumentById } from '@/lib/db/queries';
 import { loadAllArtifactDefinitions } from '@/lib/artifacts';
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('CreateDocument');
 
 interface CreateDocumentProps {
   session: { user: { id: string } };
@@ -45,7 +48,7 @@ async function buildToolDescription(): Promise<string> {
 
     return `Create documents of various types. Available types:\n${descriptions}\n\nUse the appropriate documentType based on the user's request.`;
   } catch (error) {
-    console.warn(
+    logger.warn(
       'Failed to load artifact definitions for tool description',
       error,
     );
@@ -74,7 +77,7 @@ The sourceDocumentIds parameter is REQUIRED - you must provide at least one tran
       metadata,
     }) => {
       const startTime = Date.now();
-      console.log('[CreateDocument] Tool executed', {
+      logger.info('Tool executed', {
         title,
         kind,
         documentType,
@@ -118,11 +121,11 @@ The sourceDocumentIds parameter is REQUIRED - you must provide at least one tran
 
         // Use document handlers for all document types
         if (documentType === 'meeting-summary') {
-          console.log('[CreateDocument] Using meeting-summary handler');
+          logger.debug('Using meeting-summary handler');
 
           // Fetch transcript content from source documents
-          console.log(
-            '[CreateDocument] Fetching transcript content from documents:',
+          logger.debug(
+            'Fetching transcript content from documents:',
             sourceDocumentIds,
           );
 
@@ -148,10 +151,7 @@ The sourceDocumentIds parameter is REQUIRED - you must provide at least one tran
               );
             }
           } catch (error) {
-            console.error(
-              '[CreateDocument] Error fetching source documents:',
-              error,
-            );
+            logger.error('Error fetching source documents:', error);
             throw new Error(
               `Failed to fetch source documents: ${error instanceof Error ? error.message : 'Unknown error'}`,
             );
@@ -163,7 +163,7 @@ The sourceDocumentIds parameter is REQUIRED - you must provide at least one tran
           );
 
           const handlerStartTime = Date.now();
-          console.log('[CreateDocument] Starting meeting summary handler', {
+          logger.debug('Starting meeting summary handler', {
             elapsedBeforeHandler: Date.now() - startTime,
             handlerStartTime: new Date(handlerStartTime).toISOString(),
           });
@@ -183,12 +183,12 @@ The sourceDocumentIds parameter is REQUIRED - you must provide at least one tran
             },
           });
           const handlerDuration = Date.now() - handlerStartTime;
-          console.log('[CreateDocument] Meeting summary handler completed', {
+          logger.info('Meeting summary handler completed', {
             handlerDuration,
             totalElapsed: Date.now() - startTime,
           });
         } else {
-          console.log(`[CreateDocument] Using ${kind} document handler`);
+          logger.debug(`Using ${kind} document handler`);
           // Use the existing document handler system for other types
           const documentHandler = documentHandlersByArtifactKind.find(
             (documentHandlerByArtifactKind) =>
@@ -206,11 +206,11 @@ The sourceDocumentIds parameter is REQUIRED - you must provide at least one tran
             session,
             workspaceId,
           });
-          console.log(`[CreateDocument] ${kind} handler completed`);
+          logger.info(`${kind} handler completed`);
         }
 
         dataStream.write({ type: 'data-finish', data: null, transient: true });
-        console.log('[CreateDocument] Sent data-finish signal');
+        logger.debug('Sent data-finish signal');
 
         // Return a clear message that prompts the AI to respond
         const responseMessage = `I've created a meeting summary titled "${title}". The summary is now displayed above.`;
@@ -226,7 +226,7 @@ The sourceDocumentIds parameter is REQUIRED - you must provide at least one tran
         };
 
         const totalDuration = Date.now() - startTime;
-        console.log('[CreateDocument] Tool returning success', {
+        logger.info('Tool returning success', {
           id,
           title,
           documentType: returnValue.documentType,
@@ -238,11 +238,8 @@ The sourceDocumentIds parameter is REQUIRED - you must provide at least one tran
         return returnValue;
       } catch (error) {
         const errorDuration = Date.now() - startTime;
-        console.error(
-          '[CreateDocument] Error during document creation:',
-          error,
-        );
-        console.error('[CreateDocument] Error occurred after', {
+        logger.error('Error during document creation:', error);
+        logger.error('Error occurred after', {
           errorDuration,
           durationSeconds: (errorDuration / 1000).toFixed(2),
         });
@@ -290,7 +287,7 @@ The sourceDocumentIds parameter is REQUIRED - you must provide at least one tran
         }
 
         // Log full error for debugging
-        console.error('[CreateDocument] Full error details:', {
+        logger.error('Full error details:', {
           message: errorMessage,
           details: errorDetails,
           error: error instanceof Error ? error.stack : error,

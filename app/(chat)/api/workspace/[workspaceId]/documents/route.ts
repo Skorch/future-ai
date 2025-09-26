@@ -6,6 +6,9 @@ import {
   saveDocument,
 } from '@/lib/db/queries';
 import { ChatSDKError } from '@/lib/errors';
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('DocumentAPI');
 
 export async function GET(
   request: Request,
@@ -16,10 +19,10 @@ export async function GET(
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
 
-  console.log('[Document API] GET request for document:', id);
+  logger.debug('GET request for document:', id);
 
   if (!id) {
-    console.log('[Document API] Error: Missing document ID');
+    logger.error('Missing document ID');
     return new ChatSDKError(
       'bad_request:api',
       'Parameter id is missing',
@@ -29,30 +32,31 @@ export async function GET(
   const { userId } = await auth();
 
   if (!userId) {
-    console.log('[Document API] Error: Unauthorized - no session');
+    logger.error('Unauthorized - no session');
     return new ChatSDKError('unauthorized:document').toResponse();
   }
 
-  console.log('[Document API] Fetching documents for ID:', id);
+  logger.debug('Fetching documents for ID:', id);
   const documents = await getDocumentsById({ id, workspaceId });
 
-  console.log('[Document API] Documents fetched:', {
+  logger.debug('Documents fetched:', {
     count: documents.length,
+    // Only log metadata, not actual content
     hasContent: documents.map((d) => ({
       hasContent: !!d.content,
       contentLength: d.content?.length || 0,
-      title: d.title,
+      // title removed - may contain sensitive data
     })),
   });
 
   const [document] = documents;
 
   if (!document) {
-    console.log('[Document API] Error: Document not found');
+    logger.error('Document not found');
     return new ChatSDKError('not_found:document').toResponse();
   }
 
-  console.log('[Document API] Returning documents successfully');
+  logger.debug('Returning documents successfully');
   return Response.json(documents, { status: 200 });
 }
 

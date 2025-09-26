@@ -1,4 +1,7 @@
 import type { ChatMessage } from '@/lib/types';
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('FileProcessor');
 
 // Match the schema from app/(chat)/api/chat/schema.ts
 interface FilePart {
@@ -22,7 +25,7 @@ type MessagePart = FilePart | TextPart;
 export async function processMessageFiles(
   messages: ChatMessage[],
 ): Promise<ChatMessage[]> {
-  console.log('[FileProcessor] Processing messages', {
+  logger.debug('Processing messages', {
     messageCount: messages.length,
     hasFileParts: messages.some((m) => m.parts?.some((p) => p.type === 'file')),
   });
@@ -51,7 +54,7 @@ export async function processMessageFiles(
 
     // If there are file parts, embed URL info as structured text markers
     if (fileParts.length > 0) {
-      console.log(
+      logger.debug(
         `[FileProcessor] Converting ${fileParts.length} file(s) to structured text markers`,
       );
 
@@ -73,7 +76,7 @@ export async function processMessageFiles(
         .join(' ');
       const enhancedText = userText ? `${userText}\n\n${fileInfo}` : fileInfo;
 
-      console.log(
+      logger.debug(
         '[FileProcessor] Created structured text markers:',
         enhancedText.substring(0, 200),
       );

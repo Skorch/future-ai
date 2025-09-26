@@ -2,6 +2,9 @@ import { generateObject } from 'ai';
 import { z } from 'zod';
 import { myProvider } from '../ai/providers';
 import type { QueryMatch, RAGMetadata } from './types';
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('LLMReranker');
 
 // Schema for LLM response - minimal to save tokens
 const LLMRerankSchema = z.object({
@@ -108,12 +111,12 @@ export async function rerankWithLLM(
   // Performance tracking
   const perfLog = (stage: string) => {
     const elapsed = Date.now() - startTime;
-    console.log(`[LLM Reranker Performance] ${stage}: ${elapsed}ms`);
+    logger.debug(`Performance - ${stage}: ${elapsed}ms`);
   };
 
   // Log which provider is being used
-  console.log(
-    `[LLM Reranker] Using ${USE_OPENAI_FOR_RERANKING ? `OpenAI GPT-5-${OPENAI_RERANK_CONFIG.modelVariant}` : 'Anthropic Claude'} for reranking`,
+  logger.info(
+    `Using ${USE_OPENAI_FOR_RERANKING ? `OpenAI GPT-5-${OPENAI_RERANK_CONFIG.modelVariant}` : 'Anthropic Claude'} for reranking`,
   );
   perfLog('Initialized');
 
@@ -125,8 +128,8 @@ export async function rerankWithLLM(
     const matchesWithoutContent = matches.filter(
       (m) => !m.content || m.content.length === 0,
     ).length;
-    console.log(
-      `[LLM Reranker] Input matches: ${matchesWithContent} with content, ${matchesWithoutContent} without content`,
+    logger.debug(
+      `Input matches: ${matchesWithContent} with content, ${matchesWithoutContent} without content`,
     );
 
     // Prepare matches for LLM analysis (truncate content to save tokens)
@@ -197,7 +200,7 @@ RULES:
       ? `openai-${OPENAI_RERANK_CONFIG.modelFamily}-${OPENAI_RERANK_CONFIG.modelVariant}-reranker` // Build model name from family and variant
       : options.model || 'reranker-model'; // Fallback to Claude
 
-    console.log(`[LLM Reranker] Model selected: ${modelToUse}`);
+    logger.debug(`Model selected: ${modelToUse}`);
 
     // Build provider options for OpenAI if needed
     const providerOptions = USE_OPENAI_FOR_RERANKING
@@ -222,7 +225,7 @@ RULES:
       topics: Array<{ id: string; name: string }>;
     };
     try {
-      console.log(`[LLM Reranker] Starting generateObject call...`);
+      logger.debug(`Starting generateObject call...`);
       perfLog('Before generateObject');
 
       const response = await generateObject({
@@ -240,9 +243,9 @@ RULES:
       perfLog('After generateObject');
       object = response.object;
     } catch (error) {
-      console.error('[LLM Reranker] generateObject failed:', error);
+      logger.error(' generateObject failed:', error);
       if (error instanceof Error) {
-        console.error('[LLM Reranker] Error details:', {
+        logger.error(' Error details:', {
           name: error.name,
           message: error.message,
           stack: error.stack?.split('\n').slice(0, 5).join('\n'),
@@ -250,9 +253,7 @@ RULES:
 
         // Log the actual response if available
         if (error.message.includes('Expected array, received string')) {
-          console.error(
-            '[LLM Reranker] Model returned string instead of JSON structure',
-          );
+          logger.error('Model returned string instead of JSON structure');
         }
       }
       throw error;
@@ -261,19 +262,19 @@ RULES:
     // Create a map for quick lookup
     const matchesMap = new Map(matches.map((m) => [m.id, m]));
 
-    console.log(`[LLM Reranker] Original matches count: ${matches.length}`);
-    console.log(`[LLM Reranker] LLM returned ${object.matches.length} matches`);
+    logger.debug(`Original matches count: ${matches.length}`);
+    logger.debug(`LLM returned ${object.matches.length} matches`);
 
     // Debug: Log first few IDs from both
     if (matches.length > 0) {
-      console.log(
-        `[LLM Reranker] Sample original IDs:`,
+      logger.debug(
+        `Sample original IDs:`,
         matches.slice(0, 3).map((m) => m.id),
       );
     }
     if (object.matches.length > 0) {
-      console.log(
-        `[LLM Reranker] Sample LLM IDs:`,
+      logger.debug(
+        `Sample LLM IDs:`,
         object.matches.slice(0, 3).map((m) => m.id),
       );
     }
@@ -290,14 +291,14 @@ RULES:
 
       const originalMatch = matchesMap.get(llmMatch.id);
       if (!originalMatch) {
-        console.warn(
-          `[LLM Reranker] Warning: LLM returned ID '${llmMatch.id}' not found in original matches`,
+        logger.warn(
+          `Warning: LLM returned ID '${llmMatch.id}' not found in original matches`,
         );
         continue;
       }
 
       // Debug content availability
-      console.log(`[LLM Reranker] Processing match ${llmMatch.id}:`, {
+      logger.debug(`Processing match ${llmMatch.id}:`, {
         hasContent: !!originalMatch.content,
         contentLength: originalMatch.content?.length || 0,
         contentPreview:
@@ -340,14 +341,12 @@ RULES:
 
       // Debug log for content
       if (!finalContent || finalContent.trim().length === 0) {
-        console.error(
-          `[LLM Reranker] ERROR: No content for match ${llmMatch.id}`,
-        );
-        console.error(
-          `[LLM Reranker] Original content length:`,
+        logger.error(`ERROR: No content for match ${llmMatch.id}`);
+        logger.error(
+          `Original content length:`,
           originalMatch.content?.length || 0,
         );
-        console.error(`[LLM Reranker] Merged IDs:`, mergedIds);
+        logger.error(`Merged IDs:`, mergedIds);
       }
 
       processedMatches.push(processedMatch);
@@ -369,7 +368,7 @@ RULES:
     const formattedContent = formatForLLM(processedMatches, topicGroups);
 
     // Final debug summary
-    console.log(`[LLM Reranker] Final results:`, {
+    logger.debug(`Final results:`, {
       processedCount: processedMatches.length,
       withContent: processedMatches.filter(
         (m) => m.content && m.content.length > 0,
@@ -392,7 +391,7 @@ RULES:
       topicGroups,
     };
   } catch (error) {
-    console.error('[LLM Reranker] Error:', error);
+    logger.error(' Error:', error);
     throw error;
   }
 }

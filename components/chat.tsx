@@ -18,6 +18,9 @@ import { useChatVisibility } from '@/hooks/use-chat-visibility';
 import { useAutoResume } from '@/hooks/use-auto-resume';
 import { ChatSDKError } from '@/lib/errors';
 import type { Attachment, ChatMessage } from '@/lib/types';
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('Chat');
 import { useDataStream } from './data-stream-provider';
 
 export function Chat({
@@ -82,7 +85,7 @@ export function Chat({
       mutate((key) => typeof key === 'string' && key.includes('/history'));
     },
     onError: (error) => {
-      console.error('[Chat] Error received:', error);
+      logger.error('Error received:', error);
 
       // Check for prompt length errors
       const errorMessage =

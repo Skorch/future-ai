@@ -1,3 +1,6 @@
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('providers');
 import { customProvider, type LanguageModel } from 'ai';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createOpenAI } from '@ai-sdk/openai';
@@ -15,7 +18,7 @@ let anthropicInstance: ReturnType<typeof createAnthropic> | null = null;
 
 const getAnthropic = () => {
   if (!anthropicInstance) {
-    console.log(
+    logger.info(
       '[Providers] Initializing Anthropic with API key:',
       process.env.ANTHROPIC_API_KEY ? 'present' : 'missing',
     );
@@ -26,7 +29,7 @@ const getAnthropic = () => {
       : 600000; // Default: 10 minutes (600 seconds)
 
     const timeoutSeconds = Math.round(timeoutMs / 1000);
-    console.log(
+    logger.info(
       '[Providers] Anthropic timeout configured:',
       `${timeoutSeconds} seconds (${timeoutMs}ms)`,
     );
@@ -36,7 +39,7 @@ const getAnthropic = () => {
       // Configure custom fetch with extended timeout to prevent 60-second undici default timeout
       // Default is 10 minutes, but can be configured via ANTHROPIC_TIMEOUT_MS env variable
       fetch: (url, options = {}) => {
-        console.log(
+        logger.info(
           `[Providers] Anthropic fetch initiated with ${timeoutSeconds}-second timeout`,
         );
         return fetch(url, {
@@ -54,7 +57,7 @@ let openaiInstance: ReturnType<typeof createOpenAI> | null = null;
 
 const getOpenAI = () => {
   if (!openaiInstance) {
-    console.log(
+    logger.info(
       '[Providers] Initializing OpenAI with API key:',
       process.env.OPENAI_API_KEY ? 'present' : 'missing',
     );
@@ -73,7 +76,7 @@ const buildLanguageModels = () => {
 
   // Debug: Check if API key is available
   if (!process.env.ANTHROPIC_API_KEY) {
-    console.warn(
+    logger.warn(
       '[Providers] WARNING: ANTHROPIC_API_KEY is not set in environment variables',
     );
   }
@@ -94,7 +97,7 @@ const buildLanguageModels = () => {
 
   // Add OpenAI models for reranking ONLY - not exposed to chat interface
   // These models are exclusively for tool use, particularly the LLM reranker
-  console.log('[Providers] Registering OpenAI models for reranking...');
+  logger.info('[Providers] Registering OpenAI models for reranking...');
 
   // GPT-5 family
   models['openai-gpt-5-reranker'] = getOpenAI()('gpt-5');
@@ -106,7 +109,7 @@ const buildLanguageModels = () => {
   models['openai-gpt-4.1-mini-reranker'] = getOpenAI()('gpt-4.1-mini');
   models['openai-gpt-4.1-nano-reranker'] = getOpenAI()('gpt-4.1-nano');
 
-  console.log('[Providers] OpenAI models registered');
+  logger.info('[Providers] OpenAI models registered');
 
   return models;
 };
@@ -116,7 +119,7 @@ let builtModels: Record<string, LanguageModel> | null = null;
 
 const getLanguageModels = () => {
   if (!builtModels) {
-    console.log('[Providers] Building language models...');
+    logger.info('[Providers] Building language models...');
     builtModels = buildLanguageModels();
   }
   return builtModels;
@@ -135,14 +138,14 @@ export const myProvider = isTestEnvironment
     })
   : {
       languageModel: (modelId: string) => {
-        console.log(`[Providers] Requesting model: ${modelId}`);
+        logger.info(`[Providers] Requesting model: ${modelId}`);
         const models = getLanguageModels();
         const model = models[modelId];
         if (!model) {
-          console.error(`[Providers] Available models:`, Object.keys(models));
+          logger.error(`[Providers] Available models:`, Object.keys(models));
           throw new Error(`Model ${modelId} not found in provider`);
         }
-        console.log(`[Providers] Model ${modelId} retrieved successfully`);
+        logger.info(`[Providers] Model ${modelId} retrieved successfully`);
         return model;
       },
     };

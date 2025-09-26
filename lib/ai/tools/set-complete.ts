@@ -1,3 +1,6 @@
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('SetComplete');
 import { tool } from 'ai';
 import { z } from 'zod';
 import type { UIMessageStreamWriter } from 'ai';
@@ -44,7 +47,7 @@ This will:
       complete,
       reason,
     }: z.infer<typeof setCompleteSchema>) => {
-      console.log(
+      logger.info(
         `[setComplete] Marking chat ${chatId} as ${complete ? 'complete' : 'incomplete'}${reason ? `: ${reason}` : ''}`,
       );
 

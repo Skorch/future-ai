@@ -11,7 +11,8 @@
     "tailwindcss/no-custom-classname": "off",
     "tailwindcss/classnames-order": "off",
     "import/no-duplicates": "warn",
-    "react/no-unescaped-entities": "error"
+    "react/no-unescaped-entities": "error",
+    "no-console": "error"
   },
   "settings": {
     "import/resolver": {
@@ -21,5 +22,13 @@
       }
     }
   },
-  "ignorePatterns": ["**/components/ui/**"]
+  "ignorePatterns": ["**/components/ui/**"],
+  "overrides": [
+    {
+      "files": ["lib/logger/**/*.ts", "scripts/**/*.ts", "test-data/**/*.ts"],
+      "rules": {
+        "no-console": "off"
+      }
+    }
+  ]
 }

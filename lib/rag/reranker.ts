@@ -1,5 +1,8 @@
 import { VoyageAIClient } from 'voyageai';
 import type { QueryMatch } from './types';
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('VoyageRerank');
 
 /**
  * Reranking configuration options
@@ -94,13 +97,13 @@ export class Reranker {
         })
         .filter((result) => result.score >= scoreThreshold);
 
-      console.log(
-        `[Voyage Rerank] Filtered ${response.data?.length || 0} results to ${results.length} with score >= ${scoreThreshold}`,
+      logger.debug(
+        `Filtered ${response.data?.length || 0} results to ${results.length} with score >= ${scoreThreshold}`,
       );
 
       return results;
     } catch (error) {
-      console.error('Voyage reranking failed:', error);
+      logger.error('Voyage reranking failed:', error);
       // Fallback: return original documents sorted by their vector scores
       return documents
         .slice(0, topN)

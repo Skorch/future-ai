@@ -8,6 +8,10 @@
  * Max batch size: 1,000 texts
  */
 
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('VoyageAI');
+
 export class VoyageAIError extends Error {
   constructor(
     message: string,
@@ -69,7 +73,7 @@ export class VoyageAIClient {
     // Default to 1024 dimensions (voyage-3-large default)
     this.defaultOutputDimension = config?.outputDimension || 1024;
 
-    console.log('[VoyageAI] Client initialized:', {
+    logger.info('Client initialized:', {
       model: this.model,
       baseUrl: this.baseUrl,
       defaultOutputDimension: this.defaultOutputDimension,
@@ -90,15 +94,13 @@ export class VoyageAIClient {
 
     // Ensure we don't exceed the max batch size (1000 texts for voyage-3-large)
     if (texts.length > 1000) {
-      console.warn(
-        `[VoyageAI] Batch size ${texts.length} exceeds max (1000), will need batching`,
+      logger.warn(
+        `Batch size ${texts.length} exceeds max (1000), will need batching`,
       );
       return this.embedDocumentsBatch(texts, 1000, options);
     }
 
-    console.log(
-      `[VoyageAI] Generating embeddings for ${texts.length} documents`,
-    );
+    logger.debug(`Generating embeddings for ${texts.length} documents`);
 
     try {
       // Always use input_type='document' for document embeddings
@@ -112,22 +114,17 @@ export class VoyageAIClient {
         .sort((a, b) => a.index - b.index)
         .map((item) => item.embedding);
 
-      console.log(
-        `[VoyageAI] Successfully generated ${sortedEmbeddings.length} document embeddings`,
+      logger.debug(
+        `Successfully generated ${sortedEmbeddings.length} document embeddings`,
       );
-      console.log(
-        `[VoyageAI] Embedding dimension: ${sortedEmbeddings[0]?.length || 0}`,
-      );
-      console.log(
-        `[VoyageAI] Total tokens used: ${response.usage?.total_tokens || 'unknown'}`,
+      logger.debug(`Embedding dimension: ${sortedEmbeddings[0]?.length || 0}`);
+      logger.debug(
+        `Total tokens used: ${response.usage?.total_tokens || 'unknown'}`,
       );
 
       return sortedEmbeddings;
     } catch (error) {
-      console.error(
-        '[VoyageAI] Failed to generate document embeddings:',
-        error,
-      );
+      logger.error('Failed to generate document embeddings:', error);
       throw error;
     }
   }
@@ -140,11 +137,8 @@ export class VoyageAIClient {
     text: string,
     options?: EmbeddingOptions,
   ): Promise<number[]> {
-    console.log('[VoyageAI] Generating query embedding');
-    console.log(
-      '[VoyageAI] Query preview (100 chars):',
-      text.substring(0, 100),
-    );
+    logger.debug('Generating query embedding');
+    // Query preview removed - contains user search terms
 
     try {
       // Always use input_type='query' for search queries
@@ -158,12 +152,10 @@ export class VoyageAIClient {
         throw new VoyageAIError('No embedding returned for query');
       }
 
-      console.log(
-        `[VoyageAI] Query embedding generated, dimension: ${embedding.length}`,
-      );
+      logger.debug(`Query embedding generated, dimension: ${embedding.length}`);
       return embedding;
     } catch (error) {
-      console.error('[VoyageAI] Failed to generate query embedding:', error);
+      logger.error('Failed to generate query embedding:', error);
       throw error;
     }
   }
@@ -205,14 +197,14 @@ export class VoyageAIClient {
       requestBody.output_dtype = outputDtype;
     }
 
-    console.log('[VoyageAI] Sending request to API:', {
+    logger.debug('Sending request to API:', {
       model: this.model,
       inputCount: Array.isArray(input) ? input.length : 1,
       inputType: inputType || 'not specified',
       truncation,
       outputDimension,
       outputDtype,
-      firstInputLength: Array.isArray(input) ? input[0]?.length : input.length,
+      // firstInputLength removed - may contain document content length info
     });
 
     try {
@@ -234,7 +226,7 @@ export class VoyageAIClient {
           errorDetails = errorText;
         }
 
-        console.error('[VoyageAI] API error response:', {
+        logger.error('API error response:', {
           status: response.status,
           statusText: response.statusText,
           details: errorDetails,
@@ -249,7 +241,7 @@ export class VoyageAIClient {
 
       const data: VoyageAIResponse = await response.json();
 
-      console.log('[VoyageAI] API response:', {
+      logger.debug('API response:', {
         model: data.model,
         embeddingCount: data.data?.length,
         totalTokens: data.usage?.total_tokens,
@@ -261,7 +253,7 @@ export class VoyageAIClient {
         throw error;
       }
 
-      console.error('[VoyageAI] Network or parsing error:', error);
+      logger.error('Network or parsing error:', error);
       throw new VoyageAIError(
         `Failed to call VoyageAI API: ${error instanceof Error ? error.message : 'Unknown error'}`,
         undefined,
@@ -294,7 +286,7 @@ export class VoyageAIClient {
         // If we hit token limit, fall back to smaller batches
         const err = error as { message?: string; statusCode?: number };
         if (err?.message?.includes('token') || err?.statusCode === 400) {
-          console.log('[VoyageAI] Hit token limit, reducing batch size');
+          logger.warn('Hit token limit, reducing batch size');
           effectiveBatchSize = Math.max(10, Math.floor(effectiveBatchSize / 2));
         } else {
           throw error;
@@ -302,8 +294,8 @@ export class VoyageAIClient {
       }
     }
 
-    console.log(
-      `[VoyageAI] Batch embedding ${texts.length} documents in batches of ${effectiveBatchSize}`,
+    logger.debug(
+      `Batch embedding ${texts.length} documents in batches of ${effectiveBatchSize}`,
     );
 
     const allEmbeddings: number[][] = [];
@@ -316,8 +308,8 @@ export class VoyageAIClient {
       const batchNum = Math.floor(i / effectiveBatchSize) + 1;
       const totalBatches = Math.ceil(texts.length / effectiveBatchSize);
 
-      console.log(
-        `[VoyageAI] Processing batch ${batchNum}/${totalBatches} (${batch.length} texts)`,
+      logger.debug(
+        `Processing batch ${batchNum}/${totalBatches} (${batch.length} texts)`,
       );
 
       try {
@@ -333,11 +325,11 @@ export class VoyageAIClient {
 
         allEmbeddings.push(...sortedEmbeddings);
 
-        console.log(
-          `[VoyageAI] Batch ${batchNum} complete, tokens used: ${response.usage?.total_tokens || 'unknown'}`,
+        logger.debug(
+          `Batch ${batchNum} complete, tokens used: ${response.usage?.total_tokens || 'unknown'}`,
         );
       } catch (error) {
-        console.error(`[VoyageAI] Batch ${batchNum} failed:`, error);
+        logger.error(`Batch ${batchNum} failed:`, error);
         throw error;
       }
 
@@ -347,8 +339,8 @@ export class VoyageAIClient {
       }
     }
 
-    console.log(
-      `[VoyageAI] Batch embedding complete: ${allEmbeddings.length} embeddings generated`,
+    logger.info(
+      `Batch embedding complete: ${allEmbeddings.length} embeddings generated`,
     );
     return allEmbeddings;
   }

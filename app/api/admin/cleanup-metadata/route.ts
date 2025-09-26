@@ -1,3 +1,6 @@
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('AdminCleanup');
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { cleanupTranscriptsFromMetadata } from '@/lib/db/cleanup-metadata';
@@ -10,7 +13,7 @@ export async function POST() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log('[API] Starting metadata cleanup for user:', userId);
+    logger.info('[API] Starting metadata cleanup for user:', userId);
 
     // Run the cleanup
     const result = await cleanupTranscriptsFromMetadata();
@@ -21,7 +24,7 @@ export async function POST() {
       message: `Successfully cleaned ${result.cleanedDocuments} documents`,
     });
   } catch (error) {
-    console.error('[API] Cleanup failed:', error);
+    logger.error('[API] Cleanup failed:', error);
     return NextResponse.json(
       { error: 'Cleanup failed', details: String(error) },
       { status: 500 },

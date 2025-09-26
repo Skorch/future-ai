@@ -1,5 +1,8 @@
 'use client';
 
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('data-stream-handler');
 import { useEffect, useRef } from 'react';
 import { artifactDefinitions } from './artifact';
 import { initialArtifactData, useArtifact } from '@/hooks/use-artifact';
@@ -32,13 +35,13 @@ export function DataStreamHandler() {
 
       setArtifact((draftArtifact) => {
         if (!draftArtifact) {
-          console.log(
+          logger.info(
             '[DataStreamHandler] Creating new artifact from initial data',
           );
           return { ...initialArtifactData, status: 'streaming' };
         }
 
-        console.log('[DataStreamHandler] Processing delta:', {
+        logger.info('[DataStreamHandler] Processing delta:', {
           type: delta.type,
           hasData: !!delta.data,
           dataPreview:
@@ -49,7 +52,7 @@ export function DataStreamHandler() {
 
         switch (delta.type) {
           case 'data-id':
-            console.log('[DataStreamHandler] Setting document ID:', delta.data);
+            logger.info('[DataStreamHandler] Setting document ID:', delta.data);
             return {
               ...draftArtifact,
               documentId: delta.data,
@@ -57,7 +60,7 @@ export function DataStreamHandler() {
             };
 
           case 'data-title':
-            console.log('[DataStreamHandler] Setting title:', delta.data);
+            logger.info('[DataStreamHandler] Setting title:', delta.data);
             return {
               ...draftArtifact,
               title: delta.data,
@@ -65,7 +68,7 @@ export function DataStreamHandler() {
             };
 
           case 'data-kind':
-            console.log('[DataStreamHandler] Setting kind:', delta.data);
+            logger.info('[DataStreamHandler] Setting kind:', delta.data);
             return {
               ...draftArtifact,
               kind: delta.data,
@@ -73,7 +76,7 @@ export function DataStreamHandler() {
             };
 
           case 'data-clear':
-            console.log(
+            logger.info(
               '[DataStreamHandler] CLEARING CONTENT - status set to streaming',
             );
             return {
@@ -83,7 +86,7 @@ export function DataStreamHandler() {
             };
 
           case 'data-finish':
-            console.log('[DataStreamHandler] FINISHING - status set to idle');
+            logger.info('[DataStreamHandler] FINISHING - status set to idle');
             return {
               ...draftArtifact,
               status: 'idle',
@@ -91,13 +94,13 @@ export function DataStreamHandler() {
 
           case 'data-modeChanged':
             // Mode changes are handled by ModeIndicator component
-            console.log(
+            logger.info(
               '[DataStreamHandler] Mode changed event (handled elsewhere)',
             );
             return draftArtifact;
 
           default:
-            console.log(
+            logger.info(
               '[DataStreamHandler] Unhandled delta type:',
               delta.type,
             );

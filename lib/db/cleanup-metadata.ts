@@ -1,4 +1,6 @@
-/**
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('cleanup-metadata'); /**
  * One-time cleanup script to remove transcript data from document metadata
  * Run this to fix existing documents that have transcripts stored in metadata
  */
@@ -14,7 +16,7 @@ export async function cleanupTranscriptsFromMetadata() {
   const db = drizzle(client);
 
   try {
-    console.log('[Cleanup] Starting metadata cleanup...');
+    logger.info('[Cleanup] Starting metadata cleanup...');
 
     // Get all documents
     const documents = await db
@@ -25,7 +27,7 @@ export async function cleanupTranscriptsFromMetadata() {
       })
       .from(document);
 
-    console.log(`[Cleanup] Found ${documents.length} documents to check`);
+    logger.info(`[Cleanup] Found ${documents.length} documents to check`);
 
     let cleanedCount = 0;
 
@@ -42,7 +44,7 @@ export async function cleanupTranscriptsFromMetadata() {
               ? metadata.transcript.length
               : JSON.stringify(metadata.transcript).length;
 
-          console.log(
+          logger.info(
             `[Cleanup] Document "${doc.title}" has transcript in metadata (${transcriptSize} chars)`,
           );
 
@@ -56,18 +58,18 @@ export async function cleanupTranscriptsFromMetadata() {
             .where(eq(document.id, doc.id));
 
           cleanedCount++;
-          console.log(`[Cleanup] Cleaned metadata for document: ${doc.title}`);
+          logger.info(`[Cleanup] Cleaned metadata for document: ${doc.title}`);
         }
       }
     }
 
-    console.log(`[Cleanup] Completed! Cleaned ${cleanedCount} documents`);
+    logger.info(`[Cleanup] Completed! Cleaned ${cleanedCount} documents`);
     return {
       totalDocuments: documents.length,
       cleanedDocuments: cleanedCount,
     };
   } catch (error) {
-    console.error('[Cleanup] Error cleaning metadata:', error);
+    logger.error('[Cleanup] Error cleaning metadata:', error);
     throw error;
   }
 }
@@ -77,11 +79,11 @@ export async function cleanupTranscriptsFromMetadata() {
 if (require.main === module) {
   cleanupTranscriptsFromMetadata()
     .then((result) => {
-      console.log('Cleanup completed:', result);
+      logger.info('Cleanup completed:', result);
       process.exit(0);
     })
     .catch((error) => {
-      console.error('Cleanup failed:', error);
+      logger.error('Cleanup failed:', error);
       process.exit(1);
     });
 }

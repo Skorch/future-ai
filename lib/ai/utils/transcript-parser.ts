@@ -1,14 +1,17 @@
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('transcript-parser');
 import type { TranscriptItem } from '../../rag/types';
 
 export function parseTranscript(content: string): TranscriptItem[] {
   // Debug logging to understand what content we're receiving
-  console.log('[parseTranscript] Content length:', content.length);
-  console.log('[parseTranscript] First 500 chars:', content.substring(0, 500));
-  console.log(
+  logger.info('[parseTranscript] Content length:', content.length);
+  logger.info('[parseTranscript] First 500 chars:', content.substring(0, 500));
+  logger.info(
     '[parseTranscript] Has VIEW RECORDING:',
     content.includes('VIEW RECORDING'),
   );
-  console.log(
+  logger.info(
     '[parseTranscript] Has timestamp pattern:',
     /^\d+:\d+/m.test(content),
   );
@@ -20,7 +23,7 @@ export function parseTranscript(content: string): TranscriptItem[] {
     /^\d{2}:\d{2}:\d{2}\s+\w+/m.test(content)
   ) {
     const result = parseFathom(content);
-    console.log(
+    logger.info(
       '[parseTranscript] parseFathom returned',
       result.length,
       'items',

@@ -1,5 +1,8 @@
 'use client';
 
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('workspace-switcher');
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
@@ -63,7 +66,7 @@ function WorkspaceSwitcherContent({
 
       // The router.push above will trigger a re-render with the new workspace
     } catch (error) {
-      console.error('Failed to switch workspace:', error);
+      logger.error('Failed to switch workspace:', error);
       toast.error('Failed to switch workspace');
       // Router push already happened, so page will show error if workspace doesn't exist
     }

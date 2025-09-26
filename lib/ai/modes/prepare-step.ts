@@ -1,3 +1,6 @@
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('prepare-step');
 import type { ChatMode, ModeContext, Todo } from '@/lib/db/schema';
 import { getModeConfig } from './index';
 import { myProvider } from '@/lib/ai/providers';
@@ -64,7 +67,7 @@ export function createPrepareStep(
     stepNumber,
     messages,
   }: PrepareStepInput): PrepareStepResult => {
-    console.log(
+    logger.info(
       `[prepareStep] Step ${stepNumber}, Mode: ${state.currentMode}, Complete: ${state.isComplete}, History: ${state.modeHistory.length} entries`,
     );
 
@@ -98,7 +101,7 @@ export function createPrepareStep(
 
         // Only update if mode actually changed
         if (mode !== state.currentMode) {
-          console.log(
+          logger.info(
             `[prepareStep] Mode transition detected: ${state.currentMode} → ${mode} (Reason: ${reason})`,
           );
 
@@ -120,7 +123,7 @@ export function createPrepareStep(
           // The mode switch itself is sufficient, and the AI will continue naturally
           // without needing an injected message that could trigger repeated actions
           if (nextMessage) {
-            console.log(
+            logger.info(
               `[prepareStep] NextMessage provided but not injected to prevent loops: "${nextMessage.substring(0, 50)}..."`,
             );
           }
@@ -139,7 +142,7 @@ export function createPrepareStep(
           reason?: string;
         };
 
-        console.log(
+        logger.info(
           `[prepareStep] Completion status changed: ${state.isComplete} → ${complete}${reason ? ` (Reason: ${reason})` : ''}`,
         );
 
@@ -178,7 +181,7 @@ export function createPrepareStep(
 
     const modeSystemPrompt = baseSystemPrompt + completionStatus;
 
-    console.log(
+    logger.info(
       `[prepareStep] Applying ${state.currentMode} mode: ${modeConfig.experimental_activeTools.length} active tools, Complete: ${state.isComplete}`,
     );
 

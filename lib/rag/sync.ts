@@ -7,6 +7,9 @@ import {
 } from '@/lib/ai/utils/transcript-parser';
 import crypto from 'node:crypto';
 import type { TranscriptItem, RAGDocument, RAGMetadata } from './types';
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('RAGSync');
 
 /**
  * Parse meeting date string to ISO format
@@ -34,13 +37,13 @@ function parseMeetingDate(dateStr?: string): string | undefined {
         return dateWithYear.toISOString();
       }
 
-      console.warn(`[RAG Sync] Could not parse meeting date: ${dateStr}`);
+      logger.warn(`Could not parse meeting date: ${dateStr}`);
       return undefined;
     }
 
     return date.toISOString();
   } catch (error) {
-    console.warn(`[RAG Sync] Error parsing meeting date: ${dateStr}`, error);
+    logger.warn(`Error parsing meeting date: ${dateStr}`, error);
     return undefined;
   }
 }
@@ -56,7 +59,7 @@ export async function syncDocumentToRAG(
   documentId: string,
   workspaceId?: string,
 ): Promise<void> {
-  console.log('[RAG Sync] Starting document sync', {
+  logger.debug(' Starting document sync', {
     documentId,
     workspaceId,
     hasWorkspaceId: !!workspaceId,
@@ -71,7 +74,7 @@ export async function syncDocumentToRAG(
 
     // If no workspaceId provided or document not found, we can't proceed safely
     if (!doc) {
-      console.error(
+      logger.error(
         `[RAG Sync] ERROR: Cannot sync document ${documentId} without workspace context or document not found`,
         { documentId, workspaceId, documentFound: false },
       );
@@ -79,7 +82,7 @@ export async function syncDocumentToRAG(
     }
 
     if (!doc?.content || !doc?.workspaceId) {
-      console.log(
+      logger.debug(
         `[RAG Sync] No content or workspaceId for document ${documentId}`,
       );
       return;
@@ -89,16 +92,16 @@ export async function syncDocumentToRAG(
     const documentType = doc.metadata?.documentType;
 
     if (!documentType) {
-      console.error(
-        `[RAG Sync] ERROR: No documentType in metadata for ${documentId}. Documents must have documentType set.`,
+      logger.error(
+        `ERROR: No documentType in metadata for ${documentId}. Documents must have documentType set.`,
       );
-      console.error(`[RAG Sync] Metadata received:`, doc.metadata);
+      logger.error(`Metadata received:`, doc.metadata);
       // Skip RAG sync for documents without proper metadata
       return;
     }
 
-    console.log(
-      `[RAG Sync] Document ${documentId} type: ${documentType}, workspaceId: ${doc.workspaceId}, metadata:`,
+    logger.debug(
+      `Document ${documentId} type: ${documentType}, workspaceId: ${doc.workspaceId}, metadata:`,
       doc.metadata,
     );
 
@@ -116,7 +119,7 @@ export async function syncDocumentToRAG(
     });
 
     if (chunks.length === 0) {
-      console.log(`[RAG Sync] No chunks generated for ${documentId}`);
+      logger.info(`No chunks generated for ${documentId}`);
       return;
     }
 
@@ -125,7 +128,7 @@ export async function syncDocumentToRAG(
       namespace: doc.workspaceId,
     });
 
-    console.log(
+    logger.debug(
       `[RAG Sync] SUCCESS: Stored ${chunks.length} chunks for document`,
       {
         documentId,
@@ -136,7 +139,7 @@ export async function syncDocumentToRAG(
       },
     );
   } catch (error) {
-    console.error(`[RAG Sync] ERROR: Failed to sync document`, {
+    logger.error(`ERROR: Failed to sync document`, {
       documentId,
       workspaceId,
       error,
@@ -160,7 +163,7 @@ export async function deleteFromRAG(
     if (!workspaceId) {
       // Cannot get document without workspaceId - this is a limitation
       // that should be fixed by always passing namespace/workspaceId
-      console.log(
+      logger.debug(
         `[RAG Sync] No workspaceId found for document ${documentId}, skipping delete`,
       );
       return;
@@ -174,11 +177,11 @@ export async function deleteFromRAG(
       workspaceId,
     ); // Use workspaceId as namespace
 
-    console.log(
-      `[RAG Sync] Deleted all chunks for ${documentId} in namespace ${workspaceId}`,
+    logger.info(
+      `Deleted all chunks for ${documentId} in namespace ${workspaceId}`,
     );
   } catch (error) {
-    console.error(`[RAG Sync] Failed to delete ${documentId}:`, error);
+    logger.error(`Failed to delete ${documentId}:`, error);
   }
 }
 
@@ -199,11 +202,11 @@ async function chunkDocument(
     let items: TranscriptItem[];
     try {
       items = parseTranscript(content);
-      console.log(
+      logger.debug(
         `[RAG Sync] Parsed ${items.length} transcript items for ${documentId}`,
       );
     } catch (error) {
-      console.error(
+      logger.error(
         `[RAG Sync] Failed to parse transcript ${documentId}:`,
         error,
       );
@@ -219,7 +222,7 @@ async function chunkDocument(
       },
     );
 
-    console.log(
+    logger.debug(
       `[RAG Sync] Generated ${topicChunks.length} topic chunks for ${documentId}`,
     );
 
@@ -280,7 +283,7 @@ async function chunkDocument(
   ) {
     // Simple section-based chunking for summaries and generic documents
     const sections = parseDocument(content);
-    console.log(`[RAG Sync] Parsed ${sections.length} sections from document`);
+    logger.info(`Parsed ${sections.length} sections from document`);
 
     sections.forEach((section, index) => {
       const chunkMetadata: RAGMetadata = {
@@ -331,7 +334,7 @@ async function chunkDocument(
       });
     });
   } else {
-    console.log(
+    logger.debug(
       `[RAG Sync] Unknown document type: ${documentType}, using section-based chunking`,
     );
     // Fallback to section-based chunking for unknown types

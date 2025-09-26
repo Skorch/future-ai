@@ -49,6 +49,9 @@ import { createPrepareStep } from '@/lib/ai/modes/prepare-step';
 import type { VisibilityType } from '@/components/visibility-selector';
 import { processMessageFiles } from '@/lib/ai/utils/file-processor';
 import { setComplete } from '@/lib/ai/tools/set-complete';
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('ChatRoute');
 
 export const maxDuration = 300; // 5 minutes (300 seconds)
 
@@ -62,11 +65,9 @@ function getStreamContext() {
       });
     } catch (error) {
       if (error instanceof Error && error.message.includes('REDIS_URL')) {
-        console.log(
-          ' > Resumable streams are disabled due to missing REDIS_URL',
-        );
+        logger.info('Resumable streams are disabled due to missing REDIS_URL');
       } else {
-        console.error(error);
+        logger.error('Failed to create resumable stream context', error);
       }
     }
   }
@@ -86,7 +87,7 @@ export async function POST(
     const json = await request.json();
     requestBody = postRequestBodySchema.parse(json);
   } catch (error) {
-    console.error('[Chat API] Schema validation failed:', error);
+    logger.error('Schema validation failed:', error);
     return new ChatSDKError('bad_request:api').toResponse();
   }
 
@@ -101,7 +102,7 @@ export async function POST(
       selectedVisibilityType: VisibilityType;
     } = requestBody;
 
-    console.log('[ChatRoute] Processing message', {
+    logger.debug('Processing message', {
       chatId: id,
       messageRole: message.role,
       partsCount: message.parts?.length || 0,
@@ -164,7 +165,7 @@ export async function POST(
         const todoList: TodoList = JSON.parse(chat.todoList);
         todos = todoList.todos || [];
       } catch (e) {
-        console.error('Failed to parse todo list:', e);
+        logger.error('Failed to parse todo list:', e);
       }
     }
 
@@ -187,8 +188,8 @@ export async function POST(
       chat?.complete || false,
     );
 
-    console.log(
-      `[Mode System] Current mode: ${currentMode}, Goal: ${modeContext.goal ? 'Set' : 'Not set'}, Todos: ${todos.length}, Complete: ${chat?.complete || false}`,
+    logger.debug(
+      `Current mode: ${currentMode}, Goal: ${modeContext.goal ? 'Set' : 'Not set'}, Todos: ${todos.length}, Complete: ${chat?.complete || false}`,
     );
 
     const uiMessages = [...convertToUIMessages(messagesFromDb), message];
@@ -262,18 +263,18 @@ export async function POST(
           );
 
           // Log iteration details
-          console.log(
-            '[ChatRoute] Processing iteration',
+          logger.debug(
+            'Processing iteration',
             modelMessages.filter((m) => m.role === 'user').length,
           );
-          console.log('[ChatRoute] Processed messages', {
+          logger.debug('Processed messages', {
             originalCount: uiMessages.length,
             processedCount: processedMessages.length,
             lastMessagePartsCount: lastMessageParts.length,
             lastMessagePartTypes: lastMessageParts.map((p) => p.type),
             hasTextContent: !!textPart,
             textLength: textPart?.text?.length || 0,
-            textPreview: textPart?.text?.substring(0, 200) || 'No text',
+            // textPreview removed - contains user content
             startsWithFile: textPart?.text?.startsWith('File:') || false,
           });
 
@@ -295,13 +296,13 @@ export async function POST(
                 'loadDocuments',
               ];
 
-          console.log('[ChatRoute] Starting streamText', {
+          logger.debug('Starting streamText', {
             messagesCount: processedMessages.length,
             model: selectedModel,
             toolsEnabled: !shouldDisableTools,
-            activeToolsList: activeTools,
+            activeToolsCount: activeTools.length,
             systemPromptLength: systemPromptText.length,
-            systemPromptPreview: systemPromptText.substring(0, 500),
+            // systemPromptPreview removed - may contain sensitive configuration
             hasMeetingPrompt: systemPromptText.includes('Meeting Intelligence'),
             hasCreateDocumentMention:
               systemPromptText.includes('createDocument'),
@@ -318,7 +319,7 @@ export async function POST(
           // Token analysis already done above using utility
 
           // Log model info for debugging
-          console.log('[ChatRoute] Model configuration:', {
+          logger.debug('Model configuration:', {
             model: modeConfig.model || selectedModel,
             mode: currentMode,
             activeTools: modeConfig.experimental_activeTools?.length || 0,
@@ -327,26 +328,22 @@ export async function POST(
 
           // Additional detailed logging when approaching limits (tokenStats already logged above)
           if (tokenStats.isOverLimit) {
-            console.error('[ChatRoute] ⚠️⚠️⚠️ CONTEXT EXCEEDS MODEL LIMIT ⚠️⚠️⚠️');
-            console.error(
-              '[ChatRoute] This request will likely fail with "prompt is too long" error',
+            logger.error('CONTEXT EXCEEDS MODEL LIMIT');
+            logger.error(
+              'This request will likely fail with "prompt is too long" error',
             );
-            console.error(
-              '[ChatRoute] Check the TOKEN USAGE STATS above for details',
-            );
+            logger.error('Check the TOKEN USAGE STATS above for details');
           } else if (tokenStats.isApproachingLimit) {
-            console.warn('[ChatRoute] ⚠️ WARNING: Approaching context limit');
-            console.warn(
-              '[ChatRoute] Check the TOKEN USAGE STATS above for details',
-            );
+            logger.warn('WARNING: Approaching context limit');
+            logger.warn('Check the TOKEN USAGE STATS above for details');
           }
 
           // Log detailed breakdown when large or over limit
           if (tokenStats.totalTokens > 50000 || tokenStats.isOverLimit) {
-            console.log('[ChatRoute] HIGH TOKEN USAGE DETECTED');
-            console.log('[ChatRoute] Top 5 largest messages:');
+            logger.warn('HIGH TOKEN USAGE DETECTED');
+            logger.warn('Top 5 largest messages:');
             tokenStats.largestMessages.forEach((msg, idx) => {
-              console.log(
+              logger.warn(
                 `  ${idx + 1}. Message #${msg.index} (${msg.role}): ${msg.tokens} tokens`,
               );
             });
@@ -357,7 +354,7 @@ export async function POST(
             processedMessages[processedMessages.length - 1];
           const lastModelMsg = modelMessages[modelMessages.length - 1];
 
-          console.log('[ChatRoute] DETAILED Message Conversion Debug:', {
+          logger.debug('Message Conversion Debug:', {
             // Before conversion
             processedMessage: {
               role: lastProcessedMsg?.role,
@@ -367,10 +364,10 @@ export async function POST(
                   type: p.type,
                   hasText: !!p.text,
                   textLength: p.text?.length || 0,
-                  textPreview: p.text?.substring(0, 50),
+                  // textPreview removed - contains user content
                 }),
               ),
-              fullParts: JSON.stringify(lastProcessedMsg?.parts, null, 2),
+              // fullParts removed - contains user content
             },
             // After conversion
             modelMessage: {
@@ -382,20 +379,17 @@ export async function POST(
                   : Array.isArray(lastModelMsg?.content)
                     ? lastModelMsg.content.length
                     : 0,
-              contentPreview:
-                typeof lastModelMsg?.content === 'string'
-                  ? lastModelMsg.content.substring(0, 100)
-                  : JSON.stringify(lastModelMsg?.content).substring(0, 200),
-              fullContent: JSON.stringify(lastModelMsg, null, 2),
+              // contentPreview removed - may contain sensitive data
+              // fullContent removed - contains message content
             },
           });
 
-          console.log(
-            '[ChatRoute] About to call streamText with mode-based model:',
+          logger.debug(
+            'About to call streamText with mode-based model:',
             modeConfig.model || selectedModel,
           );
-          console.log(
-            '[ChatRoute] ANTHROPIC_API_KEY present:',
+          logger.debug(
+            'ANTHROPIC_API_KEY present:',
             !!process.env.ANTHROPIC_API_KEY,
           );
 
@@ -474,16 +468,16 @@ export async function POST(
               // Hook into the agent loop to track token growth
               onStepFinish: (event) => {
                 stepCount++;
-                console.log(`\n[Agent Step ${stepCount}] Completed`);
+                logger.debug(`Agent Step ${stepCount} Completed`);
 
                 // Log finish reason to understand why the step ended
                 if (event.finishReason) {
-                  console.log(`  Finish reason: ${event.finishReason}`);
+                  logger.debug(`  Finish reason: ${event.finishReason}`);
                 }
 
                 // Log what happened in this step
                 if (event.toolCalls && event.toolCalls.length > 0) {
-                  console.log(
+                  logger.debug(
                     '  Tools called:',
                     event.toolCalls.map((t) => t.toolName).join(', '),
                   );
@@ -494,7 +488,7 @@ export async function POST(
                   event.toolResults.forEach((result) => {
                     const resultSize = JSON.stringify(result).length;
                     const resultTokens = Math.ceil(resultSize / 4);
-                    console.log(
+                    logger.debug(
                       `  Tool result size: ${resultTokens.toLocaleString()} tokens`,
                     );
                     currentTokenCount += resultTokens;
@@ -505,29 +499,29 @@ export async function POST(
                 if (event.text) {
                   const textTokens = Math.ceil(event.text.length / 4);
                   currentTokenCount += textTokens;
-                  console.log(
+                  logger.debug(
                     `  Generated text: ${textTokens.toLocaleString()} tokens`,
                   );
                 }
 
-                console.log(
+                logger.debug(
                   `  Current total: ${currentTokenCount.toLocaleString()} tokens`,
                 );
-                console.log(
+                logger.debug(
                   `  Remaining capacity: ${(200000 - currentTokenCount).toLocaleString()} tokens`,
                 );
 
                 // Warn if approaching limit during execution
                 if (currentTokenCount > 180000) {
-                  console.warn(
-                    '  ⚠️ WARNING: Approaching token limit during execution!',
+                  logger.warn(
+                    'WARNING: Approaching token limit during execution!',
                   );
                 }
               },
             };
 
             // Log the actual request being sent
-            console.log('[ChatRoute] Full streamText options being sent:', {
+            logger.debug('Full streamText options being sent:', {
               modelType: typeof streamOptions.model,
               systemLength: streamOptions.system?.length,
               messagesCount: streamOptions.messages?.length || 0,
@@ -539,10 +533,7 @@ export async function POST(
                     : Array.isArray(m.content)
                       ? JSON.stringify(m.content).length
                       : 0,
-                contentPreview:
-                  typeof m.content === 'string'
-                    ? m.content.substring(0, 100)
-                    : JSON.stringify(m.content).substring(0, 100),
+                // contentPreview removed - contains user message content
               })),
               maxOutputTokens: (streamOptions as Record<string, unknown>)
                 .maxOutputTokens,
@@ -553,24 +544,13 @@ export async function POST(
             // Call streamText with all options (stopWhen is now in streamOptions)
             result = streamText(streamOptions);
           } catch (streamError: unknown) {
-            console.error(
-              '\n==================== STREAM ERROR ====================',
-            );
-            console.error('[ChatRoute] Error calling streamText:', streamError);
-            console.error('[ChatRoute] Error occurred AFTER context analysis');
-            console.error(
-              '[ChatRoute] Total tokens attempted:',
-              tokenStats.totalTokens,
-            );
-            console.error('[ChatRoute] Model limit: 200,000');
-            console.error(
-              '[ChatRoute] Over by:',
-              tokenStats.totalTokens - 200000,
-              'tokens',
-            );
-            console.error(
-              '======================================================\n',
-            );
+            logger.error('STREAM ERROR');
+            logger.error('Error calling streamText:', streamError);
+            logger.error('Error occurred AFTER context analysis');
+            logger.error('Total tokens attempted:', tokenStats.totalTokens);
+            logger.error('Model limit: 200,000');
+            logger.error('Over by:', tokenStats.totalTokens - 200000, 'tokens');
+            // End of stream error section
 
             // Log detailed error information for debugging
             const error = streamError as {
@@ -587,7 +567,7 @@ export async function POST(
             if (error?.responseBody) {
               try {
                 const errorBody = JSON.parse(error.responseBody);
-                console.error('[ChatRoute] Anthropic API Error Details:', {
+                logger.error('Anthropic API Error Details:', {
                   type: errorBody?.error?.type,
                   message: errorBody?.error?.message,
                   requestId: errorBody?.request_id,
@@ -616,26 +596,26 @@ export async function POST(
                   if (tokenMatch) {
                     const [, actualTokens, maxTokens] = tokenMatch;
                     userFriendlyError = `Error [AI_APICallError]: prompt is too long: ${actualTokens} tokens > ${maxTokens} maximum`;
-                    console.error(
-                      '[ChatRoute] PROMPT LENGTH ERROR - API reported:',
+                    logger.error(
+                      'PROMPT LENGTH ERROR - API reported:',
                       actualTokens,
                       'tokens vs',
                       maxTokens,
                       'maximum',
                     );
-                    console.error(
-                      '[ChatRoute] Our estimate was:',
+                    logger.error(
+                      'Our estimate was:',
                       tokenStats.totalTokens,
                       'tokens',
                     );
-                    console.error(
-                      '[ChatRoute] Estimation accuracy:',
+                    logger.error(
+                      'Estimation accuracy:',
                       `${Math.round((tokenStats.totalTokens / Number.parseInt(actualTokens)) * 100)}%`,
                     );
                   } else {
                     userFriendlyError = `Error [AI_APICallError]: ${errorBody?.error?.message || 'Prompt is too long for the current model'}`;
-                    console.error(
-                      '[ChatRoute] PROMPT LENGTH ERROR - Message:',
+                    logger.error(
+                      'PROMPT LENGTH ERROR - Message:',
                       errorBody?.error?.message,
                     );
                   }
@@ -643,8 +623,8 @@ export async function POST(
                   userFriendlyError = `Error: ${errorBody?.error?.message}`;
                 }
               } catch (parseError) {
-                console.error(
-                  '[ChatRoute] Could not parse error body:',
+                logger.error(
+                  'Could not parse error body:',
                   error?.responseBody,
                 );
               }
@@ -667,10 +647,8 @@ export async function POST(
             // Log error to console for visibility
             if (isPromptTooLong) {
               // Comprehensive context analysis when hitting the limit
-              console.error(
-                '[ChatRoute] ==================== PROMPT TOO LONG ERROR ====================',
-              );
-              console.error('[ChatRoute] Error Details:', errorResponse);
+              logger.error('PROMPT TOO LONG ERROR');
+              logger.error('Error Details:', errorResponse);
 
               // Also analyze the original processed messages for file content
               interface FileContentInfo {
@@ -700,52 +678,50 @@ export async function POST(
                 .flat() as FileContentInfo[];
 
               if (fileAnalysis.length > 0) {
-                console.error('[ChatRoute] FILE CONTENT DETECTED IN MESSAGES:');
+                logger.error('FILE CONTENT DETECTED IN MESSAGES:');
                 fileAnalysis.forEach((file) => {
-                  console.error(
+                  logger.error(
                     `  - Message #${file.messageIndex}: ${file.contentLength} chars`,
                   );
-                  console.error(`    Preview: ${file.preview}...`);
+                  // Preview removed - contains user content
                 });
               }
 
               // Simplified error analysis using tokenStats
-              console.error('[ChatRoute] DETAILED ERROR ANALYSIS:');
-              console.error(
+              logger.error('DETAILED ERROR ANALYSIS:');
+              logger.error(
                 '  System prompt tokens:',
                 tokenStats.systemPromptTokens,
               );
-              console.error('  User message tokens:', tokenStats.userTokens);
-              console.error(
+              logger.error('  User message tokens:', tokenStats.userTokens);
+              logger.error(
                 '  Assistant message tokens:',
                 tokenStats.assistantTokens,
               );
-              console.error('  Total tokens:', tokenStats.totalTokens);
-              console.error(
+              logger.error('  Total tokens:', tokenStats.totalTokens);
+              logger.error(
                 '  Over limit by:',
                 tokenStats.totalTokens - 200000,
                 'tokens',
               );
 
-              console.error('[ChatRoute] TOP 5 LARGEST MESSAGES:');
+              logger.error('TOP 5 LARGEST MESSAGES:');
               tokenStats.largestMessages.forEach((msg, idx) => {
-                console.error(
+                logger.error(
                   `    ${idx + 1}. Message #${msg.index} (${msg.role}): ${msg.tokens.toLocaleString()} tokens`,
                 );
-                console.error(`       Preview: "${msg.preview}..."`);
+                // Preview removed - contains user content
               });
-              console.error('');
+              // Blank line for readability
 
-              console.error('[ChatRoute] SUGGESTIONS TO REDUCE CONTEXT:');
-              console.error('  1. Start a new chat');
-              console.error(
+              logger.error('SUGGESTIONS TO REDUCE CONTEXT:');
+              logger.error('  1. Start a new chat');
+              logger.error(
                 '  2. Use loadDocument with maxChars parameter to limit content',
               );
-              console.error('  3. Load fewer documents at once');
-              console.error('  4. Clear older messages from the conversation');
-              console.error(
-                '[ChatRoute] ================================================================',
-              );
+              logger.error('  3. Load fewer documents at once');
+              logger.error('  4. Clear older messages from the conversation');
+              logger.error('End of context reduction suggestions');
             }
 
             // Re-throw with the user-friendly message
@@ -758,7 +734,7 @@ export async function POST(
             throw enhancedError;
           }
 
-          console.log('[ChatRoute] Starting stream consumption');
+          logger.debug('Starting stream consumption');
 
           // The AI SDK doesn't expose onStepFinish directly,
           // but we can log tool usage through the stream
@@ -771,9 +747,9 @@ export async function POST(
             }),
           );
 
-          console.log('[ChatRoute] Stream merged with UI');
+          logger.debug('Stream merged with UI');
         } catch (streamError) {
-          console.error('[Chat API] Stream error:', streamError);
+          logger.error('Stream error:', streamError);
           throw streamError;
         }
       },
@@ -803,7 +779,7 @@ export async function POST(
               (p as { text: string }).text?.startsWith('File:'),
           );
 
-        console.log('[ChatRoute] Stream finished', {
+        logger.info('Stream finished', {
           totalMessages: messages.length,
           lastMessageRole: messages[messages.length - 1]?.role,
           hasToolCalls: toolCalls.length > 0,
@@ -827,8 +803,8 @@ export async function POST(
 
         // If a file was uploaded but no tool was called, log error and notify user
         if (hasFileUpload && toolCalls.length === 0) {
-          console.error(
-            '[ChatRoute] ERROR: File was uploaded but AI did not call createDocument tool',
+          logger.error(
+            'ERROR: File was uploaded but AI did not call createDocument tool',
           );
 
           // Send an error message to the UI
@@ -884,7 +860,7 @@ export async function POST(
                 cause: error.cause,
               }
             : { raw: error };
-        console.error('[Chat API] Stream processing error:', errorDetails);
+        logger.error('Stream processing error:', errorDetails);
 
         // Check for rate limit error
         const errorMessage =
@@ -893,8 +869,8 @@ export async function POST(
             : 'An error occurred while processing your request';
 
         if (errorMessage.includes('429')) {
-          console.error(
-            '[Chat API] Rate limit error detected. Check your Anthropic API usage.',
+          logger.error(
+            'Rate limit error detected. Check your Anthropic API usage.',
           );
         }
 
@@ -918,7 +894,7 @@ export async function POST(
       return error.toResponse();
     }
 
-    console.error('[Chat API] Unhandled error:', error);
+    logger.error('Unhandled error:', error);
     return new ChatSDKError('offline:chat').toResponse();
   }
 }

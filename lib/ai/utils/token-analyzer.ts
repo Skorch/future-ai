@@ -1,4 +1,7 @@
 import type { CoreMessage } from 'ai';
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('TokenAnalyzer');
 
 interface TokenStats {
   totalTokens: number;
@@ -134,43 +137,44 @@ export function logTokenStats(
 ): void {
   const iteration = iterationNumber || 'Current';
 
-  console.log(
+  logger.info(
     `\n========== TOKEN USAGE STATS (Iteration: ${iteration}) ==========`,
   );
-  console.log(
+  logger.info(
     `Total Tokens: ${stats.totalTokens.toLocaleString()} / 200,000 (${stats.utilizationPercent}% used)`,
   );
-  console.log(`Remaining: ${stats.remaining.toLocaleString()} tokens`);
-  console.log(
+  logger.info(`Remaining: ${stats.remaining.toLocaleString()} tokens`);
+  logger.info(
     `Status: ${stats.isOverLimit ? '⛔ OVER LIMIT' : stats.isApproachingLimit ? '⚠️  APPROACHING LIMIT' : '✅ OK'}`,
   );
-  console.log('Breakdown:');
-  console.log(
+  logger.info('Breakdown:');
+  logger.info(
     `  - System Prompt: ${stats.systemPromptTokens.toLocaleString()} tokens`,
   );
-  console.log(`  - User Messages: ${stats.userTokens.toLocaleString()} tokens`);
-  console.log(
+  logger.info(`  - User Messages: ${stats.userTokens.toLocaleString()} tokens`);
+  logger.info(
     `  - Assistant Messages: ${stats.assistantTokens.toLocaleString()} tokens`,
   );
-  console.log(`  - Total Messages: ${stats.messageCount}`);
-  console.log('=====================================================\n');
+  logger.info(`  - Total Messages: ${stats.messageCount}`);
+  logger.info('=====================================================\n');
 
   if (stats.isOverLimit) {
-    console.error(
+    logger.error(
       '\n⛔⛔⛔ TOKEN LIMIT EXCEEDED - REQUEST WILL LIKELY FAIL ⛔⛔⛔',
     );
-    console.error('TOP 5 LARGEST MESSAGES:');
+    logger.error('TOP 5 LARGEST MESSAGES:');
     stats.largestMessages.forEach((msg, idx) => {
-      console.error(
+      logger.error(
         `  ${idx + 1}. Message #${msg.index} (${msg.role}): ${msg.tokens.toLocaleString()} tokens`,
       );
-      console.error(`     Preview: "${msg.preview}..."`);
+      // Remove preview content in production to avoid logging user data
+      logger.debug(`     Preview: "${msg.preview}..."`);
     });
-    console.error('\nRECOMMENDATIONS:');
-    console.error('  1. Start a new chat');
-    console.error('  2. Use loadDocument with maxChars parameter');
-    console.error('  3. Load fewer documents at once');
-    console.error(
+    logger.error('\nRECOMMENDATIONS:');
+    logger.error('  1. Start a new chat');
+    logger.error('  2. Use loadDocument with maxChars parameter');
+    logger.error('  3. Load fewer documents at once');
+    logger.error(
       '⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔\n',
     );
   }
@@ -185,10 +189,10 @@ export function logTokenGrowth(
   const percentGrowth =
     beforeTokens > 0 ? Math.round((growth / beforeTokens) * 100) : 0;
 
-  console.log(`[Token Growth] ${operation}:`);
-  console.log(`  Before: ${beforeTokens.toLocaleString()} tokens`);
-  console.log(`  After: ${afterTokens.toLocaleString()} tokens`);
-  console.log(
+  logger.info(`[Token Growth] ${operation}:`);
+  logger.info(`  Before: ${beforeTokens.toLocaleString()} tokens`);
+  logger.info(`  After: ${afterTokens.toLocaleString()} tokens`);
+  logger.info(
     `  Growth: +${growth.toLocaleString()} tokens (${percentGrowth}% increase)`,
   );
 }
