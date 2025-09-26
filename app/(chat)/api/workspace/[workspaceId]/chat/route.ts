@@ -461,7 +461,7 @@ export async function POST(
               stopWhen: [
                 stepCountIs(30), // Max steps to prevent infinite loops
                 // Don't stop on setMode - let prepareStep handle seamless transitions
-                hasToolCall('setComplete'), // Stop when marking complete/incomplete
+                // hasToolCall('setComplete'), // Stop when marking complete/incomplete
                 hasToolCall('askUser'), // Stop when user input is required
               ],
 
