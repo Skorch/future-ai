@@ -2,8 +2,7 @@
 
 import { ChevronUp } from 'lucide-react';
 import Image from 'next/image';
-import { useUser } from '@clerk/nextjs';
-import { useClerk } from '@clerk/nextjs';
+import { useUser, useClerk } from '@clerk/nextjs';
 import { useTheme } from 'next-themes';
 
 import {

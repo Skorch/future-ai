@@ -73,7 +73,7 @@ export default async function WelcomePage() {
         </h1>
         <p className="text-lg text-muted-foreground">
           Your intelligent AI assistant is ready to help you with conversations,
-          document analysis, and more. Let's get started!
+          document analysis, and more. Let&apos;s get started!
         </p>
         <div className="space-y-4">
           <div className="text-left space-y-2 text-sm text-muted-foreground">

@@ -7,9 +7,9 @@ import {
   updateWorkspace,
   deleteWorkspace,
   getWorkspaceById,
+  updateWorkspaceAccess,
 } from './queries';
 import { setActiveWorkspace, clearActiveWorkspace } from './context';
-import { updateWorkspaceAccess } from './queries';
 
 const createWorkspaceSchema = z.object({
   name: z.string().min(1).max(255),

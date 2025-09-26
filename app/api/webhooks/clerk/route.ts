@@ -2,9 +2,8 @@ import { Webhook } from 'svix';
 import { headers } from 'next/headers';
 import type { WebhookEvent } from '@clerk/nextjs/server';
 import { eq } from 'drizzle-orm';
-import { db } from '@/lib/db/queries';
+import { db, upsertUser } from '@/lib/db/queries';
 import { user as userTable } from '@/lib/db/schema';
-import { upsertUser } from '@/lib/db/queries';
 import { createWorkspace } from '@/lib/workspace/queries';
 
 export async function POST(req: Request) {

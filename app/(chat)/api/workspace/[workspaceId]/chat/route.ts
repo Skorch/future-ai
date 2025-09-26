@@ -4,6 +4,8 @@ import {
   JsonToSseTransformStream,
   smoothStream,
   streamText,
+  stepCountIs,
+  hasToolCall,
 } from 'ai';
 import {
   analyzeTokenUsage,
@@ -46,7 +48,6 @@ import { getModeConfig } from '@/lib/ai/modes';
 import { createPrepareStep } from '@/lib/ai/modes/prepare-step';
 import type { VisibilityType } from '@/components/visibility-selector';
 import { processMessageFiles } from '@/lib/ai/utils/file-processor';
-import { stepCountIs, hasToolCall } from 'ai';
 import { setComplete } from '@/lib/ai/tools/set-complete';
 
 export const maxDuration = 300; // 5 minutes (300 seconds)
