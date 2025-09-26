@@ -51,7 +51,7 @@ export class Reranker {
     options: RerankOptions = {},
   ): Promise<RerankResult[]> {
     const {
-      model = 'rerank-2',
+      model = 'rerank-2.5',
       topN = Math.min(documents.length, 10),
       returnDocuments = true,
       truncation = true,

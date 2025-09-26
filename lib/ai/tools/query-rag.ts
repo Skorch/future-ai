@@ -37,7 +37,7 @@ const queryRAGSchema = z.object({
   rerankMethod: z
     .enum(['llm', 'voyage'])
     .optional()
-    .default('llm')
+    .default('voyage')
     .describe('Reranking method: llm (Claude Haiku) or voyage (Voyage AI)'),
 });
 
@@ -338,7 +338,7 @@ export const queryRAG = (props: QueryRAGProps) => {
               params.query,
               truncatedMatches,
               {
-                model: 'rerank-2',
+                model: 'rerank-2.5',
                 topN: topK,
                 returnDocuments: true,
                 truncation: true,

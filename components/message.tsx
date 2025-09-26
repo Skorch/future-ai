@@ -282,15 +282,28 @@ const RAGQueryResult = memo(function RAGQueryResult({
                           </div>
 
                           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                            {match.metadata?.meeting_date ? (
+                            {match.metadata?.meetingDate ||
+                            match.metadata?.meeting_date ? (
                               <span className="flex items-center gap-1">
                                 📅{' '}
                                 {new Date(
-                                  String(match.metadata.meeting_date),
+                                  String(
+                                    match.metadata.meetingDate ||
+                                      match.metadata.meeting_date,
+                                  ),
                                 ).toLocaleDateString()}
                               </span>
                             ) : null}
-                            {match.metadata?.speaker ? (
+                            {match.metadata?.speakers &&
+                            Array.isArray(match.metadata.speakers) &&
+                            match.metadata.speakers.length > 0 ? (
+                              <span className="flex items-center gap-1">
+                                👤{' '}
+                                {(match.metadata.speakers as string[]).join(
+                                  ', ',
+                                )}
+                              </span>
+                            ) : match.metadata?.speaker ? (
                               <span className="flex items-center gap-1">
                                 👤 {String(match.metadata.speaker)}
                               </span>
@@ -298,6 +311,11 @@ const RAGQueryResult = memo(function RAGQueryResult({
                             {match.metadata?.sectionTitle ? (
                               <span className="flex items-center gap-1">
                                 📝 {String(match.metadata.sectionTitle)}
+                              </span>
+                            ) : null}
+                            {match.metadata?.topic ? (
+                              <span className="flex items-center gap-1">
+                                📂 Topic: {String(match.metadata.topic)}
                               </span>
                             ) : null}
                             {match.metadata?.chunkIndex !== undefined &&
@@ -851,15 +869,19 @@ const PurePreviewMessage = ({
                 const { toolCallId, state } = toolPart;
 
                 // DETERMINISTIC: Check metadata field first, then fallback to direct fields
-                const isLLMReranked =
-                  toolPart.output?.metadata?.rerankMethod === 'llm' ||
-                  toolPart.output?.result?.metadata?.rerankMethod === 'llm' ||
-                  toolPart.output?.rerankMethod === 'llm' ||
-                  toolPart.output?.result?.rerankMethod === 'llm';
+                const rerankMethod =
+                  toolPart.output?.metadata?.rerankMethod ||
+                  toolPart.output?.result?.metadata?.rerankMethod ||
+                  toolPart.output?.rerankMethod ||
+                  toolPart.output?.result?.rerankMethod;
 
-                // Use LLM component for LLM reranked results, otherwise use standard
+                const isLLMReranked = rerankMethod === 'llm';
+                const isVoyageReranked = rerankMethod === 'voyage';
 
-                if (isLLMReranked) {
+                // Use LLM component for LLM reranked results, enhanced component for Voyage
+                // Fall back to standard component only when no reranking method is detected
+
+                if (isLLMReranked || isVoyageReranked) {
                   return (
                     <LLMRAGQueryResult
                       key={toolCallId || `rag-${index}`}

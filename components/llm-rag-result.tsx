@@ -186,7 +186,10 @@ export function LLMRAGQueryResult({ output, isStreaming }: LLMRAGQueryResult) {
       document: 'Document',
       artifact: 'Artifact',
     };
-    return typeMap[typeStr] || typeStr;
+    // Return mapped value or capitalize the original type
+    return (
+      typeMap[typeStr] || typeStr.charAt(0).toUpperCase() + typeStr.slice(1)
+    );
   };
 
   const renderMatch = (
@@ -253,6 +256,13 @@ export function LLMRAGQueryResult({ output, isStreaming }: LLMRAGQueryResult) {
                 <Badge variant="outline" className="text-xs">
                   <FileText className="h-3 w-3 mr-1" />
                   {String(metadata.sectionTitle)}
+                </Badge>
+              ) : null}
+
+              {metadata.topic ? (
+                <Badge variant="outline" className="text-xs">
+                  <Folder className="h-3 w-3 mr-1" />
+                  Topic: {String(metadata.topic)}
                 </Badge>
               ) : null}
 
