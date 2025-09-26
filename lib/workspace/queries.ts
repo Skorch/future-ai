@@ -1,11 +1,6 @@
 import { and, desc, eq, isNull } from 'drizzle-orm';
-import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
 import { workspace } from '@/lib/db/schema';
-
-// biome-ignore lint: Forbidden non-null assertion.
-const client = postgres(process.env.POSTGRES_URL!);
-const db = drizzle(client);
+import { db } from '@/lib/db/queries';
 
 /**
  * Get all workspaces for a user (excluding soft-deleted)

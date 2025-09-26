@@ -1,14 +1,8 @@
 import { auth } from '@/app/(auth)/auth';
 import { getWorkspaceById } from '@/lib/workspace/queries';
-import { getChatsByWorkspaceAndUser } from '@/lib/db/queries';
+import { getChatsByWorkspaceAndUser, db } from '@/lib/db/queries';
 import { document } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
-import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
-
-// biome-ignore lint: Forbidden non-null assertion.
-const client = postgres(process.env.POSTGRES_URL!);
-const db = drizzle(client);
 
 export async function GET(
   _request: Request,
