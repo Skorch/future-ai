@@ -61,24 +61,22 @@ export async function createUser(email: string, password: string) {
   const hashedPassword = generateHashedPassword(password);
 
   try {
-    return await db.transaction(async (tx) => {
-      // Create user
-      const [newUser] = await tx
-        .insert(user)
-        .values({ email, password: hashedPassword })
-        .returning();
+    // Create user first
+    const [newUser] = await db
+      .insert(user)
+      .values({ email, password: hashedPassword })
+      .returning();
 
-      // Auto-create Personal workspace with UUID
-      const workspaceId = generateUUID();
-      await tx.insert(workspace).values({
-        id: workspaceId,
-        userId: newUser.id,
-        name: 'Personal',
-        description: 'Your personal workspace',
-      });
-
-      return newUser;
+    // Then create workspace - both are awaited so they complete before returning
+    const workspaceId = generateUUID();
+    await db.insert(workspace).values({
+      id: workspaceId,
+      userId: newUser.id,
+      name: 'Personal',
+      description: 'Your personal workspace',
     });
+
+    return newUser;
   } catch (error) {
     throw new ChatSDKError('bad_request:database', 'Failed to create user');
   }
