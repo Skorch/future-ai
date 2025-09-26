@@ -31,12 +31,14 @@ function Suggestion({
 
 interface SuggestedActionsProps {
   chatId: string;
+  workspaceId: string;
   sendMessage: UseChatHelpers<ChatMessage>['sendMessage'];
   selectedVisibilityType: VisibilityType;
 }
 
 function PureSuggestedActions({
   chatId,
+  workspaceId,
   sendMessage,
   selectedVisibilityType,
 }: SuggestedActionsProps) {
@@ -61,7 +63,11 @@ function PureSuggestedActions({
           <Suggestion
             suggestion={suggestedAction}
             onClick={(suggestion) => {
-              window.history.replaceState({}, '', `/chat/${chatId}`);
+              window.history.replaceState(
+                {},
+                '',
+                `/workspace/${workspaceId}/chat/${chatId}`,
+              );
               sendMessage({
                 role: 'user',
                 parts: [{ type: 'text', text: suggestion }],

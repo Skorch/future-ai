@@ -156,7 +156,7 @@ export function SidebarHistory({
     setShowDeleteDialog(false);
 
     if (deleteId === id) {
-      router.push('/');
+      router.push(`/workspace/${workspaceId}`);
     }
   };
 

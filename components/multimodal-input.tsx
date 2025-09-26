@@ -46,6 +46,7 @@ interface TranscriptAttachment extends Attachment {
 
 function PureMultimodalInput({
   chatId,
+  workspaceId,
   input,
   setInput,
   status,
@@ -60,6 +61,7 @@ function PureMultimodalInput({
   chat,
 }: {
   chatId: string;
+  workspaceId: string;
   input: string;
   setInput: Dispatch<SetStateAction<string>>;
   status: UseChatHelpers<ChatMessage>['status'];
@@ -195,7 +197,11 @@ function PureMultimodalInput({
   }, [pastedText, setInput]);
 
   const submitForm = useCallback(() => {
-    window.history.replaceState({}, '', `/chat/${chatId}`);
+    window.history.replaceState(
+      {},
+      '',
+      `/workspace/${workspaceId}/chat/${chatId}`,
+    );
 
     // Separate transcript attachments from regular file attachments
     const transcriptAttachments = attachments.filter(
@@ -365,6 +371,7 @@ function PureMultimodalInput({
           <SuggestedActions
             sendMessage={sendMessage}
             chatId={chatId}
+            workspaceId={workspaceId}
             selectedVisibilityType={selectedVisibilityType}
           />
         )}

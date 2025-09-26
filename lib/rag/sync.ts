@@ -56,6 +56,12 @@ export async function syncDocumentToRAG(
   documentId: string,
   workspaceId?: string,
 ): Promise<void> {
+  console.log('[RAG Sync] Starting document sync', {
+    documentId,
+    workspaceId,
+    hasWorkspaceId: !!workspaceId,
+  });
+
   try {
     // First try with provided workspaceId if available
     // This is a temporary fix - ideally we should always have workspaceId
@@ -65,8 +71,9 @@ export async function syncDocumentToRAG(
 
     // If no workspaceId provided or document not found, we can't proceed safely
     if (!doc) {
-      console.log(
-        `[RAG Sync] Cannot sync document ${documentId} without workspace context`,
+      console.error(
+        `[RAG Sync] ERROR: Cannot sync document ${documentId} without workspace context or document not found`,
+        { documentId, workspaceId, documentFound: false },
       );
       return;
     }
@@ -118,9 +125,24 @@ export async function syncDocumentToRAG(
       namespace: doc.workspaceId,
     });
 
-    console.log(`[RAG Sync] Stored ${chunks.length} chunks for ${documentId}`);
+    console.log(
+      `[RAG Sync] SUCCESS: Stored ${chunks.length} chunks for document`,
+      {
+        documentId,
+        workspaceId: doc.workspaceId,
+        documentType,
+        title: doc.title,
+        chunkCount: chunks.length,
+      },
+    );
   } catch (error) {
-    console.error(`[RAG Sync] Failed to sync ${documentId}:`, error);
+    console.error(`[RAG Sync] ERROR: Failed to sync document`, {
+      documentId,
+      workspaceId,
+      error,
+      errorMessage: error instanceof Error ? error.message : String(error),
+      errorStack: error instanceof Error ? error.stack : undefined,
+    });
     // Don't throw - RAG sync failures shouldn't break document operations
   }
 }

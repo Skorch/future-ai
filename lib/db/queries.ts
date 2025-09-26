@@ -451,9 +451,30 @@ export async function saveDocument({
       .returning();
 
     // Automatically sync to RAG (async, don't await)
-    syncDocumentToRAG(documentId).catch((err) =>
-      console.error('[saveDocument] RAG sync failed:', err),
-    );
+    console.log('[saveDocument] Starting RAG sync', {
+      documentId,
+      workspaceId,
+      title,
+      kind,
+    });
+    syncDocumentToRAG(documentId, workspaceId)
+      .then(() => {
+        console.log('[saveDocument] RAG sync completed successfully', {
+          documentId,
+          workspaceId,
+        });
+      })
+      .catch((err) => {
+        console.error('[saveDocument] RAG sync failed', {
+          documentId,
+          workspaceId,
+          title,
+          kind,
+          error: err,
+          errorMessage: err instanceof Error ? err.message : String(err),
+          errorStack: err instanceof Error ? err.stack : undefined,
+        });
+      });
 
     return result;
   } catch (error) {

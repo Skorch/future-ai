@@ -393,7 +393,7 @@ const PurePreviewMessage = ({
   isArtifactVisible,
 }: {
   chatId: string;
-  workspaceId?: string;
+  workspaceId: string;
   message: ChatMessage;
   vote: Vote | undefined;
   isLoading: boolean;
@@ -949,6 +949,7 @@ const PurePreviewMessage = ({
               <MessageActions
                 key={`action-${message.id}`}
                 chatId={chatId}
+                workspaceId={workspaceId}
                 message={message}
                 vote={vote}
                 isLoading={isLoading}

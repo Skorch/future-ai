@@ -75,6 +75,7 @@ const PureSpreadsheetEditor = ({
 
   const initialRows = useMemo(() => {
     return parseData.map((row, rowIndex) => {
+      // biome-ignore lint/suspicious/noExplicitAny: Dynamic spreadsheet row data
       const rowData: any = {
         id: rowIndex,
         rowNumber: rowIndex + 1,
@@ -94,10 +95,12 @@ const PureSpreadsheetEditor = ({
     setLocalRows(initialRows);
   }, [initialRows]);
 
+  // biome-ignore lint/suspicious/noExplicitAny: CSV data can contain mixed types
   const generateCsv = (data: any[][]) => {
     return unparse(data);
   };
 
+  // biome-ignore lint/suspicious/noExplicitAny: Dynamic row data from spreadsheet
   const handleRowsChange = (newRows: any[]) => {
     setLocalRows(newRows);
 

@@ -9,11 +9,13 @@ import { ChatSDKError } from '@/lib/errors';
 import { getActiveWorkspace } from '@/lib/workspace/context';
 import type { ChatMessage } from '@/lib/types';
 import { createUIMessageStream, JsonToSseTransformStream } from 'ai';
-// Note: getStreamContext is workspace-specific now, but stream API is not workspace-aware yet
-// This will need refactoring when streams become workspace-scoped
-// For now, importing from first workspace route as a workaround
-import { getStreamContext } from '@/app/(chat)/api/workspace/[workspaceId]/chat/route';
 import { differenceInSeconds } from 'date-fns';
+import type { ResumableStreamContext } from 'resumable-stream';
+
+// Note: getStreamContext needs to be implemented for workspace-aware streaming
+// TODO: Implement proper workspace-aware stream context
+// This will be imported from the workspace route once properly implemented
+const getStreamContext = (): ResumableStreamContext | null => null;
 
 export async function GET(
   _: Request,
@@ -71,9 +73,11 @@ export async function GET(
     execute: () => {},
   });
 
-  const stream = await streamContext.resumableStream(recentStreamId, () =>
-    emptyDataStream.pipeThrough(new JsonToSseTransformStream()),
-  );
+  const stream = streamContext
+    ? await streamContext.resumableStream(recentStreamId, () =>
+        emptyDataStream.pipeThrough(new JsonToSseTransformStream()),
+      )
+    : null;
 
   /*
    * For when the generation is streaming during SSR

@@ -27,6 +27,8 @@
     "pinecone:create": "tsx scripts/setup-pinecone.ts create-index",
     "pinecone:delete": "tsx scripts/setup-pinecone.ts delete-index",
     "pinecone:reset": "tsx scripts/setup-pinecone.ts reset-index",
+    "rag:reindex": "tsx scripts/reindex-rag-direct.ts",
+    "rag:reindex:dry": "tsx scripts/reindex-rag-direct.ts --dry-run",
     "pinecone:stats": "tsx scripts/setup-pinecone.ts stats",
     "rag": "tsx scripts/setup-pinecone.ts",
     "rag:test": "tsx scripts/rag-cli.ts"

@@ -10,6 +10,7 @@ import type { ChatMessage } from '@/lib/types';
 
 interface ArtifactMessagesProps {
   chatId: string;
+  workspaceId: string;
   status: UseChatHelpers<ChatMessage>['status'];
   votes: Array<Vote> | undefined;
   messages: ChatMessage[];
@@ -21,6 +22,7 @@ interface ArtifactMessagesProps {
 
 function PureArtifactMessages({
   chatId,
+  workspaceId,
   status,
   votes,
   messages,
@@ -47,6 +49,7 @@ function PureArtifactMessages({
       {messages.map((message, index) => (
         <PreviewMessage
           chatId={chatId}
+          workspaceId={workspaceId}
           key={message.id}
           message={message}
           isLoading={status === 'streaming' && index === messages.length - 1}

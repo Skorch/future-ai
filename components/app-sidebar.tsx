@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { PlusIcon } from '@/components/icons';
 import { SidebarHistory } from '@/components/sidebar-history';
 import { SidebarUserNav } from '@/components/sidebar-user-nav';
+import { WorkspaceSwitcher } from '@/components/workspace-switcher';
 import { Button } from '@/components/ui/button';
 import {
   Sidebar,
@@ -13,10 +14,9 @@ import {
   SidebarFooter,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar';
-import Link from 'next/link';
-import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 export function AppSidebar({
   user,
@@ -31,36 +31,23 @@ export function AppSidebar({
     <Sidebar className="group-data-[side=left]:border-r-0">
       <SidebarHeader>
         <SidebarMenu>
-          <div className="flex flex-row justify-between items-center">
-            <Link
-              href={newChatUrl}
+          <SidebarMenuItem>
+            <WorkspaceSwitcher currentWorkspaceId={workspaceId} />
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <Button
+              variant="outline"
+              className="w-full justify-start"
               onClick={() => {
                 setOpenMobile(false);
+                router.push(newChatUrl);
+                router.refresh();
               }}
-              className="flex flex-row gap-3 items-center"
             >
-              <span className="text-lg font-semibold px-2 hover:bg-muted rounded-md cursor-pointer">
-                Chatbot
-              </span>
-            </Link>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  type="button"
-                  className="p-2 h-fit"
-                  onClick={() => {
-                    setOpenMobile(false);
-                    router.push(newChatUrl);
-                    router.refresh();
-                  }}
-                >
-                  <PlusIcon />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent align="end">New Chat</TooltipContent>
-            </Tooltip>
-          </div>
+              <PlusIcon size={16} />
+              New Chat
+            </Button>
+          </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>

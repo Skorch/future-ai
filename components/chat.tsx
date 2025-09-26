@@ -32,7 +32,7 @@ export function Chat({
   chat,
 }: {
   id: string;
-  workspaceId?: string;
+  workspaceId: string;
   initialMessages: ChatMessage[];
   initialVisibilityType: VisibilityType;
   isReadonly: boolean;
@@ -148,9 +148,7 @@ export function Chat({
       });
 
       setHasAppendedQuery(true);
-      const newUrl = workspaceId
-        ? `/workspace/${workspaceId}/chat/${id}`
-        : `/chat/${id}`;
+      const newUrl = `/workspace/${workspaceId}/chat/${id}`;
       window.history.replaceState({}, '', newUrl);
     }
   }, [query, sendMessage, hasAppendedQuery, id, workspaceId]);
@@ -196,6 +194,7 @@ export function Chat({
           {!isReadonly && (
             <MultimodalInput
               chatId={id}
+              workspaceId={workspaceId}
               input={input}
               setInput={setInput}
               status={status}

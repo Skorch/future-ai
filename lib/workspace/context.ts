@@ -5,7 +5,8 @@ const WORKSPACE_COOKIE_NAME = 'activeWorkspace';
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 
 /**
- * Get the active workspace ID from cookies, or create/return default
+ * Get the active workspace ID from cookies, or return default
+ * Note: This function cannot set cookies as it may be called from Server Components
  */
 export async function getActiveWorkspace(userId: string): Promise<string> {
   const cookieStore = await cookies();
@@ -19,9 +20,9 @@ export async function getActiveWorkspace(userId: string): Promise<string> {
     }
   }
 
-  // No valid workspace in cookie, get or create default
+  // No valid workspace in cookie, return the user's default workspace
+  // Note: We don't set the cookie here as this may be called from Server Components
   const workspaceId = await ensureUserHasWorkspace(userId);
-  await setActiveWorkspace(workspaceId);
   return workspaceId;
 }
 

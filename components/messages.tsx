@@ -16,7 +16,7 @@ import {
 
 interface MessagesProps {
   chatId: string;
-  workspaceId?: string;
+  workspaceId: string;
   status: UseChatHelpers<ChatMessage>['status'];
   votes: Array<Vote> | undefined;
   messages: ChatMessage[];

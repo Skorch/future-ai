@@ -53,7 +53,7 @@ export const maxDuration = 300; // 5 minutes (300 seconds)
 
 let globalStreamContext: ResumableStreamContext | null = null;
 
-export function getStreamContext() {
+function getStreamContext() {
   if (!globalStreamContext) {
     try {
       globalStreamContext = createResumableStreamContext({

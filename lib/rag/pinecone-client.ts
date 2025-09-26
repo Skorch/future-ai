@@ -16,6 +16,7 @@ import {
   MAX_BATCH_SIZE,
   MIN_SCORE_THRESHOLD,
 } from './types';
+import { getVoyageAIClient, type VoyageAIClient } from './embeddings';
 
 /**
  * Wrapper for Pinecone vector database operations
@@ -24,6 +25,7 @@ import {
 export class PineconeClient {
   private client: Pinecone;
   private indexName: string;
+  private voyageClient: VoyageAIClient;
 
   constructor(config?: Partial<PineconeConfig>) {
     const apiKey = config?.apiKey || process.env.PINECONE_API_KEY;
@@ -35,6 +37,61 @@ export class PineconeClient {
 
     this.indexName =
       config?.indexName || process.env.PINECONE_INDEX_NAME || 'rag-index';
+
+    // Initialize VoyageAI client for embeddings
+    this.voyageClient = getVoyageAIClient();
+
+    console.log('[Pinecone] Client initialized with:', {
+      indexName: this.indexName,
+      hasApiKey: !!apiKey,
+      apiKeyLength: apiKey.length,
+      configSource: config?.indexName
+        ? 'config'
+        : process.env.PINECONE_INDEX_NAME
+          ? 'env'
+          : 'default',
+      embeddingProvider: 'VoyageAI',
+    });
+
+    // Verify index exists (async, don't block constructor)
+    this.verifyIndex().catch((err) => {
+      console.error('[Pinecone] Index verification failed:', err);
+    });
+  }
+
+  /**
+   * Verify that the index exists and log its configuration
+   */
+  private async verifyIndex(): Promise<void> {
+    try {
+      const indexList = await this.client.listIndexes();
+      const indexExists = indexList.indexes?.some(
+        (idx) => idx.name === this.indexName,
+      );
+
+      if (!indexExists) {
+        console.error(
+          '[Pinecone] WARNING: Index does not exist:',
+          this.indexName,
+        );
+        console.error(
+          '[Pinecone] Available indexes:',
+          indexList.indexes?.map((i) => i.name),
+        );
+        return;
+      }
+
+      const indexInfo = await this.client.describeIndex(this.indexName);
+      console.log('[Pinecone] Index verified:', {
+        name: this.indexName,
+        dimension: indexInfo.dimension,
+        metric: indexInfo.metric,
+        host: indexInfo.host,
+        status: indexInfo.status,
+      });
+    } catch (error) {
+      console.error('[Pinecone] Failed to verify index:', error);
+    }
   }
 
   /**
@@ -51,6 +108,14 @@ export class PineconeClient {
       progressCallback,
     } = options;
 
+    console.log('[Pinecone] writeDocuments called with:', {
+      documentCount: documents.length,
+      namespace,
+      batchSize,
+      indexName: this.indexName,
+      firstDocId: documents[0]?.id,
+    });
+
     if (documents.length === 0) {
       return {
         success: true,
@@ -64,6 +129,7 @@ export class PineconeClient {
 
     try {
       const index = this.client.index(this.indexName);
+      console.log('[Pinecone] Got index handle for:', this.indexName);
 
       // Process documents in batches
       for (let i = 0; i < documents.length; i += batchSize) {
@@ -73,58 +139,50 @@ export class PineconeClient {
         );
 
         try {
-          // For integrated embeddings with Pinecone's data plane API
-          // The field configured in fieldMap (content) will be auto-embedded
-          // Check if we have the upsertRecords method (newer SDK) or need to use upsert
+          console.log(
+            `[Pinecone] Processing batch ${i / batchSize + 1}, size: ${batch.length}`,
+          );
+
+          // Always use VoyageAI for embeddings
           const ns = index.namespace(namespace);
+          const texts = batch.map((doc) => doc.content);
 
-          if (
-            'upsertRecords' in ns &&
-            typeof (ns as unknown as { upsertRecords?: unknown })
-              .upsertRecords === 'function'
-          ) {
-            // Use newer upsertRecords API for integrated embeddings
-            const records = batch.map((doc) => ({
-              _id: doc.id,
-              content: doc.content, // This matches our fieldMap configuration
-              ...doc.metadata, // Spread metadata as top-level fields
-            }));
-            await (
-              ns as unknown as {
-                upsertRecords: (records: unknown[]) => Promise<void>;
-              }
-            ).upsertRecords(records);
-          } else {
-            // Fallback to standard upsert with pre-computed embeddings
-            // Generate embeddings using Pinecone's inference API
-            const texts = batch.map((doc) => doc.content);
-            const embedResponse = await this.client.inference.embed(
-              'llama-text-embed-v2',
-              texts,
-              { inputType: 'passage' },
-            );
+          console.log(
+            `[Pinecone] Generating VoyageAI embeddings for ${texts.length} documents`,
+          );
+          console.log(
+            '[Pinecone] First text sample (100 chars):',
+            texts[0]?.substring(0, 100),
+          );
 
-            const records = batch.map((doc, idx) => {
-              const embedding = embedResponse.data[idx];
-              const vector =
-                'values' in embedding
-                  ? embedding.values
-                  : (embedding as { data?: number[] }).data || [];
+          // Use VoyageAI to generate embeddings
+          const embeddings = await this.voyageClient.embedDocuments(texts);
 
-              return {
-                id: doc.id,
-                values: vector as number[],
-                metadata: {
-                  ...doc.metadata,
-                  content: doc.content,
-                } as RecordMetadata,
-              };
-            });
+          console.log('[Pinecone] VoyageAI embeddings generated:', {
+            count: embeddings.length,
+            dimension: embeddings[0]?.length || 0,
+          });
 
-            await ns.upsert(records);
-          }
+          // Create records with embeddings and metadata
+          const records = batch.map((doc, idx) => ({
+            id: doc.id,
+            values: embeddings[idx],
+            metadata: {
+              ...doc.metadata,
+              content: doc.content, // Store content in metadata for retrieval
+            } as RecordMetadata,
+          }));
+
+          console.log(
+            `[Pinecone] Upserting ${records.length} records with VoyageAI embeddings to namespace: ${namespace}`,
+          );
+          await ns.upsert(records);
+          console.log('[Pinecone] Upsert completed successfully');
 
           written += batch.length;
+          console.log(
+            `[Pinecone] Written so far: ${written}/${documents.length}`,
+          );
 
           // Report progress
           if (progressCallback) {
@@ -137,17 +195,29 @@ export class PineconeClient {
         } catch (error) {
           const message =
             error instanceof Error ? error.message : 'Unknown error';
+          console.error(`[Pinecone] Batch ${i / batchSize + 1} failed:`, error);
           errors.push(`Batch ${i / batchSize + 1}: ${message}`);
         }
       }
 
-      return {
+      const result = {
         success: errors.length === 0,
         documentsWritten: written,
         namespace,
         errors: errors.length > 0 ? errors : undefined,
       };
+
+      console.log('[Pinecone] writeDocuments completed:', {
+        success: result.success,
+        documentsWritten: result.documentsWritten,
+        namespace: result.namespace,
+        errorCount: errors.length,
+        errors: result.errors,
+      });
+
+      return result;
     } catch (error) {
+      console.error('[Pinecone] writeDocuments failed with exception:', error);
       throw new PineconeError(
         `Failed to write documents: ${error instanceof Error ? error.message : 'Unknown error'}`,
         error,
@@ -274,21 +344,14 @@ export class PineconeClient {
     try {
       const index = this.client.index(this.indexName);
 
-      // For indexes with integrated embeddings, we need to use the inference API
-      // to generate embeddings first
-      const embedResponse = await this.client.inference.embed(
-        'llama-text-embed-v2',
-        [text],
-        { inputType: 'query' },
+      // Use VoyageAI to generate query embedding
+      console.log('[Pinecone] Generating VoyageAI query embedding');
+      const vector = await this.voyageClient.embedQuery(text);
+
+      console.log(
+        '[Pinecone] VoyageAI query embedding generated, dimensions:',
+        vector.length,
       );
-
-      const embedding = embedResponse.data[0];
-      const vector =
-        'values' in embedding
-          ? embedding.values
-          : (embedding as { data?: number[] }).data;
-
-      console.log('[Pinecone] Generated embedding dimensions:', vector?.length);
 
       // Build query params, only include filter if it has keys
       const queryParams: {
@@ -427,11 +490,28 @@ export class PineconeClient {
       // The filter should use MongoDB-style operators like $eq
       await index.namespace(namespace).deleteMany(filter);
 
-      console.log('[Pinecone] Deleted vectors with filter:', filter);
+      console.log(
+        '[Pinecone] Deleted vectors with filter:',
+        filter,
+        'in namespace:',
+        namespace,
+      );
     } catch (error) {
+      // Check if it's a 404 error (namespace doesn't exist) - this is OK
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('404') || errorMessage.includes('not found')) {
+        console.log(
+          '[Pinecone] Namespace does not exist (OK to ignore):',
+          namespace,
+        );
+        return;
+      }
+
+      // For other errors, log and throw
       console.error('[Pinecone] Delete by metadata failed:', error);
       throw new PineconeError(
-        `Delete by metadata failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `Delete by metadata failed: ${errorMessage}`,
         error,
       );
     }

@@ -12,11 +12,13 @@ import type { ChatMessage } from '@/lib/types';
 
 export function PureMessageActions({
   chatId,
+  workspaceId,
   message,
   vote,
   isLoading,
 }: {
   chatId: string;
+  workspaceId: string;
   message: ChatMessage;
   vote: Vote | undefined;
   isLoading: boolean;

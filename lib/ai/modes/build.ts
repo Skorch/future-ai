@@ -31,7 +31,6 @@ TOOL USAGE IN BUILD MODE:
 - ✅ askUser - Get clarification and validate decisions
 - ✅ createDocument - Use to generate deliverables
 - ✅ updateDocument - Use to refine artifacts
-- ✅ requestSuggestions - Get feedback on documents
 - ✅ queryRAG - Search knowledge base
 - ✅ All document reading tools available
 
@@ -52,7 +51,6 @@ IMPORTANT: After mode switches, continue working - the conversation doesn't stop
     'loadDocuments',
     'createDocument',
     'updateDocument',
-    'requestSuggestions',
     'setMode',
     'setComplete', // Allow marking task complete in any mode
   ],

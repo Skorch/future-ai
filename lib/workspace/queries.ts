@@ -102,36 +102,22 @@ export async function deleteWorkspace(workspaceId: string, userId: string) {
 
 /**
  * Get the user's default workspace (most recently accessed)
+ * Throws an error if user has no workspaces (should never happen as workspaces are created during user registration)
  */
 export async function getDefaultWorkspace(userId: string) {
   const workspaces = await getWorkspacesByUserId(userId);
   if (workspaces.length === 0) {
-    // If no workspaces exist, create a Personal workspace
-    const ws = await createWorkspace(
-      userId,
-      'Personal',
-      'Your personal workspace',
+    throw new Error(
+      `User ${userId} has no workspaces. This should not happen.`,
     );
-    return ws.id;
   }
   return workspaces[0].id;
 }
 
 /**
- * Ensure a user has at least one workspace
+ * Get the default workspace for a user (alias for getDefaultWorkspace)
+ * Throws an error if user has no workspaces (should never happen as workspaces are created during user registration)
  */
 export async function ensureUserHasWorkspace(userId: string): Promise<string> {
-  const workspaces = await getWorkspacesByUserId(userId);
-
-  if (workspaces.length === 0) {
-    const ws = await createWorkspace(
-      userId,
-      'Personal',
-      'Your personal workspace',
-    );
-    return ws.id;
-  }
-
-  // Return the most recently accessed workspace
-  return workspaces[0].id;
+  return getDefaultWorkspace(userId);
 }

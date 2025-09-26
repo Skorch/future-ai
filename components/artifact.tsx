@@ -62,7 +62,7 @@ function PureArtifact({
   selectedVisibilityType,
 }: {
   chatId: string;
-  workspaceId?: string;
+  workspaceId: string;
   input: string;
   setInput: Dispatch<SetStateAction<string>>;
   status: UseChatHelpers<ChatMessage>['status'];
@@ -348,6 +348,7 @@ function PureArtifact({
               <div className="flex flex-col h-full justify-between items-center">
                 <ArtifactMessages
                   chatId={chatId}
+                  workspaceId={workspaceId}
                   status={status}
                   votes={votes}
                   messages={messages}
@@ -360,6 +361,7 @@ function PureArtifact({
                 <div className="flex flex-row gap-2 relative items-end w-full px-4 pb-4">
                   <MultimodalInput
                     chatId={chatId}
+                    workspaceId={workspaceId}
                     input={input}
                     setInput={setInput}
                     status={status}

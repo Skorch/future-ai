@@ -261,7 +261,6 @@ const DocumentContent = ({ document }: { document: Document }) => {
     currentVersionIndex: 0,
     status: artifact.status,
     saveContent: () => {},
-    suggestions: [],
   };
 
   return (
