@@ -89,27 +89,25 @@ export async function createGuestUser() {
   const password = generateHashedPassword(generateUUID());
 
   try {
-    return await db.transaction(async (tx) => {
-      // Create guest user
-      const [guestUser] = await tx
-        .insert(user)
-        .values({ email, password })
-        .returning({
-          id: user.id,
-          email: user.email,
-        });
-
-      // Auto-create Guest workspace with UUID
-      const workspaceId = generateUUID();
-      await tx.insert(workspace).values({
-        id: workspaceId,
-        userId: guestUser.id,
-        name: 'Guest Workspace',
-        description: 'Temporary workspace for guest access',
+    // Create guest user first
+    const [guestUser] = await db
+      .insert(user)
+      .values({ email, password })
+      .returning({
+        id: user.id,
+        email: user.email,
       });
 
-      return guestUser;
+    // Then create workspace - both are awaited so they complete before returning
+    const workspaceId = generateUUID();
+    await db.insert(workspace).values({
+      id: workspaceId,
+      userId: guestUser.id,
+      name: 'Guest Workspace',
+      description: 'Temporary workspace for guest access',
     });
+
+    return guestUser;
   } catch (error) {
     throw new ChatSDKError(
       'bad_request:database',
