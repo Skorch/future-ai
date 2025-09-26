@@ -5,7 +5,7 @@ export default function LoginPage() {
     <div className="flex h-dvh w-full items-center justify-center px-4">
       <SignIn
         fallbackRedirectUrl="/"
-        signUpFallbackRedirectUrl="/"
+        signUpFallbackRedirectUrl="/welcome"
         appearance={{
           elements: {
             rootBox: 'mx-auto',
