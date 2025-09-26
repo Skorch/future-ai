@@ -15,6 +15,20 @@
       "when": 1758836846455,
       "tag": "0001_known_sprite",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1758850976513,
+      "tag": "0002_woozy_monster_badoon",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1758851063414,
+      "tag": "0003_tearful_mysterio",
+      "breakpoints": true
     }
   ]
 }

@@ -26,7 +26,7 @@ export const workspace = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     userId: uuid('userId')
-      .references(() => user.id)
+      .references(() => user.id, { onDelete: 'cascade' })
       .notNull(),
     name: varchar('name', { length: 255 }).notNull(),
     description: text('description'),
@@ -50,9 +50,9 @@ export const chat = pgTable(
     title: text('title').notNull(),
     userId: uuid('userId')
       .notNull()
-      .references(() => user.id),
+      .references(() => user.id, { onDelete: 'cascade' }),
     workspaceId: uuid('workspaceId')
-      .references(() => workspace.id)
+      .references(() => workspace.id, { onDelete: 'cascade' })
       .notNull(), // NEW
     visibility: varchar('visibility', { enum: ['public', 'private'] })
       .notNull()
@@ -88,7 +88,7 @@ export const message = pgTable('Message', {
   id: uuid('id').primaryKey().notNull().defaultRandom(),
   chatId: uuid('chatId')
     .notNull()
-    .references(() => chat.id),
+    .references(() => chat.id, { onDelete: 'cascade' }),
   role: varchar('role').notNull(),
   parts: json('parts').notNull(),
   attachments: json('attachments').notNull(),
@@ -102,10 +102,10 @@ export const vote = pgTable(
   {
     chatId: uuid('chatId')
       .notNull()
-      .references(() => chat.id),
+      .references(() => chat.id, { onDelete: 'cascade' }),
     messageId: uuid('messageId')
       .notNull()
-      .references(() => message.id),
+      .references(() => message.id, { onDelete: 'cascade' }),
     isUpvoted: boolean('isUpvoted').notNull(),
   },
   (table) => {
@@ -128,9 +128,11 @@ export const document = pgTable(
       .notNull()
       .default('text'),
     workspaceId: uuid('workspaceId')
-      .references(() => workspace.id)
+      .references(() => workspace.id, { onDelete: 'cascade' })
       .notNull(), // CHANGED from userId
-    createdByUserId: uuid('createdByUserId').references(() => user.id), // NEW - track creator
+    createdByUserId: uuid('createdByUserId').references(() => user.id, {
+      onDelete: 'set null',
+    }), // NEW - track creator
     // NEW FIELDS for RAG simplification
     metadata: json('metadata')
       .$type<{
@@ -190,7 +192,8 @@ export const stream = pgTable(
     chatRef: foreignKey({
       columns: [table.chatId],
       foreignColumns: [chat.id],
-    }),
+      name: 'Stream_chatId_Chat_id_fk',
+    }).onDelete('cascade'),
   }),
 );
 
