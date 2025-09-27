@@ -16,6 +16,9 @@ export { MEETING_INTELLIGENCE_PROMPT as meetingIntelligencePrompt } from './prom
 import type { RequestHints } from './prompts/system';
 import { composeSystemPrompt } from './prompts/system';
 import { MEETING_INTELLIGENCE_PROMPT } from './prompts/domains/meeting-intelligence';
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('prompts');
 
 export const systemPrompt = ({
   requestHints,
@@ -23,7 +26,7 @@ export const systemPrompt = ({
   selectedChatModel?: string; // Deprecated parameter, ignored
   requestHints: RequestHints;
 }) => {
-  console.warn(
+  logger.warn(
     'DEPRECATED: systemPrompt() is deprecated. Use composeSystemPrompt() instead.',
   );
   return composeSystemPrompt({
@@ -39,7 +42,7 @@ export const updateDocumentPrompt = (
 ) => {
   // Only support text documents now
   if (type !== 'text') {
-    console.warn(
+    logger.warn(
       `Document type '${type}' is no longer supported. Treating as text.`,
     );
   }

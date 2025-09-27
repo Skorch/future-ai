@@ -1,4 +1,7 @@
 {
-  "*.{ts,tsx,js,jsx}": ["biome check --write --unsafe --error-on-warnings"],
+  "*.{ts,tsx,js,jsx}": [
+    "eslint --max-warnings 0",
+    "biome check --write --unsafe --error-on-warnings"
+  ],
   "!(lib/db/migrations/**).{json,css}": ["biome format --write"]
 }
