@@ -8,6 +8,7 @@ import { createReranker } from '../../rag/reranker';
 import { rerankWithLLM, type LLMRerankResult } from '../../rag/llm-reranker';
 import type { QueryResult, QueryMatch, RAGMetadata } from '../../rag/types';
 import type { ChatMessage } from '@/lib/types';
+import { QUERY_RAG_PROMPT } from '@/lib/ai/prompts/tools/query-rag';
 
 // Tool parameter schema - only expose what LLM needs to control
 const queryRAGSchema = z.object({
@@ -239,8 +240,7 @@ export const queryRAG = (props: QueryRAGProps) => {
   );
 
   return tool({
-    description:
-      'Search the RAG system for relevant content using semantic search',
+    description: QUERY_RAG_PROMPT,
     inputSchema: queryRAGSchema,
     execute: async (params) => {
       const startTime = Date.now();

@@ -6,7 +6,7 @@ import { myProvider } from '@/lib/ai/providers';
 import { createDocumentHandler } from '@/lib/artifacts/server';
 import { getDocumentById } from '@/lib/db/queries';
 import { metadata } from './metadata';
-import { ARTIFACT_SYSTEM_PROMPT } from '@/lib/ai/prompts/artifact-system';
+import { MEETING_SUMMARY_GENERATION_PROMPT } from '@/lib/ai/prompts/domains/meeting-summary-generation';
 
 // Type definitions for meeting summary metadata
 interface MeetingSummaryMetadata {
@@ -100,9 +100,9 @@ export const meetingSummaryHandler = createDocumentHandler<'text'>({
       },
     );
 
-    // Compose: Artifact system prompt + Meeting summary specific instructions + Template
+    // Compose: Meeting summary generation prompt + specific instructions + template
     const systemPrompt = [
-      ARTIFACT_SYSTEM_PROMPT,
+      MEETING_SUMMARY_GENERATION_PROMPT,
       '\n## Document Type Specific Instructions\n',
       metadata.prompt,
       '\n## Required Output Format\n',

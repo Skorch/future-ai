@@ -8,7 +8,7 @@ import type { ChatMessage } from '../types';
 import { smoothStream, streamText } from 'ai';
 import { myProvider } from '@/lib/ai/providers';
 import type { ArtifactMetadata } from './types';
-import { ARTIFACT_SYSTEM_PROMPT } from '@/lib/ai/prompts/artifact-system';
+import { DOCUMENT_GENERATION_PROMPT } from '@/lib/ai/prompts/domains/document-generation';
 
 export interface SaveDocumentProps {
   id: string;
@@ -168,9 +168,9 @@ function createEnhancedDocumentHandler<T extends ArtifactKind>(
 ): DocumentHandler<T> {
   // Default prompt composition function
   const defaultComposePrompt = (metadata: ArtifactMetadata): string => {
-    // Compose: Artifact system prompt + Document specific instructions + Template
+    // Compose: Document generation prompt + specific instructions + template
     return [
-      ARTIFACT_SYSTEM_PROMPT,
+      DOCUMENT_GENERATION_PROMPT,
       '\n## Document Type Specific Instructions\n',
       metadata.prompt,
       '\n## Required Output Format\n',
