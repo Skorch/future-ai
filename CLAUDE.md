@@ -301,3 +301,5 @@ Remember: The best code is code that doesn't exist. Every line you write is a li
   dynamic route parameters are now async - parameters must be declared as Promise<>
 - when testing always use pnpm and the testing framework is vitest
 - You can NOT ever bypass pre-commit hooks
+- when adding new node modules, always default to the latest version (not
+  your KNOWLEDGE of what the latest version is)

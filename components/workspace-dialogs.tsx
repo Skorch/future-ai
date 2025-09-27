@@ -254,28 +254,28 @@ export function DeleteWorkspaceDialog({
           <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
           <AlertDialogDescription>
             This action cannot be undone. This will permanently delete the
-            &quot;{workspace.name}&quot; workspace
-            {stats && (
-              <>
-                {' '}
-                including:
-                <ul className="mt-2 list-disc list-inside">
-                  {stats.chatCount > 0 && (
-                    <li>
-                      {stats.chatCount} chat{stats.chatCount !== 1 ? 's' : ''}
-                    </li>
-                  )}
-                  {stats.documentCount > 0 && (
-                    <li>
-                      {stats.documentCount} document
-                      {stats.documentCount !== 1 ? 's' : ''}
-                    </li>
-                  )}
-                </ul>
-              </>
-            )}
+            &quot;{workspace.name}&quot; workspace.
           </AlertDialogDescription>
         </AlertDialogHeader>
+
+        {stats && (stats.chatCount > 0 || stats.documentCount > 0) && (
+          <div className="text-sm text-muted-foreground">
+            This workspace includes:
+            <ul className="mt-2 list-disc list-inside">
+              {stats.chatCount > 0 && (
+                <li>
+                  {stats.chatCount} chat{stats.chatCount !== 1 ? 's' : ''}
+                </li>
+              )}
+              {stats.documentCount > 0 && (
+                <li>
+                  {stats.documentCount} document
+                  {stats.documentCount !== 1 ? 's' : ''}
+                </li>
+              )}
+            </ul>
+          </div>
+        )}
 
         <div className="my-4">
           <Label htmlFor="confirm">

@@ -143,3 +143,24 @@ export async function ensureUserHasWorkspace(userId: string): Promise<string> {
 
   return workspaces[0].id;
 }
+
+/**
+ * Find user's Demo workspace if it exists
+ */
+export async function findUserDemoWorkspace(userId: string) {
+  const demoName = process.env.DEMO_WORKSPACE_NAME || 'Demo';
+
+  const result = await db
+    .select()
+    .from(workspace)
+    .where(
+      and(
+        eq(workspace.userId, userId),
+        eq(workspace.name, demoName),
+        isNull(workspace.deletedAt),
+      ),
+    )
+    .limit(1);
+
+  return result[0] || null;
+}
