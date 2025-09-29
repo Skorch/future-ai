@@ -605,7 +605,7 @@ export async function getAllUserDocuments({
 
     return documents.map((doc) => {
       const metadata = doc.metadata as {
-        documentType?: 'transcript' | 'meeting-summary';
+        documentType?: 'transcript' | 'meeting-memory';
         fileName?: string;
         fileSize?: number;
         uploadedAt?: string;
@@ -620,7 +620,7 @@ export async function getAllUserDocuments({
         humanReadableSize: formatBytes(doc.contentLength),
         documentType:
           metadata?.documentType ||
-          ('document' as 'transcript' | 'meeting-summary' | 'document'),
+          ('document' as 'transcript' | 'meeting-memory' | 'document'),
         sourceDocumentIds: (doc.sourceDocumentIds || []) as string[],
       };
     });
@@ -720,7 +720,7 @@ export async function getDocumentsForUser({
 
     return documents.map((doc) => {
       const metadata = doc.metadata as {
-        documentType?: 'transcript' | 'meeting-summary';
+        documentType?: 'transcript' | 'meeting-memory';
         fileName?: string;
         fileSize?: number;
         uploadedAt?: string;
@@ -733,7 +733,7 @@ export async function getDocumentsForUser({
         ...doc,
         documentType:
           metadata?.documentType ||
-          ('document' as 'transcript' | 'meeting-summary' | 'document'),
+          ('document' as 'transcript' | 'meeting-memory' | 'document'),
         truncated: maxCharsPerDoc
           ? doc.fullContentLength > maxCharsPerDoc
           : false,

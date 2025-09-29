@@ -55,7 +55,7 @@ ${currentContent}
 };
 
 // Specialized prompt for transcript summary generation
-// This is used by artifacts/meeting-summary for document generation
+// This is used by artifacts/meeting-memory for document generation
 export const transcriptSummaryPrompt = `
 Generate a structured meeting summary from this transcript. Follow this EXACT format:
 

@@ -1,12 +1,16 @@
 import { getLogger } from '@/lib/logger';
 
-const logger = getLogger('MeetingSummary');
+const logger = getLogger('MeetingMemory');
 import { smoothStream, streamText } from 'ai';
 import { myProvider } from '@/lib/ai/providers';
-import { createDocumentHandler } from '@/lib/artifacts/server';
-import { getDocumentById } from '@/lib/db/queries';
+import { getDocumentById, saveDocument } from '@/lib/db/queries';
 import { metadata } from './metadata';
 import { MEETING_SUMMARY_GENERATION_PROMPT } from '@/lib/ai/prompts/domains/meeting-summary-generation';
+import type {
+  DocumentHandler,
+  CreateDocumentCallbackProps,
+  UpdateDocumentCallbackProps,
+} from '@/lib/artifacts/server';
 
 // Type definitions for meeting summary metadata
 interface MeetingSummaryMetadata {
@@ -16,15 +20,17 @@ interface MeetingSummaryMetadata {
   participants?: string[];
 }
 
-export const meetingSummaryHandler = createDocumentHandler<'text'>({
+export const meetingSummaryHandler: DocumentHandler<'text'> = {
   kind: 'text',
   metadata,
   onCreateDocument: async ({
+    id,
     title,
     dataStream,
     metadata: docMetadata,
     workspaceId,
-  }) => {
+    session,
+  }: CreateDocumentCallbackProps) => {
     const handlerStartTime = Date.now();
     // Cast metadata to our expected type
     const typedMetadata = docMetadata as MeetingSummaryMetadata | undefined;
@@ -172,9 +178,38 @@ ${transcript}`,
       totalSeconds: (totalDuration / 1000).toFixed(2),
     });
 
-    return draftContent;
+    // Save document directly - explicit and clear
+    if (session?.user?.id) {
+      await saveDocument({
+        id,
+        title,
+        content: draftContent,
+        kind: 'text',
+        userId: session.user.id,
+        workspaceId,
+        metadata: {
+          ...docMetadata,
+          documentType: 'meeting-memory',
+          sourceDocumentIds: typedMetadata?.sourceDocumentIds || [],
+        },
+      });
+
+      logger.debug('[MeetingSummaryHandler] Document saved to database', {
+        id,
+        title,
+        contentLength: draftContent.length,
+      });
+    }
+
+    return; // Tool doesn't need the content returned
   },
-  onUpdateDocument: async ({ document, description, dataStream }) => {
+  onUpdateDocument: async ({
+    document,
+    description,
+    dataStream,
+    session,
+    workspaceId,
+  }: UpdateDocumentCallbackProps) => {
     // Reuse the text handler's update logic for now
     let draftContent = '';
 
@@ -202,6 +237,24 @@ ${transcript}`,
       }
     }
 
-    return draftContent;
+    // Save updated document
+    if (session?.user?.id) {
+      await saveDocument({
+        id: document.id,
+        title: document.title,
+        content: draftContent,
+        kind: 'text',
+        userId: session.user.id,
+        workspaceId,
+      });
+
+      logger.debug('[MeetingSummaryHandler] Updated document saved', {
+        id: document.id,
+        title: document.title,
+        contentLength: draftContent.length,
+      });
+    }
+
+    return;
   },
-});
+};

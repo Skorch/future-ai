@@ -21,7 +21,7 @@ import { ArtifactCloseButton } from './artifact-close-button';
 import { ArtifactMessages } from './artifact-messages';
 import { useSidebar } from './ui/sidebar';
 import { useArtifact } from '@/hooks/use-artifact';
-import { textArtifact } from '@/artifacts/text/client';
+import { textArtifact } from '@/lib/artifacts/document-types/text/client';
 import equal from 'fast-deep-equal';
 
 const logger = getLogger('Artifact');
@@ -29,8 +29,13 @@ import type { UseChatHelpers } from '@ai-sdk/react';
 import type { VisibilityType } from './visibility-selector';
 import type { Attachment, ChatMessage } from '@/lib/types';
 
-export const artifactDefinitions = [textArtifact];
-export type ArtifactKind = (typeof artifactDefinitions)[number]['kind'];
+// Client artifact registry - maps to UI components
+const clientArtifactRegistry = {
+  text: textArtifact,
+} as const;
+
+export const artifactDefinitions = Object.values(clientArtifactRegistry);
+export type ArtifactKind = keyof typeof clientArtifactRegistry;
 
 export interface UIArtifact {
   title: string;
@@ -271,12 +276,13 @@ function PureArtifact({
   const { width: windowWidth, height: windowHeight } = useWindowSize();
   const isMobile = windowWidth ? windowWidth < 768 : false;
 
-  const artifactDefinition = artifactDefinitions.find(
-    (definition) => definition.kind === artifact.kind,
-  );
+  const artifactDefinition =
+    clientArtifactRegistry[
+      artifact.kind as keyof typeof clientArtifactRegistry
+    ];
 
   if (!artifactDefinition) {
-    throw new Error('Artifact definition not found!');
+    throw new Error(`Artifact definition not found for kind: ${artifact.kind}`);
   }
 
   useEffect(() => {

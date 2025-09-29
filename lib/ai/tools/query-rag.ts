@@ -9,16 +9,27 @@ import { rerankWithLLM, type LLMRerankResult } from '../../rag/llm-reranker';
 import type { QueryResult, QueryMatch, RAGMetadata } from '../../rag/types';
 import type { ChatMessage } from '@/lib/types';
 import { QUERY_RAG_PROMPT } from '@/lib/ai/prompts/tools/query-rag';
+import { documentTypes } from '@/lib/artifacts';
+
+// Build dynamic content types: registry types + special metadata filters
+// Note: 'transcript' and 'document' are metadata filters, not registry types
+const contentTypesArray: string[] = [
+  ...documentTypes,
+  'transcript',
+  'document',
+  'all',
+];
+const contentTypes = contentTypesArray as [string, ...string[]];
 
 // Tool parameter schema - only expose what LLM needs to control
 const queryRAGSchema = z.object({
   query: z.string().describe('Search query to find relevant content'),
   contentType: z
-    .enum(['transcript', 'meeting-summary', 'document', 'all'])
+    .enum(contentTypes)
     .optional()
     .default('all')
     .describe(
-      'Filter results by content type (transcript for raw transcripts, meeting-summary for AI-generated summaries, document for other text)',
+      `Filter results by content type. Available types: ${contentTypes.join(', ')}. (transcript for raw transcripts, meeting-memory for AI-generated summaries, document for other text)`,
     ),
   filter: z
     .object({

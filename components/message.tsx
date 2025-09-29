@@ -106,7 +106,7 @@ const getDocumentType = (
   const docTypeStr = String(docType);
   const typeMap: Record<string, string> = {
     transcript: 'Transcript',
-    'meeting-summary': 'Meeting Summary',
+    'meeting-memory': 'Meeting Summary',
     document: 'Document',
     artifact: 'Artifact',
   };
@@ -693,7 +693,7 @@ const PurePreviewMessage = ({
                       <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
                         <div className="flex items-center gap-2 mb-3">
                           <svg
-                            className="w-5 h-5 text-blue-600 dark:text-blue-400"
+                            className="size-5 text-blue-600 dark:text-blue-400"
                             fill="none"
                             strokeLinecap="round"
                             strokeLinejoin="round"
@@ -783,7 +783,7 @@ const PurePreviewMessage = ({
                                   >
                                     {i === 0 && (
                                       <svg
-                                        className="w-3.5 h-3.5 text-yellow-500"
+                                        className="size-3.5 text-yellow-500"
                                         fill="currentColor"
                                         viewBox="0 0 20 20"
                                       >

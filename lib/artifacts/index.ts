@@ -1,19 +1,36 @@
 import type { ArtifactDefinition } from './types';
 
-// Artifact registry - single source of truth for all artifacts
+// Artifact registry - single source of truth for all document types
 export const artifactRegistry = {
-  'meeting-summary': () => import('@/artifacts/meeting-summary'),
-  // Add new artifacts here:
-  // 'meeting-agenda': () => import('@/artifacts/meeting-agenda'),
-  // 'product-requirements': () => import('@/artifacts/product-requirements'),
+  text: () => import('./document-types/text'),
+  'meeting-memory': () => import('./document-types/meeting-memory'),
 } as const;
 
-export type ArtifactType = keyof typeof artifactRegistry;
+// TypeScript type derived from registry keys
+export type DocumentType = keyof typeof artifactRegistry;
 
-// Helper to load all artifact definitions (for system prompt generation)
-export async function loadAllArtifactDefinitions(): Promise<
-  ArtifactDefinition[]
-> {
+// Array of keys for Zod enum schemas
+export const documentTypes = Object.keys(
+  artifactRegistry,
+) as Array<DocumentType>;
+
+// Helper to get specific type definition
+export async function getDocumentTypeDefinition(
+  type: DocumentType,
+): Promise<ArtifactDefinition> {
+  const loader = artifactRegistry[type];
+  if (!loader) {
+    throw new Error(`Unknown document type: ${type}`);
+  }
+  const artifactModule = await loader();
+  return {
+    metadata: artifactModule.metadata,
+    handler: artifactModule.handler,
+  };
+}
+
+// Load all definitions (for prompts, UI, etc.)
+export async function getAllDocumentTypes(): Promise<ArtifactDefinition[]> {
   const definitions = await Promise.all(
     Object.values(artifactRegistry).map(async (loader) => {
       const artifactModule = await loader();
@@ -26,17 +43,7 @@ export async function loadAllArtifactDefinitions(): Promise<
   return definitions;
 }
 
-// Helper to get a specific artifact
-export async function getArtifact(
-  type: ArtifactType,
-): Promise<ArtifactDefinition> {
-  const loader = artifactRegistry[type];
-  if (!loader) {
-    throw new Error(`Unknown artifact type: ${type}`);
-  }
-  const artifactModule = await loader();
-  return {
-    metadata: artifactModule.metadata,
-    handler: artifactModule.handler,
-  };
-}
+// Legacy aliases for backward compatibility
+export type ArtifactType = DocumentType;
+export const loadAllArtifactDefinitions = getAllDocumentTypes;
+export const getArtifact = getDocumentTypeDefinition;

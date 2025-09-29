@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import {
   Collapsible,
@@ -86,11 +86,18 @@ export function LLMRAGQueryResult({ output, isStreaming }: LLMRAGQueryResult) {
   const result = output.result || output;
   const matches = result.matches || [];
   // DETERMINISTIC: Check metadata first, then fallback to direct fields
-  const topicGroups =
-    result.metadata?.topicGroups ||
-    result.topicGroups ||
-    output.metadata?.topicGroups ||
-    [];
+  const topicGroups = useMemo(
+    () =>
+      result.metadata?.topicGroups ||
+      result.topicGroups ||
+      output.metadata?.topicGroups ||
+      [],
+    [
+      result.metadata?.topicGroups,
+      result.topicGroups,
+      output.metadata?.topicGroups,
+    ],
+  );
   const rerankMethod =
     result.metadata?.rerankMethod ||
     result.rerankMethod ||
@@ -182,7 +189,7 @@ export function LLMRAGQueryResult({ output, isStreaming }: LLMRAGQueryResult) {
     const typeStr = String(type || 'document');
     const typeMap: Record<string, string> = {
       transcript: 'Transcript',
-      'meeting-summary': 'Meeting Summary',
+      'meeting-memory': 'Meeting Summary',
       document: 'Document',
       artifact: 'Artifact',
     };
@@ -228,7 +235,7 @@ export function LLMRAGQueryResult({ output, isStreaming }: LLMRAGQueryResult) {
               </Badge>
               {match.merged && match.merged.length > 0 && (
                 <Badge variant="outline" className="text-xs">
-                  <Layers className="h-3 w-3 mr-1" />
+                  <Layers className="size-3 mr-1" />
                   Merged {match.merged.length} chunks
                 </Badge>
               )}
@@ -238,7 +245,7 @@ export function LLMRAGQueryResult({ output, isStreaming }: LLMRAGQueryResult) {
             <div className="flex flex-wrap gap-1.5">
               {metadata.meetingDate ? (
                 <Badge variant="outline" className="text-xs">
-                  <Calendar className="h-3 w-3 mr-1" />
+                  <Calendar className="size-3 mr-1" />
                   {new Date(String(metadata.meetingDate)).toLocaleDateString()}
                 </Badge>
               ) : null}
@@ -247,28 +254,28 @@ export function LLMRAGQueryResult({ output, isStreaming }: LLMRAGQueryResult) {
               Array.isArray(metadata.speakers) &&
               metadata.speakers.length > 0 ? (
                 <Badge variant="outline" className="text-xs">
-                  <User className="h-3 w-3 mr-1" />
+                  <User className="size-3 mr-1" />
                   {(metadata.speakers as string[]).join(', ')}
                 </Badge>
               ) : null}
 
               {metadata.sectionTitle ? (
                 <Badge variant="outline" className="text-xs">
-                  <FileText className="h-3 w-3 mr-1" />
+                  <FileText className="size-3 mr-1" />
                   {String(metadata.sectionTitle)}
                 </Badge>
               ) : null}
 
               {metadata.topic ? (
                 <Badge variant="outline" className="text-xs">
-                  <Folder className="h-3 w-3 mr-1" />
+                  <Folder className="size-3 mr-1" />
                   Topic: {String(metadata.topic)}
                 </Badge>
               ) : null}
 
               {metadata.chunkIndex !== undefined && metadata.totalChunks ? (
                 <Badge variant="outline" className="text-xs">
-                  <Hash className="h-3 w-3 mr-1" />
+                  <Hash className="size-3 mr-1" />
                   Chunk {String(metadata.chunkIndex)}/
                   {String(metadata.totalChunks)}
                 </Badge>
@@ -318,13 +325,13 @@ export function LLMRAGQueryResult({ output, isStreaming }: LLMRAGQueryResult) {
           <div className="flex gap-3 mt-3 pt-3 border-t text-xs text-muted-foreground">
             {metadata.filePath ? (
               <span className="flex items-center gap-1">
-                <Folder className="h-3 w-3" />
+                <Folder className="size-3" />
                 {String(metadata.filePath)}
               </span>
             ) : null}
             {metadata.artifactId ? (
               <span className="flex items-center gap-1">
-                <Link2 className="h-3 w-3" />
+                <Link2 className="size-3" />
                 {String(metadata.artifactId)}
               </span>
             ) : null}
@@ -344,7 +351,7 @@ export function LLMRAGQueryResult({ output, isStreaming }: LLMRAGQueryResult) {
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-accent/50 transition-colors rounded-t-lg">
         <div className="flex items-center gap-2">
-          <Search className="h-4 w-4 text-muted-foreground" />
+          <Search className="size-4 text-muted-foreground" />
           <span className="text-sm">
             {isStreaming
               ? 'Searching knowledge...'
@@ -369,9 +376,9 @@ export function LLMRAGQueryResult({ output, isStreaming }: LLMRAGQueryResult) {
           )}
         </div>
         {isOpen ? (
-          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+          <ChevronDown className="size-4 text-muted-foreground" />
         ) : (
-          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          <ChevronRight className="size-4 text-muted-foreground" />
         )}
       </CollapsibleTrigger>
 
@@ -399,9 +406,9 @@ export function LLMRAGQueryResult({ output, isStreaming }: LLMRAGQueryResult) {
                         className="flex items-center gap-2 text-sm font-semibold hover:text-primary transition-colors w-full text-left"
                       >
                         {expandedTopics.has(group.id) ? (
-                          <ChevronDown className="h-4 w-4" />
+                          <ChevronDown className="size-4" />
                         ) : (
-                          <ChevronRight className="h-4 w-4" />
+                          <ChevronRight className="size-4" />
                         )}
                         <span>📚 {group.topic}</span>
                         <Badge variant="outline" className="text-xs ml-2">

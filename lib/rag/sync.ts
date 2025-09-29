@@ -277,10 +277,7 @@ async function chunkDocument(
         metadata: chunkMetadata,
       });
     });
-  } else if (
-    documentType === 'meeting-summary' ||
-    documentType === 'document'
-  ) {
+  } else if (documentType === 'meeting-memory' || documentType === 'document') {
     // Simple section-based chunking for summaries and generic documents
     const sections = parseDocument(content);
     logger.debug(`Parsed ${sections.length} sections from document`);
@@ -290,7 +287,7 @@ async function chunkDocument(
         // Core identifiers (always present)
         documentId,
         documentType:
-          documentType === 'meeting-summary' ? 'meeting-summary' : 'document',
+          documentType === 'meeting-memory' ? 'meeting-memory' : 'document',
         userId: metadata.userId as string,
 
         // Document info (always present)

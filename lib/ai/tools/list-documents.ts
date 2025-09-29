@@ -36,7 +36,7 @@ DECISION FLOW FOR COMMON QUERIES:
    → list-documents → load that specific document fully
 
 DOCUMENT TYPES & LOADING STRATEGY:
-- 'meeting-summary': AI-generated, concise (~2-5k tokens) - ALWAYS safe to load multiple
+- 'meeting-memory': AI-generated, concise (~2-5k tokens) - ALWAYS safe to load multiple
 - 'transcript': Raw meeting audio/video (~10-50k tokens) - Load selectively or partially
 - 'document': Other text files - Check size before loading
 
@@ -67,7 +67,7 @@ than RAG search, which might miss important topics.`,
         total: documents.length,
         transcripts: documents.filter((d) => d.documentType === 'transcript')
           .length,
-        summaries: documents.filter((d) => d.documentType === 'meeting-summary')
+        summaries: documents.filter((d) => d.documentType === 'meeting-memory')
           .length,
         totalSizeBytes: documents.reduce((sum, d) => sum + d.contentLength, 0),
         totalEstimatedTokens: documents.reduce(

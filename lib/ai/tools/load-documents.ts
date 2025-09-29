@@ -86,7 +86,7 @@ The tool returns an array of loaded documents with their content and metadata.`,
 
       // Group by document type for summary
       const summaryCount = documents.filter(
-        (d) => d.documentType === 'meeting-summary',
+        (d) => d.documentType === 'meeting-memory',
       ).length;
       const transcriptCount = documents.filter(
         (d) => d.documentType === 'transcript',

@@ -1,7 +1,7 @@
 import { tool, type UIMessageStreamWriter } from 'ai';
 import { z } from 'zod';
 import { getDocumentById } from '@/lib/db/queries';
-import { documentHandlersByArtifactKind } from '@/lib/artifacts/server';
+import { getDocumentTypeDefinition, type DocumentType } from '@/lib/artifacts';
 import type { ChatMessage } from '@/lib/types';
 
 interface UpdateDocumentProps {
@@ -38,16 +38,22 @@ export const updateDocument = ({
         transient: true,
       });
 
-      const documentHandler = documentHandlersByArtifactKind.find(
-        (documentHandlerByArtifactKind) =>
-          documentHandlerByArtifactKind.kind === document.kind,
-      );
+      // Load handler from registry based on document's actual type
+      // Extract documentType from metadata, fallback to kind, then to 'text'
+      const documentType = (document.metadata?.documentType ||
+        document.kind ||
+        'text') as DocumentType;
+      const documentDef = await getDocumentTypeDefinition(documentType);
 
-      if (!documentHandler) {
-        throw new Error(`No document handler found for kind: ${document.kind}`);
+      if (!documentDef?.handler) {
+        return {
+          success: false,
+          error: `Unknown document type: ${documentType}`,
+          message: `Unable to update document - type "${documentType}" is not supported`,
+        };
       }
 
-      await documentHandler.onUpdateDocument({
+      await documentDef.handler.onUpdateDocument({
         document,
         description,
         dataStream,

@@ -2,10 +2,10 @@ import type { ArtifactMetadata } from '@/lib/artifacts/types';
 import { MEETING_SUMMARY_PROMPT, MEETING_SUMMARY_TEMPLATE } from './prompts';
 
 export const metadata: ArtifactMetadata = {
-  type: 'meeting-summary',
-  name: 'Meeting Summary',
+  type: 'meeting-memory',
+  name: 'Meeting Memory',
   description:
-    'Structured summary of meeting transcripts with action items and key decisions',
+    'Internal team knowledge base from meetings with action items and key decisions',
   clientKind: 'text',
 
   // Prompt and template content

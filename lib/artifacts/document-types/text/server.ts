@@ -1,11 +1,23 @@
 import { smoothStream, streamText } from 'ai';
 import { myProvider } from '@/lib/ai/providers';
-import { createDocumentHandler } from '@/lib/artifacts/server';
+import { saveDocument } from '@/lib/db/queries';
 import { updateDocumentPrompt } from '@/lib/ai/prompts';
+import type {
+  DocumentHandler,
+  CreateDocumentCallbackProps,
+  UpdateDocumentCallbackProps,
+} from '@/lib/artifacts/server';
 
-export const textDocumentHandler = createDocumentHandler<'text'>({
+export const textDocumentHandler: DocumentHandler<'text'> = {
   kind: 'text',
-  onCreateDocument: async ({ title, dataStream, metadata }) => {
+  onCreateDocument: async ({
+    id,
+    title,
+    dataStream,
+    metadata,
+    session,
+    workspaceId,
+  }: CreateDocumentCallbackProps) => {
     let draftContent = '';
 
     const { fullStream } = streamText({
@@ -32,9 +44,31 @@ export const textDocumentHandler = createDocumentHandler<'text'>({
       }
     }
 
-    return draftContent;
+    // Save document directly
+    if (session?.user?.id) {
+      await saveDocument({
+        id,
+        title,
+        content: draftContent,
+        kind: 'text',
+        userId: session.user.id,
+        workspaceId,
+        metadata: {
+          ...metadata,
+          documentType: metadata?.documentType || 'text',
+        },
+      });
+    }
+
+    return;
   },
-  onUpdateDocument: async ({ document, description, dataStream }) => {
+  onUpdateDocument: async ({
+    document,
+    description,
+    dataStream,
+    session,
+    workspaceId,
+  }: UpdateDocumentCallbackProps) => {
     let draftContent = '';
 
     const { fullStream } = streamText({
@@ -68,6 +102,18 @@ export const textDocumentHandler = createDocumentHandler<'text'>({
       }
     }
 
-    return draftContent;
+    // Save updated document
+    if (session?.user?.id) {
+      await saveDocument({
+        id: document.id,
+        title: document.title,
+        content: draftContent,
+        kind: 'text',
+        userId: session.user.id,
+        workspaceId,
+      });
+    }
+
+    return;
   },
-});
+};

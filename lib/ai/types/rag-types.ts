@@ -37,7 +37,7 @@ export interface RAGDocument {
 export interface RAGMetadata {
   // Core identifiers (always present)
   documentId: string;
-  documentType: 'transcript' | 'meeting-summary' | 'document' | string;
+  documentType: 'transcript' | 'meeting-memory' | 'document' | string;
   userId: string;
 
   // Document info (always present)

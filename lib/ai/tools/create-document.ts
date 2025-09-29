@@ -1,13 +1,14 @@
 import { generateUUID } from '@/lib/utils';
 import { tool, type UIMessageStreamWriter } from 'ai';
 import { z } from 'zod';
-import {
-  artifactKinds,
-  documentHandlersByArtifactKind,
-} from '@/lib/artifacts/server';
+import { artifactKinds } from '@/lib/artifacts/server';
 import type { ChatMessage } from '@/lib/types';
-import { getDocumentById } from '@/lib/db/queries';
-import { loadAllArtifactDefinitions } from '@/lib/artifacts';
+import {
+  loadAllArtifactDefinitions,
+  getDocumentTypeDefinition,
+  documentTypes,
+  type DocumentType,
+} from '@/lib/artifacts';
 import { getLogger } from '@/lib/logger';
 
 const logger = getLogger('CreateDocument');
@@ -19,23 +20,22 @@ interface CreateDocumentProps {
 }
 
 const createDocumentSchema = z.object({
-  title: z.string().describe('Title for the meeting summary document'),
+  title: z.string().describe('Title for the document'),
   kind: z.enum(artifactKinds).default('text'),
   documentType: z
-    .literal('meeting-summary') // ONLY summaries allowed, no transcripts
-    .default('meeting-summary')
-    .describe('Document type - only meeting-summary is allowed'),
+    .enum(documentTypes as [DocumentType, ...DocumentType[]])
+    .default('text')
+    .describe(`Document type. Available types: ${documentTypes.join(', ')}`),
   sourceDocumentIds: z
     .array(z.string().uuid())
-    .min(1, 'At least one source document ID is required for summaries')
-    .describe('Array of transcript document IDs to summarize from (required)'),
-  metadata: z
-    .object({
-      meetingDate: z.string().optional(),
-      participants: z.array(z.string()).optional(),
-    })
     .optional()
-    .describe('Optional metadata like meeting date and participants'),
+    .describe(
+      'Array of source document IDs (required for some types like meeting-memory)',
+    ),
+  metadata: z
+    .record(z.unknown())
+    .optional()
+    .describe('Additional metadata specific to the document type'),
 });
 
 // Build dynamic tool description from registry
@@ -64,10 +64,9 @@ export const createDocument = ({
   workspaceId,
 }: CreateDocumentProps) =>
   tool({
-    description: `Create a meeting summary document from uploaded transcript documents.
-IMPORTANT: This tool ONLY creates summaries, not transcripts. Transcripts are created via file upload.
-When you see TRANSCRIPT_DOCUMENT markers in the chat, use those document IDs in the sourceDocumentIds parameter.
-The sourceDocumentIds parameter is REQUIRED - you must provide at least one transcript document ID.`,
+    description: `Create documents of various types. Available types: ${documentTypes.join(', ')}.
+Each document type may have specific requirements - for example, meeting-memory requires sourceDocumentIds.
+The tool will guide you if required parameters are missing for the selected type.`,
     inputSchema: createDocumentSchema,
     execute: async ({
       title,
@@ -119,103 +118,42 @@ The sourceDocumentIds parameter is REQUIRED - you must provide at least one tran
 
         isStreamInitialized = true;
 
-        // Use document handlers for all document types
-        if (documentType === 'meeting-summary') {
-          logger.debug('Using meeting-summary handler');
+        // Pure dispatcher - lookup handler from registry
+        logger.debug(`Looking up handler for documentType: ${documentType}`);
 
-          // Fetch transcript content from source documents
-          logger.debug(
-            'Fetching transcript content from documents:',
-            sourceDocumentIds,
-          );
+        const documentDef = await getDocumentTypeDefinition(
+          documentType || 'text',
+        );
 
-          // Validate source documents exist
-          let transcriptDocuments: Awaited<
-            ReturnType<typeof getDocumentById>
-          >[];
-          try {
-            transcriptDocuments = await Promise.all(
-              sourceDocumentIds.map((docId) =>
-                getDocumentById({ id: docId, workspaceId }),
-              ),
-            );
-
-            // Check if any documents are missing
-            const missingDocs = transcriptDocuments
-              .map((doc, idx) => (!doc ? sourceDocumentIds[idx] : null))
-              .filter(Boolean);
-
-            if (missingDocs.length > 0) {
-              throw new Error(
-                `Source documents not found: ${missingDocs.join(', ')}`,
-              );
-            }
-          } catch (error) {
-            logger.error('Error fetching source documents:', error);
-            throw new Error(
-              `Failed to fetch source documents: ${error instanceof Error ? error.message : 'Unknown error'}`,
-            );
-          }
-
-          // Import the meeting summary handler directly
-          const { meetingSummaryHandler } = await import(
-            '@/artifacts/meeting-summary/server'
-          );
-
-          const handlerStartTime = Date.now();
-          logger.debug('Starting meeting summary handler', {
-            elapsedBeforeHandler: Date.now() - startTime,
-            handlerStartTime: new Date(handlerStartTime).toISOString(),
-          });
-
-          // The handler will fetch transcripts from sourceDocumentIds itself
-          // We don't need to pass transcript content at all
-          await meetingSummaryHandler.onCreateDocument({
-            id,
-            title,
-            dataStream,
-            session,
-            workspaceId,
-            metadata: {
-              sourceDocumentIds: sourceDocumentIds || [],
-              meetingDate: metadata?.meetingDate,
-              participants: metadata?.participants,
-            },
-          });
-          const handlerDuration = Date.now() - handlerStartTime;
-        } else {
-          logger.debug(`Using ${kind} document handler`);
-          // Use the existing document handler system for other types
-          const documentHandler = documentHandlersByArtifactKind.find(
-            (documentHandlerByArtifactKind) =>
-              documentHandlerByArtifactKind.kind === kind,
-          );
-
-          if (!documentHandler) {
-            throw new Error(`No document handler found for kind: ${kind}`);
-          }
-
-          await documentHandler.onCreateDocument({
-            id,
-            title,
-            dataStream,
-            session,
-            workspaceId,
-          });
+        if (!documentDef?.handler) {
+          throw new Error(`Unknown document type: ${documentType}`);
         }
+
+        // Pass all parameters to handler via metadata
+        // Handlers are responsible for their own validation
+        await documentDef.handler.onCreateDocument({
+          id,
+          title,
+          dataStream,
+          session,
+          workspaceId,
+          metadata: {
+            ...metadata,
+            sourceDocumentIds, // Pass through - handler validates if needed
+          },
+        });
 
         dataStream.write({ type: 'data-finish', data: null, transient: true });
         logger.debug('Sent data-finish signal');
 
         // Return a clear message that prompts the AI to respond
-        const responseMessage = `I've created a meeting summary titled "${title}". The summary is now displayed above.`;
+        const responseMessage = `I've created a ${documentType || 'text'} document titled "${title}". The document is now displayed above.`;
 
         const returnValue = {
           id,
           title,
           kind,
-          documentType: 'meeting-summary',
-          sourceDocumentIds: sourceDocumentIds || [],
+          documentType: documentType || 'text',
           message: responseMessage,
           success: true,
         };
@@ -295,14 +233,9 @@ The sourceDocumentIds parameter is REQUIRED - you must provide at least one tran
 
         // Return error response that the AI can understand and relay to the user
         return {
-          id,
-          title,
-          kind,
-          documentType: documentType || 'meeting-summary',
-          sourceDocumentIds: sourceDocumentIds || [],
           success: false,
           error: errorMessage,
-          errorDetails,
+          documentType: documentType,
           message: `I encountered an error while creating the document "${title}". ${errorMessage}. ${errorDetails ? `Details: ${errorDetails}` : ''}`,
         };
       }
