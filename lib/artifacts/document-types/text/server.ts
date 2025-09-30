@@ -1,9 +1,12 @@
-import { smoothStream, streamText } from 'ai';
 import { myProvider } from '@/lib/ai/providers';
-import { saveDocument } from '@/lib/db/queries';
 import { updateDocumentPrompt } from '@/lib/ai/prompts';
 import { metadata as artifactMetadata } from './metadata';
 import { OutputSize } from '@/lib/artifacts/types';
+import {
+  processStream,
+  saveGeneratedDocument,
+  buildStreamConfig,
+} from '../base-handler';
 import type {
   DocumentHandler,
   CreateDocumentCallbackProps,
@@ -20,48 +23,30 @@ export const textDocumentHandler: DocumentHandler<'text'> = {
     session,
     workspaceId,
   }: CreateDocumentCallbackProps) => {
-    let draftContent = '';
-
-    const { fullStream } = streamText({
+    // Build configuration for this document type
+    const streamConfig = buildStreamConfig({
       model: myProvider.languageModel('artifact-model'),
       system:
         'Write about the given topic. Markdown is supported. Use headings wherever appropriate.',
-      maxOutputTokens: artifactMetadata.outputSize ?? OutputSize.LARGE, // Use configured size or default to LARGE
-      experimental_transform: smoothStream({ chunking: 'word' }),
       prompt: title,
+      maxOutputTokens: artifactMetadata.outputSize ?? OutputSize.LARGE,
     });
 
-    for await (const delta of fullStream) {
-      const { type } = delta;
+    // Process the stream and collect content
+    const content = await processStream(streamConfig, dataStream);
 
-      if (type === 'text-delta') {
-        const { text } = delta;
-
-        draftContent += text;
-
-        dataStream.write({
-          type: 'data-textDelta',
-          data: text,
-          transient: true,
-        });
-      }
-    }
-
-    // Save document directly
-    if (session?.user?.id) {
-      await saveDocument({
-        id,
-        title,
-        content: draftContent,
-        kind: 'text',
-        userId: session.user.id,
-        workspaceId,
-        metadata: {
-          ...metadata,
-          documentType: metadata?.documentType || 'text',
-        },
-      });
-    }
+    // Save the generated document
+    await saveGeneratedDocument(content, {
+      id,
+      title,
+      kind: 'text',
+      session,
+      workspaceId,
+      metadata: {
+        ...(metadata || {}),
+        documentType: (metadata?.documentType as string | undefined) || 'text',
+      },
+    });
 
     return;
   },
@@ -72,51 +57,26 @@ export const textDocumentHandler: DocumentHandler<'text'> = {
     session,
     workspaceId,
   }: UpdateDocumentCallbackProps) => {
-    let draftContent = '';
-
-    const { fullStream } = streamText({
+    // Build configuration with prediction for updates
+    const streamConfig = buildStreamConfig({
       model: myProvider.languageModel('artifact-model'),
       system: updateDocumentPrompt(document.content, 'text'),
-      maxOutputTokens: artifactMetadata.outputSize ?? OutputSize.LARGE, // Use configured size or default to LARGE
-      experimental_transform: smoothStream({ chunking: 'word' }),
       prompt: description,
-      providerOptions: {
-        openai: {
-          prediction: {
-            type: 'content',
-            content: document.content,
-          },
-        },
-      },
+      maxOutputTokens: artifactMetadata.outputSize ?? OutputSize.LARGE,
+      prediction: document.content || undefined,
     });
 
-    for await (const delta of fullStream) {
-      const { type } = delta;
+    // Process the stream and collect content
+    const content = await processStream(streamConfig, dataStream);
 
-      if (type === 'text-delta') {
-        const { text } = delta;
-
-        draftContent += text;
-
-        dataStream.write({
-          type: 'data-textDelta',
-          data: text,
-          transient: true,
-        });
-      }
-    }
-
-    // Save updated document
-    if (session?.user?.id) {
-      await saveDocument({
-        id: document.id,
-        title: document.title,
-        content: draftContent,
-        kind: 'text',
-        userId: session.user.id,
-        workspaceId,
-      });
-    }
+    // Save the updated document
+    await saveGeneratedDocument(content, {
+      id: document.id,
+      title: document.title,
+      kind: 'text',
+      session,
+      workspaceId,
+    });
 
     return;
   },
