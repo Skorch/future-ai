@@ -43,7 +43,7 @@ function PureSuggestedActions({
   selectedVisibilityType,
 }: SuggestedActionsProps) {
   const suggestedActions = [
-    'Explain to me your capabilities and how to use this.',
+    'Explain to me your capabilities, available document types, and how to use this.',
     'What documents are available?',
   ];
 
