@@ -17,7 +17,9 @@ export const messageMetadataSchema = z.object({
 export type MessageMetadata = z.infer<typeof messageMetadataSchema>;
 
 type weatherTool = InferUITool<typeof getWeather>;
-type createDocumentTool = InferUITool<ReturnType<typeof createDocument>>;
+type createDocumentTool = InferUITool<
+  Awaited<ReturnType<typeof createDocument>>
+>;
 type updateDocumentTool = InferUITool<ReturnType<typeof updateDocument>>;
 type setModeTool = InferUITool<ReturnType<typeof setMode>>;
 type askUserTool = InferUITool<ReturnType<typeof askUser>>;

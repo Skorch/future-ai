@@ -1,4 +1,6 @@
 import type { Geo } from '@vercel/functions';
+import { getAllDocumentTypes } from '@/lib/artifacts';
+import type { ArtifactDefinition } from '@/lib/artifacts/types';
 
 export interface RequestHints {
   latitude: Geo['latitude'];
@@ -73,16 +75,72 @@ About the origin of user's request:
 - country: ${requestHints.country}
 `;
 
-// Main system prompt composer
-export function composeSystemPrompt({
+// Cache capabilities to avoid multiple generations
+// Note: This is module-level cache, cleared on server restart
+// If document types are added dynamically, consider request-scoped caching
+let capabilityCache: string | null = null;
+
+// Generate system capabilities from registry
+async function generateSystemCapabilities(): Promise<string> {
+  // Return cached if available
+  if (capabilityCache) return capabilityCache;
+
+  try {
+    const docTypes = await getAllDocumentTypes();
+
+    capabilityCache = `
+## My Core Capabilities
+
+### Document Creation
+I can help you create these types of business documents:
+
+${docTypes
+  .map((dt: ArtifactDefinition) => {
+    const metadata = dt.metadata;
+    const required = metadata.requiredParams?.includes('sourceDocumentIds')
+      ? '📎 Requires transcript/source documents'
+      : '✏️ Can create from scratch';
+
+    return `**${metadata.name}**
+  ${metadata.description}
+  ${required}
+  Use when: ${metadata.agentGuidance.when}
+  Keywords: ${metadata.agentGuidance.triggers.slice(0, 3).join(', ')}`;
+  })
+  .join('\n\n')}
+
+### How I Work
+- **Discovery Mode**: I investigate your needs, search existing knowledge, and guide you to the right solution
+- **Build Mode**: I create documents and deliverables based on discovered requirements
+
+To get started, you can:
+- Ask "What can you do?" to see my capabilities
+- Upload a transcript for automatic processing
+- Describe the document you need
+- Ask me to search for existing information`;
+
+    return capabilityCache;
+  } catch (error) {
+    // Log error silently and return empty string - don't break the prompt
+    // Consider using a proper logger here if available
+    return '';
+  }
+}
+
+// Main system prompt composer - NOW ASYNC
+export async function composeSystemPrompt({
   requestHints,
   domainPrompts = [],
 }: {
   requestHints: RequestHints;
   domainPrompts?: string[];
-}): string {
+}): Promise<string> {
+  // Generate capabilities at system level
+  const capabilities = await generateSystemCapabilities();
+
   const components = [
     SYSTEM_PROMPT_BASE,
+    capabilities, // System-level capability injection
     getRequestPromptFromHints(requestHints),
     ...domainPrompts,
   ].filter(Boolean);

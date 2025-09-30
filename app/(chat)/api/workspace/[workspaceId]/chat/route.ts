@@ -234,7 +234,7 @@ export async function POST(
     const processedMessages = await processMessageFiles(uiMessages);
 
     // Calculate token usage BEFORE creating the stream
-    const systemPromptText = composeSystemPrompt({
+    const systemPromptText = await composeSystemPrompt({
       requestHints,
       domainPrompts: [MEETING_INTELLIGENCE_PROMPT],
     });
@@ -436,7 +436,7 @@ export async function POST(
 
                     // Existing tools
                     getWeather,
-                    createDocument: createDocument({
+                    createDocument: await createDocument({
                       session,
                       dataStream,
                       workspaceId,

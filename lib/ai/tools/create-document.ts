@@ -38,35 +38,54 @@ const createDocumentSchema = z.object({
     .describe('Additional metadata specific to the document type'),
 });
 
+// Cache for tool description to avoid regenerating
+// Note: Module-level cache, cleared on server restart
+let toolDescriptionCache: string | null = null;
+
 // Build dynamic tool description from registry
 async function buildToolDescription(): Promise<string> {
+  // Return cached if available
+  if (toolDescriptionCache) return toolDescriptionCache;
+
   try {
     const definitions = await loadAllArtifactDefinitions();
     const descriptions = definitions
-      .map((d) => `- ${d.metadata.type}: ${d.metadata.description}`)
+      .map((d) => {
+        const required = d.metadata.requiredParams?.includes(
+          'sourceDocumentIds',
+        )
+          ? ' (requires sourceDocumentIds)'
+          : '';
+        return `- ${d.metadata.type}: ${d.metadata.description}${required}`;
+      })
       .join('\n');
 
-    return `Create documents of various types. Available types:\n${descriptions}\n\nUse the appropriate documentType based on the user's request.`;
+    toolDescriptionCache = `Create business documents. Available types:
+${descriptions}
+
+Each type may have specific requirements. The tool will guide you if parameters are missing.`;
+
+    return toolDescriptionCache;
   } catch (error) {
     logger.warn(
       'Failed to load artifact definitions for tool description',
       error,
     );
-    return `Create a meeting summary document from uploaded transcript documents.
-IMPORTANT: This tool ONLY creates summaries, not transcripts. Transcripts are created via file upload.
-When you see TRANSCRIPT_DOCUMENT markers in the chat, use those document IDs in the sourceDocumentIds parameter.`;
+    // Fallback description
+    return `Create business documents. The tool will guide you through available types and requirements.`;
   }
 }
 
-export const createDocument = ({
+export const createDocument = async ({
   session,
   dataStream,
   workspaceId,
-}: CreateDocumentProps) =>
-  tool({
-    description: `Create documents of various types. Available types: ${documentTypes.join(', ')}.
-Each document type may have specific requirements - for example, meeting-memory requires sourceDocumentIds.
-The tool will guide you if required parameters are missing for the selected type.`,
+}: CreateDocumentProps) => {
+  // Dynamically build description from registry
+  const description = await buildToolDescription();
+
+  return tool({
+    description,
     inputSchema: createDocumentSchema,
     execute: async ({
       title,
@@ -241,3 +260,4 @@ The tool will guide you if required parameters are missing for the selected type
       }
     },
   });
+};
