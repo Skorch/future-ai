@@ -145,6 +145,21 @@ export async function fetchSourceDocuments(
 }
 
 /**
+ * Compose system prompt from instructions and template
+ * Standard pattern for all document types
+ */
+export function composeSystemPrompt(
+  instructions: string,
+  template: string,
+  sectionHeader = 'Output Format',
+): string {
+  if (!template) {
+    return instructions;
+  }
+  return `${instructions}\n\n## ${sectionHeader}\n${template}`;
+}
+
+/**
  * Build stream configuration with thinking budget support
  * Helper for types that need reasoning capabilities
  */
