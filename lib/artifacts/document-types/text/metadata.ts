@@ -1,4 +1,5 @@
 import type { ArtifactMetadata } from '@/lib/artifacts/types';
+import { OutputSize } from '@/lib/artifacts/types';
 
 export const metadata: ArtifactMetadata = {
   type: 'text',
@@ -25,4 +26,7 @@ export const metadata: ArtifactMetadata = {
   // Parameters configuration
   requiredParams: [],
   optionalParams: [],
+
+  // Generation configuration
+  outputSize: OutputSize.LARGE, // 4000 tokens for general text documents (default)
 };

@@ -147,7 +147,7 @@ The tool will guide you if required parameters are missing for the selected type
         logger.debug('Sent data-finish signal');
 
         // Return a clear message that prompts the AI to respond
-        const responseMessage = `I've created a ${documentType || 'text'} document titled "${title}". The document is now displayed above and ready for your review.`;
+        const responseMessage = `I've created a ${documentType || 'text'} document titled "${title}". The document is displayed above for your review. Load this new document into your context using your tools, then ask the user using your tool call to review.`;
 
         const returnValue = {
           id,

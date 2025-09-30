@@ -6,11 +6,6 @@ export {
   type RequestHints,
 } from './prompts/system';
 
-export { MEETING_INTELLIGENCE_PROMPT } from './prompts/domains/meeting-intelligence';
-
-// Legacy export for backward compatibility - will be removed after migration
-export { MEETING_INTELLIGENCE_PROMPT as meetingIntelligencePrompt } from './prompts/domains/meeting-intelligence';
-
 // DEPRECATED: Use composeSystemPrompt from './prompts/system' instead
 // This function is kept temporarily for backward compatibility
 import type { RequestHints } from './prompts/system';
@@ -53,44 +48,3 @@ Improve the following contents of the document based on the given prompt.
 ${currentContent}
 `;
 };
-
-// Specialized prompt for transcript summary generation
-// This is used by artifacts/meeting-memory for document generation
-export const transcriptSummaryPrompt = `
-Generate a structured meeting summary from this transcript. Follow this EXACT format:
-
-# Meeting Summary: [Create descriptive title based on main topics]
-**Date:** [Extract date or use today's date]
-**Participants:** [List all speakers identified]
-**Duration:** [Calculate from timestamps or estimate]
-
-## Executive Overview
-[2-3 sentences capturing the essence of the meeting]
-
-## Topic: [Identify first major discussion topic]
-[Detailed bullet points about this topic, including:]
-- Key points discussed with specific details
-- Any decisions made about this topic
-- **Action:** [Specific action items with owner]
-- Notable quotes or important statements
-
-## Topic: [Second major topic]
-[Continue same pattern]
-
-[Add 3-7 total topic sections based on transcript content]
-
-## Key Decisions
-[Number each decision clearly with context]
-
-## Action Items
-[Table format with Owner, Task, Due Date]
-
-## Next Meeting
-[Only if mentioned in transcript]
-
-IMPORTANT:
-- Use "## Topic:" prefix for all discussion topics
-- Be specific and detailed in topic names
-- Extract actual content, not generic summaries
-- Include speaker attributions where relevant
-`;

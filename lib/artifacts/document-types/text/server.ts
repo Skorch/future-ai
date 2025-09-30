@@ -2,6 +2,8 @@ import { smoothStream, streamText } from 'ai';
 import { myProvider } from '@/lib/ai/providers';
 import { saveDocument } from '@/lib/db/queries';
 import { updateDocumentPrompt } from '@/lib/ai/prompts';
+import { metadata as artifactMetadata } from './metadata';
+import { OutputSize } from '@/lib/artifacts/types';
 import type {
   DocumentHandler,
   CreateDocumentCallbackProps,
@@ -24,6 +26,7 @@ export const textDocumentHandler: DocumentHandler<'text'> = {
       model: myProvider.languageModel('artifact-model'),
       system:
         'Write about the given topic. Markdown is supported. Use headings wherever appropriate.',
+      maxOutputTokens: artifactMetadata.outputSize ?? OutputSize.LARGE, // Use configured size or default to LARGE
       experimental_transform: smoothStream({ chunking: 'word' }),
       prompt: title,
     });
@@ -74,6 +77,7 @@ export const textDocumentHandler: DocumentHandler<'text'> = {
     const { fullStream } = streamText({
       model: myProvider.languageModel('artifact-model'),
       system: updateDocumentPrompt(document.content, 'text'),
+      maxOutputTokens: artifactMetadata.outputSize ?? OutputSize.LARGE, // Use configured size or default to LARGE
       experimental_transform: smoothStream({ chunking: 'word' }),
       prompt: description,
       providerOptions: {

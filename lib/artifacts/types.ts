@@ -1,3 +1,19 @@
+// Output size configuration for document generation
+export enum OutputSize {
+  SMALL = 1500, // Brief summaries, quick notes
+  MEDIUM = 2500, // Standard documents like meeting memories
+  LARGE = 4000, // Comprehensive reports, detailed analysis
+  XLARGE = 8000, // Full documentation, extensive content
+}
+
+// Thinking budget configuration for document generation
+export enum ThinkingBudget {
+  NONE = 0, // No thinking process
+  LOW = 4000, // Quick analysis
+  MEDIUM = 8000, // Standard analysis for complex documents
+  HIGH = 12000, // Deep analysis for critical documents
+}
+
 export interface ArtifactMetadata {
   type: string;
   name: string;
@@ -18,6 +34,10 @@ export interface ArtifactMetadata {
   // Parameters configuration
   requiredParams?: string[];
   optionalParams?: string[];
+
+  // Generation configuration
+  outputSize?: OutputSize; // Optional, defaults to LARGE if not specified
+  thinkingBudget?: ThinkingBudget; // Optional, defaults to NONE if not specified
 }
 
 import type { DocumentHandler } from './server';

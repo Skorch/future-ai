@@ -73,11 +73,11 @@ export class VoyageAIClient {
     // Default to 1024 dimensions (voyage-3-large default)
     this.defaultOutputDimension = config?.outputDimension || 1024;
 
-    logger.debug('Client initialized:', {
-      model: this.model,
-      baseUrl: this.baseUrl,
-      defaultOutputDimension: this.defaultOutputDimension,
-    });
+    // logger.debug('Client initialized:', {
+    //   model: this.model,
+    //   baseUrl: this.baseUrl,
+    //   defaultOutputDimension: this.defaultOutputDimension,
+    // });
   }
 
   /**

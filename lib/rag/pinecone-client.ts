@@ -44,17 +44,17 @@ export class PineconeClient {
     // Initialize VoyageAI client for embeddings
     this.voyageClient = getVoyageAIClient();
 
-    logger.debug('Client initialized with:', {
-      indexName: this.indexName,
-      hasApiKey: !!apiKey,
-      apiKeyLength: apiKey.length,
-      configSource: config?.indexName
-        ? 'config'
-        : process.env.PINECONE_INDEX_NAME
-          ? 'env'
-          : 'default',
-      embeddingProvider: 'VoyageAI',
-    });
+    // logger.debug('Client initialized with:', {
+    //   indexName: this.indexName,
+    //   hasApiKey: !!apiKey,
+    //   apiKeyLength: apiKey.length,
+    //   configSource: config?.indexName
+    //     ? 'config'
+    //     : process.env.PINECONE_INDEX_NAME
+    //       ? 'env'
+    //       : 'default',
+    //   embeddingProvider: 'VoyageAI',
+    // });
 
     // Verify index exists (async, don't block constructor)
     this.verifyIndex().catch((err) => {

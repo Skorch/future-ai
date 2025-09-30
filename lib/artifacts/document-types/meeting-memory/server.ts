@@ -6,11 +6,13 @@ import { myProvider } from '@/lib/ai/providers';
 import { getDocumentById, saveDocument } from '@/lib/db/queries';
 import { metadata } from './metadata';
 import { MEETING_SUMMARY_GENERATION_PROMPT } from '@/lib/ai/prompts/domains/meeting-summary-generation';
+import { OutputSize } from '@/lib/artifacts/types';
 import type {
   DocumentHandler,
   CreateDocumentCallbackProps,
   UpdateDocumentCallbackProps,
 } from '@/lib/artifacts/server';
+import type { AnthropicProviderOptions } from '@ai-sdk/anthropic';
 
 // Type definitions for meeting summary metadata
 interface MeetingSummaryMetadata {
@@ -120,9 +122,21 @@ export const meetingSummaryHandler: DocumentHandler<'text'> = {
     const { fullStream } = streamText({
       model: myProvider.languageModel('artifact-model'),
       system: systemPrompt,
-      maxOutputTokens: 8192, // Testing if token limit affects verbosity
+      maxOutputTokens: metadata.outputSize ?? OutputSize.SMALL, // Use configured size or default to SMALL
       experimental_transform: smoothStream({ chunking: 'word' }),
-      prompt: `Create a comprehensive meeting summary from this transcript:
+      ...(metadata.thinkingBudget
+        ? {
+            providerOptions: {
+              anthropic: {
+                thinking: {
+                  type: 'enabled' as const,
+                  budgetTokens: metadata.thinkingBudget,
+                },
+              } satisfies AnthropicProviderOptions,
+            },
+          }
+        : {}),
+      prompt: `Create a concise meeting summary from this transcript:
 
 Meeting Date: ${meetingDate}
 Participants: ${participants.join(', ')}
@@ -215,9 +229,21 @@ ${transcript}`,
 
     const { fullStream } = streamText({
       model: myProvider.languageModel('artifact-model'),
-      system: `You are editing a meeting summary. Maintain the structured format with Date, Participants, Topics, Key Decisions, and Action Items sections. Current content:\n${document.content}`,
-      maxOutputTokens: 8192, // Testing if token limit affects verbosity
+      system: `You are editing a meeting summary. Maintain concise, graduated detail (major topics 2-3 paragraphs, medium 2, minor 1). Current content:\n${document.content}`,
+      maxOutputTokens: metadata.outputSize ?? OutputSize.LARGE, // Use configured size or default to LARGE
       experimental_transform: smoothStream({ chunking: 'word' }),
+      ...(metadata.thinkingBudget
+        ? {
+            providerOptions: {
+              anthropic: {
+                thinking: {
+                  type: 'enabled' as const,
+                  budgetTokens: metadata.thinkingBudget,
+                },
+              } satisfies AnthropicProviderOptions,
+            },
+          }
+        : {}),
       prompt: description,
     });
 

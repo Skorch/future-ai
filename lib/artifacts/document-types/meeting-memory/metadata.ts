@@ -1,4 +1,5 @@
 import type { ArtifactMetadata } from '@/lib/artifacts/types';
+import { OutputSize, ThinkingBudget } from '@/lib/artifacts/types';
 import { MEETING_SUMMARY_PROMPT, MEETING_SUMMARY_TEMPLATE } from './prompts';
 
 export const metadata: ArtifactMetadata = {
@@ -34,4 +35,8 @@ export const metadata: ArtifactMetadata = {
   // Parameters configuration
   requiredParams: ['sourceDocumentIds'],
   optionalParams: ['meetingDate', 'participants'],
+
+  // Generation configuration
+  outputSize: OutputSize.MEDIUM, // 2500 tokens for concise meeting summaries
+  thinkingBudget: ThinkingBudget.LOW, // 8000 tokens for analyzing transcript and planning structure
 };
