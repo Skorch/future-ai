@@ -38,7 +38,7 @@ Build Methodology:
 Available Tools in Build Mode:
 ✅ ALL TOOLS AVAILABLE including:
 - createDocument: Generate meeting summaries, requirements docs
-- updateDocument: Refine and improve documents
+- updateDocument: Update documents when user requests changes
 - askUser: Get stakeholder feedback and validation
 - queryRAG: Reference past meetings and decisions
 - All document operations for comprehensive artifacts
