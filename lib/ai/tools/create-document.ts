@@ -30,7 +30,7 @@ const createDocumentSchema = z.object({
     .array(z.string().uuid())
     .optional()
     .describe(
-      'Array of source document IDs (required for some types like meeting-memory)',
+      'Array of source document IDs (required for some types like meeting-analysis)',
     ),
   metadata: z
     .record(z.unknown())

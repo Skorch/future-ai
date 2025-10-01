@@ -36,7 +36,7 @@ export const meetingSummaryHandler: DocumentHandler<'text'> = {
     // Cast metadata to our expected type
     const typedMetadata = docMetadata as MeetingSummaryMetadata | undefined;
 
-    // Fetch source documents (required for meeting-memory)
+    // Fetch source documents (required for meeting-analysis)
     if (!typedMetadata?.sourceDocumentIds?.length) {
       throw new Error(
         'Meeting summaries require sourceDocumentIds to fetch transcript content',
@@ -94,7 +94,7 @@ ${transcript}`,
       workspaceId,
       metadata: {
         ...docMetadata,
-        documentType: 'meeting-memory',
+        documentType: 'meeting-analysis',
         sourceDocumentIds: typedMetadata?.sourceDocumentIds || [],
       },
     });

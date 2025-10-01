@@ -12,10 +12,7 @@ import {
   logTokenStats,
 } from '@/lib/ai/utils/token-analyzer';
 import { auth } from '@clerk/nextjs/server';
-import {
-  type RequestHints,
-  composeSystemPrompt,
-} from '@/lib/ai/prompts/system';
+import { composeSystemPrompt } from '@/lib/ai/prompts/system';
 import { MEETING_INTELLIGENCE_PROMPT } from '@/lib/ai/prompts/domains/meeting-intelligence';
 import {
   createStreamId,
@@ -28,7 +25,6 @@ import { convertToUIMessages, generateUUID } from '@/lib/utils';
 import { generateTitleFromUserMessage } from '@/app/(chat)/actions';
 import { createDocument } from '@/lib/ai/tools/create-document';
 import { updateDocument } from '@/lib/ai/tools/update-document';
-import { getWeather } from '@/lib/ai/tools/get-weather';
 import { queryRAG } from '@/lib/ai/tools/query-rag';
 import { listDocuments } from '@/lib/ai/tools/list-documents';
 import { loadDocument } from '@/lib/ai/tools/load-document';
@@ -38,7 +34,6 @@ import { askUser } from '@/lib/ai/tools/ask-user';
 import { isProductionEnvironment } from '@/lib/constants';
 import { myProvider } from '@/lib/ai/providers';
 import { postRequestBodySchema, type PostRequestBody } from './schema';
-import { geolocation } from '@vercel/functions';
 import {
   createResumableStreamContext,
   type ResumableStreamContext,
@@ -198,15 +193,6 @@ export async function POST(
 
     const uiMessages = [...convertToUIMessages(messagesFromDb), message];
 
-    const { longitude, latitude, city, country } = geolocation(request);
-
-    const requestHints: RequestHints = {
-      longitude,
-      latitude,
-      city,
-      country,
-    };
-
     await saveMessages({
       messages: [
         {
@@ -235,7 +221,6 @@ export async function POST(
 
     // Calculate token usage BEFORE creating the stream
     const systemPromptText = await composeSystemPrompt({
-      requestHints,
       domainPrompts: [MEETING_INTELLIGENCE_PROMPT],
     });
 
@@ -292,7 +277,6 @@ export async function POST(
           const activeTools = shouldDisableTools
             ? []
             : [
-                'getWeather',
                 'createDocument',
                 'updateDocument',
                 'queryRAG',
@@ -435,7 +419,6 @@ export async function POST(
                     setComplete: setComplete({ chatId: id, dataStream }),
 
                     // Existing tools
-                    getWeather,
                     createDocument: await createDocument({
                       session,
                       dataStream,

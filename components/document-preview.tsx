@@ -21,8 +21,8 @@ import equal from 'fast-deep-equal';
 
 interface DocumentPreviewProps {
   isReadonly: boolean;
-  result?: { id: string; title: string; kind: 'text' | 'code' };
-  args?: { title: string; kind: 'text' | 'code' };
+  result?: { id: string; title: string; kind: 'text' };
+  args?: { title: string; kind: 'text' };
   workspaceId?: string;
 }
 
@@ -129,9 +129,7 @@ export function DocumentPreview({
   );
 }
 
-const LoadingSkeleton = ({
-  artifactKind,
-}: { artifactKind: 'text' | 'code' }) => (
+const LoadingSkeleton = ({ artifactKind }: { artifactKind: 'text' }) => (
   <div className="w-full">
     <div className="p-4 border rounded-t-2xl flex flex-row gap-2 items-center justify-between dark:bg-muted h-[57px] dark:border-zinc-700 border-b-0">
       <div className="flex flex-row items-center gap-3">
@@ -156,7 +154,7 @@ const PureHitboxLayer = ({
   setArtifact,
 }: {
   hitboxRef: React.RefObject<HTMLDivElement>;
-  result: { id: string; title: string; kind: 'text' | 'code' };
+  result: { id: string; title: string; kind: 'text' };
   setArtifact: (
     updaterFn: UIArtifact | ((currentArtifact: UIArtifact) => UIArtifact),
   ) => void;
@@ -216,7 +214,7 @@ const PureDocumentHeader = ({
   workspaceId,
 }: {
   title: string;
-  kind: 'text' | 'code';
+  kind: 'text';
   isStreaming: boolean;
   documentId: string;
   workspaceId?: string;

@@ -1,13 +1,5 @@
-import type { Geo } from '@vercel/functions';
 import { getAllDocumentTypes } from '@/lib/artifacts';
 import type { ArtifactDefinition } from '@/lib/artifacts/types';
-
-export interface RequestHints {
-  latitude: Geo['latitude'];
-  longitude: Geo['longitude'];
-  city: Geo['city'];
-  country: Geo['country'];
-}
 
 export const SYSTEM_PROMPT_BASE = `
 You are a professional business intelligence assistant specializing in meeting analysis, requirements gathering, and strategic documentation.
@@ -67,14 +59,6 @@ Your operational modes reflect different phases of business analysis:
 - Consistency across all deliverables
 `;
 
-export const getRequestPromptFromHints = (requestHints: RequestHints) => `\
-About the origin of user's request:
-- lat: ${requestHints.latitude}
-- lon: ${requestHints.longitude}
-- city: ${requestHints.city}
-- country: ${requestHints.country}
-`;
-
 // Cache capabilities to avoid multiple generations
 // Note: This is module-level cache, cleared on server restart
 // If document types are added dynamically, consider request-scoped caching
@@ -129,19 +113,16 @@ To get started, you can:
 
 // Main system prompt composer - NOW ASYNC
 export async function composeSystemPrompt({
-  requestHints,
   domainPrompts = [],
 }: {
-  requestHints: RequestHints;
   domainPrompts?: string[];
-}): Promise<string> {
+} = {}): Promise<string> {
   // Generate capabilities at system level
   const capabilities = await generateSystemCapabilities();
 
   const components = [
     SYSTEM_PROMPT_BASE,
     capabilities, // System-level capability injection
-    getRequestPromptFromHints(requestHints),
     ...domainPrompts,
   ].filter(Boolean);
 

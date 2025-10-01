@@ -13,10 +13,10 @@ describe('Artifact Server Handlers', () => {
       expect(existsSync(join(basePath, 'client.tsx'))).toBe(true);
     });
 
-    it('meeting-memory type should have all required files', () => {
+    it('meeting-analysis type should have all required files', () => {
       const basePath = join(
         process.cwd(),
-        'lib/artifacts/document-types/meeting-memory',
+        'lib/artifacts/document-types/meeting-analysis',
       );
 
       expect(existsSync(join(basePath, 'index.ts'))).toBe(true);
@@ -37,7 +37,7 @@ describe('Artifact Server Handlers', () => {
       // Should NOT import handlers directly
       expect(content).not.toContain("from './document-types/text/server'");
       expect(content).not.toContain(
-        "from './document-types/meeting-memory/server'",
+        "from './document-types/meeting-analysis/server'",
       );
 
       // Should NOT import from old locations
@@ -53,11 +53,11 @@ describe('Artifact Server Handlers', () => {
         '@/lib/artifacts/document-types/text/metadata'
       );
       const meetingMetadata = await import(
-        '@/lib/artifacts/document-types/meeting-memory/metadata'
+        '@/lib/artifacts/document-types/meeting-analysis/metadata'
       );
 
       expect(textMetadata.metadata.type).toBe('text');
-      expect(meetingMetadata.metadata.type).toBe('meeting-memory');
+      expect(meetingMetadata.metadata.type).toBe('meeting-analysis');
     });
   });
 });

@@ -10,7 +10,7 @@ describe('Artifact Registry', () => {
     it('should contain all registered document types', () => {
       expect(Object.keys(artifactRegistry)).toEqual([
         'text',
-        'meeting-memory',
+        'meeting-analysis',
         'meeting-agenda',
         'meeting-minutes',
         'use-case',
@@ -21,7 +21,7 @@ describe('Artifact Registry', () => {
     it('should export documentTypes array matching registry keys', () => {
       expect(documentTypes).toEqual([
         'text',
-        'meeting-memory',
+        'meeting-analysis',
         'meeting-agenda',
         'meeting-minutes',
         'use-case',
@@ -32,15 +32,15 @@ describe('Artifact Registry', () => {
     it('should derive DocumentType from registry keys', () => {
       // This is a type-level test - if it compiles, it passes
       const validType: DocumentType = 'text';
-      const validType2: DocumentType = 'meeting-memory';
+      const validType2: DocumentType = 'meeting-analysis';
 
       expect(validType).toBe('text');
-      expect(validType2).toBe('meeting-memory');
+      expect(validType2).toBe('meeting-analysis');
     });
 
     it('should have lazy-loading functions for each type', () => {
       expect(typeof artifactRegistry.text).toBe('function');
-      expect(typeof artifactRegistry['meeting-memory']).toBe('function');
+      expect(typeof artifactRegistry['meeting-analysis']).toBe('function');
       expect(typeof artifactRegistry['meeting-agenda']).toBe('function');
       expect(typeof artifactRegistry['meeting-minutes']).toBe('function');
       expect(typeof artifactRegistry['use-case']).toBe('function');
@@ -63,13 +63,13 @@ describe('Artifact Registry', () => {
       expect(metadata.chunkingStrategy).toBe('section-based');
     });
 
-    it('meeting-memory metadata should have correct structure', async () => {
+    it('meeting-analysis metadata should have correct structure', async () => {
       const { metadata } = await import(
-        '@/lib/artifacts/document-types/meeting-memory/metadata'
+        '@/lib/artifacts/document-types/meeting-analysis/metadata'
       );
 
-      expect(metadata.type).toBe('meeting-memory');
-      expect(metadata.name).toBe('Meeting Memory');
+      expect(metadata.type).toBe('meeting-analysis');
+      expect(metadata.name).toBe('Meeting Analysis');
       expect(metadata.clientKind).toBe('text');
       expect(metadata).toHaveProperty('prompt');
       expect(metadata).toHaveProperty('agentGuidance');
@@ -89,9 +89,9 @@ describe('Artifact Registry', () => {
       expect(metadata.agentGuidance.examples.length).toBeGreaterThan(0);
     });
 
-    it('meeting-memory type should have meeting-specific triggers', async () => {
+    it('meeting-analysis type should have meeting-specific triggers', async () => {
       const { metadata } = await import(
-        '@/lib/artifacts/document-types/meeting-memory/metadata'
+        '@/lib/artifacts/document-types/meeting-analysis/metadata'
       );
 
       expect(metadata.agentGuidance.triggers).toContain('transcript');

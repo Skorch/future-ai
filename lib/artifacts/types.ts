@@ -21,7 +21,7 @@ export interface ArtifactMetadata {
   type: string;
   name: string;
   description: string;
-  clientKind: 'text' | 'code' | 'sheet';
+  clientKind: 'text';
 
   // Prompt and template content
   prompt: string;

@@ -110,7 +110,7 @@ export async function saveGeneratedDocument(
 }
 
 /**
- * Fetch and combine source documents for types that need them (e.g., meeting-memory)
+ * Fetch and combine source documents for types that need them (e.g., meeting-analysis)
  * Returns empty string if no source documents provided
  */
 export async function fetchSourceDocuments(

@@ -85,7 +85,7 @@ Reserve space for user messages, your responses, and other tool outputs.`,
           ).toLocaleString()} tokens)`;
 
       const metadata = document.metadata as {
-        documentType?: 'transcript' | 'meeting-memory';
+        documentType?: 'transcript' | 'meeting-analysis';
         fileName?: string;
         fileSize?: number;
         uploadedAt?: string;
@@ -124,7 +124,7 @@ Reserve space for user messages, your responses, and other tool outputs.`,
         createdAt: document.createdAt,
         documentType:
           metadata?.documentType ||
-          ('document' as 'transcript' | 'meeting-memory' | 'document'),
+          ('document' as 'transcript' | 'meeting-analysis' | 'document'),
         loadInfo: {
           truncated: document.truncated,
           loadedChars: document.loadedChars,

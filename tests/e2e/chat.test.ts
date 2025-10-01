@@ -90,17 +90,6 @@ test.describe('Chat activity', () => {
     expect(assistantMessage.content).toBe('This painting is by Monet!');
   });
 
-  test('Call weather tool', async () => {
-    await chatPage.sendUserMessage("What's the weather in sf?");
-    await chatPage.isGenerationComplete();
-
-    const assistantMessage = await chatPage.getRecentAssistantMessage();
-
-    expect(assistantMessage.content).toBe(
-      'The current temperature in San Francisco is 17°C.',
-    );
-  });
-
   test('Upvote message', async () => {
     await chatPage.sendUserMessage('Why is the sky blue?');
     await chatPage.isGenerationComplete();

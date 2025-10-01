@@ -36,7 +36,7 @@ DECISION FLOW FOR COMMON QUERIES:
    → list-documents → load that specific document fully
 
 DOCUMENT TYPES & LOADING STRATEGY:
-- 'meeting-memory': AI-generated, concise (~2-5k tokens) - ALWAYS safe to load multiple
+- 'meeting-analysis': AI-generated, concise (~2-5k tokens) - ALWAYS safe to load multiple
 - 'transcript': Raw meeting audio/video (~10-50k tokens) - Load selectively or partially
 - 'document': Other text files - Check size before loading
 

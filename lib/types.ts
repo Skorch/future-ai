@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import type { getWeather } from './ai/tools/get-weather';
 import type { createDocument } from './ai/tools/create-document';
 import type { updateDocument } from './ai/tools/update-document';
 import type { setMode } from './ai/tools/set-mode';
@@ -16,7 +15,6 @@ export const messageMetadataSchema = z.object({
 
 export type MessageMetadata = z.infer<typeof messageMetadataSchema>;
 
-type weatherTool = InferUITool<typeof getWeather>;
 type createDocumentTool = InferUITool<
   Awaited<ReturnType<typeof createDocument>>
 >;
@@ -25,7 +23,6 @@ type setModeTool = InferUITool<ReturnType<typeof setMode>>;
 type askUserTool = InferUITool<ReturnType<typeof askUser>>;
 
 export type ChatTools = {
-  getWeather: weatherTool;
   createDocument: createDocumentTool;
   updateDocument: updateDocumentTool;
   setMode: setModeTool;

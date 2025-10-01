@@ -29,7 +29,7 @@ const queryRAGSchema = z.object({
     .optional()
     .default('all')
     .describe(
-      `Filter results by content type. Available types: ${contentTypes.join(', ')}. (transcript for raw transcripts, meeting-memory for AI-generated summaries, document for other text)`,
+      `Filter results by content type. Available types: ${contentTypes.join(', ')}. (transcript for raw transcripts, meeting-analysis for AI-generated summaries, document for other text)`,
     ),
   filter: z
     .object({

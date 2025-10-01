@@ -1,7 +1,6 @@
 // Export all AI tools for easy import
 export { createDocument } from './create-document';
 export { updateDocument } from './update-document';
-export { getWeather } from './get-weather';
 export { queryRAG } from './query-rag';
 export { listDocuments } from './list-documents';
 export { loadDocument } from './load-document';

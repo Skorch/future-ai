@@ -3,8 +3,8 @@ import { OutputSize, ThinkingBudget } from '@/lib/artifacts/types';
 import { MEETING_SUMMARY_PROMPT, MEETING_SUMMARY_TEMPLATE } from './prompts';
 
 export const metadata: ArtifactMetadata = {
-  type: 'meeting-memory',
-  name: 'Meeting Memory',
+  type: 'meeting-analysis',
+  name: 'Meeting Analysis',
   description:
     'Internal team knowledge base from meetings with action items and key decisions',
   clientKind: 'text',

@@ -19,7 +19,6 @@ import {
 } from './elements/tool';
 import { MessageActions } from './message-actions';
 import { PreviewAttachment } from './preview-attachment';
-import { Weather } from './weather';
 import equal from 'fast-deep-equal';
 import { cn, sanitizeText } from '@/lib/utils';
 import { Button } from './ui/button';
@@ -106,7 +105,7 @@ const getDocumentType = (
   const docTypeStr = String(docType);
   const typeMap: Record<string, string> = {
     transcript: 'Transcript',
-    'meeting-memory': 'Meeting Summary',
+    'meeting-analysis': 'Meeting Summary',
     document: 'Document',
     artifact: 'Artifact',
   };
@@ -550,27 +549,6 @@ const PurePreviewMessage = ({
                     </div>
                   );
                 }
-              }
-
-              if (type === 'tool-getWeather') {
-                const { toolCallId, state } = part;
-
-                return (
-                  <Tool key={toolCallId} defaultOpen={true}>
-                    <ToolHeader type="tool-getWeather" state={state} />
-                    <ToolContent>
-                      {state === 'input-available' && (
-                        <ToolInput input={part.input} />
-                      )}
-                      {state === 'output-available' && (
-                        <ToolOutput
-                          output={<Weather weatherAtLocation={part.output} />}
-                          errorText={undefined}
-                        />
-                      )}
-                    </ToolContent>
-                  </Tool>
-                );
               }
 
               if (type === 'tool-createDocument') {

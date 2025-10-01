@@ -3,7 +3,7 @@ import type { ArtifactDefinition } from './types';
 // Artifact registry - single source of truth for all document types
 export const artifactRegistry = {
   text: () => import('./document-types/text'),
-  'meeting-memory': () => import('./document-types/meeting-memory'),
+  'meeting-analysis': () => import('./document-types/meeting-analysis'),
   'meeting-agenda': () => import('./document-types/meeting-agenda'),
   'meeting-minutes': () => import('./document-types/meeting-minutes'),
   'use-case': () => import('./document-types/use-case'),
