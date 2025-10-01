@@ -48,6 +48,23 @@ export async function getAllDocumentTypes(): Promise<ArtifactDefinition[]> {
   return definitions;
 }
 
+// Get display name map for all document types
+export async function getDocumentTypeDisplayMap(): Promise<
+  Record<string, string>
+> {
+  const types = await getAllDocumentTypes();
+  const displayMap: Record<string, string> = {};
+
+  types.forEach((typeDef) => {
+    displayMap[typeDef.metadata.type] = typeDef.metadata.name;
+  });
+
+  // Add special non-registry type for transcripts (uploaded, not generated)
+  displayMap.transcript = 'Transcript';
+
+  return displayMap;
+}
+
 // Legacy aliases for backward compatibility
 export type ArtifactType = DocumentType;
 export const loadAllArtifactDefinitions = getAllDocumentTypes;

@@ -29,4 +29,7 @@ export const metadata: ArtifactMetadata = {
 
   // Generation configuration
   outputSize: OutputSize.LARGE, // 4000 tokens for general text documents (default)
+
+  // RAG configuration
+  chunkingStrategy: 'section-based', // Use section-based chunking for text documents
 };

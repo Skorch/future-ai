@@ -36,4 +36,6 @@ export const metadata: ArtifactMetadata = {
 
   outputSize: OutputSize.SMALL,
   thinkingBudget: ThinkingBudget.LOW, // For better time allocation and structure planning
+
+  chunkingStrategy: 'section-based', // Use section-based chunking for agendas
 };

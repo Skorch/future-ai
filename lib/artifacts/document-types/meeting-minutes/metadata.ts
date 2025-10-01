@@ -38,4 +38,6 @@ export const metadata: ArtifactMetadata = {
 
   outputSize: OutputSize.SMALL, // Brief for email - max 1500 tokens
   thinkingBudget: ThinkingBudget.LOW, // Focus on extraction and condensation
+
+  chunkingStrategy: 'section-based', // Use section-based chunking for minutes
 };

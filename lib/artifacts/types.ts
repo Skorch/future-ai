@@ -14,6 +14,9 @@ export enum ThinkingBudget {
   HIGH = 12000, // Deep analysis for critical documents
 }
 
+// Chunking strategy for RAG indexing
+export type ChunkingStrategy = 'ai-transcript' | 'section-based' | 'none';
+
 export interface ArtifactMetadata {
   type: string;
   name: string;
@@ -38,6 +41,9 @@ export interface ArtifactMetadata {
   // Generation configuration
   outputSize?: OutputSize; // Optional, defaults to LARGE if not specified
   thinkingBudget?: ThinkingBudget; // Optional, defaults to NONE if not specified
+
+  // RAG configuration for document chunking strategy
+  chunkingStrategy?: ChunkingStrategy; // Defaults to 'section-based' if not specified
 }
 
 import type { DocumentHandler } from './server';

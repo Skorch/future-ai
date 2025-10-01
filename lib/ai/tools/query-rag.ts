@@ -9,7 +9,7 @@ import { rerankWithLLM, type LLMRerankResult } from '../../rag/llm-reranker';
 import type { QueryResult, QueryMatch, RAGMetadata } from '../../rag/types';
 import type { ChatMessage } from '@/lib/types';
 import { QUERY_RAG_PROMPT } from '@/lib/ai/prompts/tools/query-rag';
-import { documentTypes } from '@/lib/artifacts';
+import { documentTypes, getDocumentTypeDisplayMap } from '@/lib/artifacts';
 
 // Build dynamic content types: registry types + special metadata filters
 // Note: 'transcript' and 'document' are metadata filters, not registry types
@@ -256,6 +256,9 @@ export const queryRAG = (props: QueryRAGProps) => {
     execute: async (params) => {
       const startTime = Date.now();
 
+      // Get display name mapping for document types
+      const displayMap = await getDocumentTypeDisplayMap();
+
       try {
         // Check cache first
         const cacheKey = JSON.stringify(params);
@@ -410,7 +413,14 @@ export const queryRAG = (props: QueryRAGProps) => {
             id: m.id,
             score: m.score,
             content: m.content, // Full content, let UI handle truncation
-            metadata: m.metadata,
+            metadata: {
+              ...m.metadata,
+              // Add display name for the document type
+              documentTypeDisplay:
+                displayMap[m.metadata.documentType] ||
+                m.metadata.documentType.charAt(0).toUpperCase() +
+                  m.metadata.documentType.slice(1).replace(/-/g, ' '),
+            },
             // IMPORTANT: Preserve LLM-specific fields for UI topic grouping
             ...(m.topicId && { topicId: m.topicId }),
             ...(m.merged && { merged: m.merged }),

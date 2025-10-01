@@ -38,4 +38,6 @@ export const metadata: ArtifactMetadata = {
 
   outputSize: OutputSize.LARGE, // 4000 tokens for comprehensive documentation
   thinkingBudget: ThinkingBudget.HIGH, // 12000 tokens for complex synthesis and analysis
+
+  chunkingStrategy: 'section-based', // Use section-based chunking for BRDs
 };

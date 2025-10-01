@@ -7,12 +7,26 @@ import {
 
 describe('Artifact Registry', () => {
   describe('Registry Structure', () => {
-    it('should contain text and meeting-memory types', () => {
-      expect(Object.keys(artifactRegistry)).toEqual(['text', 'meeting-memory']);
+    it('should contain all registered document types', () => {
+      expect(Object.keys(artifactRegistry)).toEqual([
+        'text',
+        'meeting-memory',
+        'meeting-agenda',
+        'meeting-minutes',
+        'use-case',
+        'business-requirements',
+      ]);
     });
 
     it('should export documentTypes array matching registry keys', () => {
-      expect(documentTypes).toEqual(['text', 'meeting-memory']);
+      expect(documentTypes).toEqual([
+        'text',
+        'meeting-memory',
+        'meeting-agenda',
+        'meeting-minutes',
+        'use-case',
+        'business-requirements',
+      ]);
     });
 
     it('should derive DocumentType from registry keys', () => {
@@ -27,6 +41,10 @@ describe('Artifact Registry', () => {
     it('should have lazy-loading functions for each type', () => {
       expect(typeof artifactRegistry.text).toBe('function');
       expect(typeof artifactRegistry['meeting-memory']).toBe('function');
+      expect(typeof artifactRegistry['meeting-agenda']).toBe('function');
+      expect(typeof artifactRegistry['meeting-minutes']).toBe('function');
+      expect(typeof artifactRegistry['use-case']).toBe('function');
+      expect(typeof artifactRegistry['business-requirements']).toBe('function');
     });
   });
 
@@ -41,6 +59,8 @@ describe('Artifact Registry', () => {
       expect(metadata.clientKind).toBe('text');
       expect(metadata).toHaveProperty('prompt');
       expect(metadata).toHaveProperty('agentGuidance');
+      expect(metadata).toHaveProperty('chunkingStrategy');
+      expect(metadata.chunkingStrategy).toBe('section-based');
     });
 
     it('meeting-memory metadata should have correct structure', async () => {
@@ -53,6 +73,8 @@ describe('Artifact Registry', () => {
       expect(metadata.clientKind).toBe('text');
       expect(metadata).toHaveProperty('prompt');
       expect(metadata).toHaveProperty('agentGuidance');
+      expect(metadata).toHaveProperty('chunkingStrategy');
+      expect(metadata.chunkingStrategy).toBe('section-based');
     });
   });
 

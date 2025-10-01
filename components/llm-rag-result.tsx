@@ -185,17 +185,15 @@ export function LLMRAGQueryResult({ output, isStreaming }: LLMRAGQueryResult) {
     return 'Untitled Document';
   };
 
-  const getDocumentType = (type: unknown): string => {
-    const typeStr = String(type || 'document');
-    const typeMap: Record<string, string> = {
-      transcript: 'Transcript',
-      'meeting-memory': 'Meeting Summary',
-      document: 'Document',
-      artifact: 'Artifact',
-    };
-    // Return mapped value or capitalize the original type
+  const getDocumentType = (metadata: Record<string, unknown>): string => {
+    // Use the pre-mapped display name from server, or fall back to formatting
+    if (metadata.documentTypeDisplay) {
+      return String(metadata.documentTypeDisplay);
+    }
+    // Fallback for older data without display name
+    const typeStr = String(metadata.documentType || 'document');
     return (
-      typeMap[typeStr] || typeStr.charAt(0).toUpperCase() + typeStr.slice(1)
+      typeStr.charAt(0).toUpperCase() + typeStr.slice(1).replace(/-/g, ' ')
     );
   };
 
@@ -211,7 +209,7 @@ export function LLMRAGQueryResult({ output, isStreaming }: LLMRAGQueryResult) {
   ) => {
     const metadata = match.metadata || {};
     const title = getDocumentTitle(metadata);
-    const docType = getDocumentType(metadata.documentType);
+    const docType = getDocumentType(metadata);
     const content = formatTimecode(match.content || '');
     const matchId = match.id || `match-${index}`;
     const isExpanded = expandedContent.has(matchId);

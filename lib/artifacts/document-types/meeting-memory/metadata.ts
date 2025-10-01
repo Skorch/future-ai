@@ -39,4 +39,7 @@ export const metadata: ArtifactMetadata = {
   // Generation configuration
   outputSize: OutputSize.MEDIUM, // 2500 tokens for concise meeting summaries
   thinkingBudget: ThinkingBudget.LOW, // 8000 tokens for analyzing transcript and planning structure
+
+  // RAG configuration
+  chunkingStrategy: 'section-based', // Use section-based chunking for meeting summaries
 };

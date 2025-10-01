@@ -84,29 +84,29 @@ The tool returns an array of loaded documents with their content and metadata.`,
       const estimatedTokensLoaded = Math.ceil(totalCharsLoaded / 4);
       const estimatedTokensTotal = Math.ceil(totalCharsAvailable / 4);
 
-      // Group by document type for summary
-      const summaryCount = documents.filter(
-        (d) => d.documentType === 'meeting-memory',
-      ).length;
-      const transcriptCount = documents.filter(
-        (d) => d.documentType === 'transcript',
-      ).length;
-      const otherCount = documents.filter(
-        (d) => d.documentType === 'document',
-      ).length;
+      // Group by document type for summary - dynamic counts
+      const typeCounts = documents.reduce(
+        (acc, doc) => {
+          const type = doc.documentType || 'unknown';
+          acc[type] = (acc[type] || 0) + 1;
+          return acc;
+        },
+        {} as Record<string, number>,
+      );
+
+      // Build type summary string
+      const typeEntries = Object.entries(typeCounts);
+      const typesSummary = typeEntries
+        .map(([type, count]) => `${count} ${type}`)
+        .join(', ');
 
       const loadMessage = maxCharsPerDoc
-        ? `Loaded ${documents.length} documents (${summaryCount} summaries, ${transcriptCount} transcripts${
-            otherCount ? `, ${otherCount} other` : ''
-          }) with ${maxCharsPerDoc.toLocaleString()} chars limit per document. Total: ${totalCharsLoaded.toLocaleString()} of ${totalCharsAvailable.toLocaleString()} characters (~${estimatedTokensLoaded.toLocaleString()} tokens)`
-        : `Loaded ${documents.length} complete documents (${summaryCount} summaries, ${transcriptCount} transcripts${
-            otherCount ? `, ${otherCount} other` : ''
-          }). Total: ${totalCharsLoaded.toLocaleString()} characters (~${estimatedTokensLoaded.toLocaleString()} tokens)`;
+        ? `Loaded ${documents.length} documents (${typesSummary}) with ${maxCharsPerDoc.toLocaleString()} chars limit per document. Total: ${totalCharsLoaded.toLocaleString()} of ${totalCharsAvailable.toLocaleString()} characters (~${estimatedTokensLoaded.toLocaleString()} tokens)`
+        : `Loaded ${documents.length} complete documents (${typesSummary}). Total: ${totalCharsLoaded.toLocaleString()} characters (~${estimatedTokensLoaded.toLocaleString()} tokens)`;
 
       logger.debug('[LoadDocuments Tool] Documents loaded successfully:', {
         count: documents.length,
-        summaries: summaryCount,
-        transcripts: transcriptCount,
+        byType: typeCounts,
         totalCharsLoaded,
         totalCharsAvailable,
         estimatedTokensLoaded,
@@ -155,11 +155,7 @@ The tool returns an array of loaded documents with their content and metadata.`,
           documentsLoaded: documents.length,
           documentsRequested: documentIds.length,
           documentsMissing: documentIds.length - documents.length,
-          byType: {
-            summaries: summaryCount,
-            transcripts: transcriptCount,
-            other: otherCount,
-          },
+          byType: typeCounts,
           totalCharsLoaded,
           totalCharsAvailable,
           estimatedTokensLoaded,

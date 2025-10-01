@@ -144,7 +144,7 @@ export const document = pgTable(
     // NEW FIELDS for RAG simplification
     metadata: json('metadata')
       .$type<{
-        documentType?: 'transcript' | 'meeting-memory';
+        documentType?: string; // Generic string type for flexibility - no migrations needed when types change
         fileName?: string;
         fileSize?: number;
         uploadedAt?: string;

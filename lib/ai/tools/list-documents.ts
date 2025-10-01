@@ -63,12 +63,19 @@ than RAG search, which might miss important topics.`,
         totalTokens: documents.reduce((sum, d) => sum + d.estimatedTokens, 0),
       });
 
+      // Generate counts for all document types dynamically
+      const typeCounts = documents.reduce(
+        (acc, doc) => {
+          const type = doc.documentType || 'unknown';
+          acc[type] = (acc[type] || 0) + 1;
+          return acc;
+        },
+        {} as Record<string, number>,
+      );
+
       const summary = {
         total: documents.length,
-        transcripts: documents.filter((d) => d.documentType === 'transcript')
-          .length,
-        summaries: documents.filter((d) => d.documentType === 'meeting-memory')
-          .length,
+        byType: typeCounts,
         totalSizeBytes: documents.reduce((sum, d) => sum + d.contentLength, 0),
         totalEstimatedTokens: documents.reduce(
           (sum, d) => sum + d.estimatedTokens,

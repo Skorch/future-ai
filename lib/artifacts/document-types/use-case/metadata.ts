@@ -38,4 +38,6 @@ export const metadata: ArtifactMetadata = {
 
   outputSize: OutputSize.MEDIUM, // 2500 tokens for structured business document
   thinkingBudget: ThinkingBudget.MEDIUM, // 8000 tokens for template parsing and LOE analysis
+
+  chunkingStrategy: 'section-based', // Use section-based chunking for use cases
 };

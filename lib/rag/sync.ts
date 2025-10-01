@@ -8,6 +8,7 @@ import {
 import crypto from 'node:crypto';
 import type { TranscriptItem, RAGDocument, RAGMetadata } from './types';
 import { getLogger } from '@/lib/logger';
+import { getDocumentTypeDefinition } from '@/lib/artifacts';
 
 const logger = getLogger('RAGSync');
 
@@ -197,7 +198,34 @@ async function chunkDocument(
   const chunks: RAGDocument[] = [];
   const fileHash = crypto.createHash('sha256').update(documentId).digest('hex');
 
+  // Determine chunking strategy
+  let chunkingStrategy = 'section-based'; // Default
+
+  // Special case for transcripts (not in registry)
   if (documentType === 'transcript') {
+    chunkingStrategy = 'ai-transcript';
+  } else {
+    // Try to get strategy from artifact metadata
+    try {
+      // Check if it's a valid DocumentType by checking the registry
+      const { artifactRegistry } = await import('@/lib/artifacts');
+      if (documentType in artifactRegistry) {
+        const artifactDef = await getDocumentTypeDefinition(
+          documentType as keyof typeof artifactRegistry,
+        );
+        if (artifactDef?.metadata?.chunkingStrategy) {
+          chunkingStrategy = artifactDef.metadata.chunkingStrategy;
+        }
+      }
+    } catch (error) {
+      logger.debug(
+        `[RAG Sync] Could not find artifact definition for ${documentType}, using default section-based chunking`,
+      );
+    }
+  }
+
+  // Apply chunking based on strategy
+  if (chunkingStrategy === 'ai-transcript') {
     // AI-powered intelligent chunking for transcripts
     let items: TranscriptItem[];
     try {
@@ -277,8 +305,8 @@ async function chunkDocument(
         metadata: chunkMetadata,
       });
     });
-  } else if (documentType === 'meeting-memory' || documentType === 'document') {
-    // Simple section-based chunking for summaries and generic documents
+  } else if (chunkingStrategy === 'section-based') {
+    // Section-based chunking for all document types that use this strategy
     const sections = parseDocument(content);
     logger.debug(`Parsed ${sections.length} sections from document`);
 
@@ -286,8 +314,7 @@ async function chunkDocument(
       const chunkMetadata: RAGMetadata = {
         // Core identifiers (always present)
         documentId,
-        documentType:
-          documentType === 'meeting-memory' ? 'meeting-memory' : 'document',
+        documentType, // Use the actual document type
         userId: metadata.userId as string,
 
         // Document info (always present)
@@ -330,11 +357,51 @@ async function chunkDocument(
         metadata: chunkMetadata,
       });
     });
-  } else {
+  } else if (chunkingStrategy === 'none') {
+    // No chunking - treat entire document as single chunk
     logger.debug(
-      `[RAG Sync] Unknown document type: ${documentType}, using section-based chunking`,
+      `[RAG Sync] No chunking strategy for ${documentType}, treating as single chunk`,
     );
-    // Fallback to section-based chunking for unknown types
+    const chunkMetadata: RAGMetadata = {
+      // Core identifiers (always present)
+      documentId,
+      documentType,
+      userId: metadata.userId as string,
+
+      // Document info (always present)
+      title: metadata.title as string,
+      kind: metadata.kind as string,
+      createdAt: metadata.createdAt as string | Date,
+
+      // Chunk specifics (always present)
+      chunkIndex: 0,
+      totalChunks: 1,
+      fileHash,
+      contentSource: 'artifact',
+
+      // Preserve any existing metadata
+      artifactId: metadata?.artifactId as string | undefined,
+      artifactTitle: (metadata?.artifactTitle || metadata?.title) as
+        | string
+        | undefined,
+      artifactType: (metadata?.artifactType || metadata?.kind) as
+        | string
+        | undefined,
+      artifactCreatedAt: (metadata?.artifactCreatedAt || metadata?.createdAt) as
+        | string
+        | undefined,
+    };
+
+    chunks.push({
+      id: `${documentId}-full`,
+      content,
+      metadata: chunkMetadata,
+    });
+  } else {
+    logger.warn(
+      `[RAG Sync] Unknown chunking strategy '${chunkingStrategy}' for ${documentType}, falling back to section-based`,
+    );
+    // Fallback to section-based chunking for unknown strategies
     const sections = parseDocument(content);
 
     sections.forEach((section, index) => {
