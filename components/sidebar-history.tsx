@@ -183,6 +183,9 @@ export function SidebarHistory({ workspaceId }: { workspaceId: string }) {
   return (
     <>
       <SidebarGroup>
+        <div className="px-2 pb-2 text-sm font-semibold text-sidebar-foreground">
+          Chats
+        </div>
         <SidebarGroupContent>
           <SidebarMenu>
             {paginatedChatHistories &&
@@ -194,10 +197,10 @@ export function SidebarHistory({ workspaceId }: { workspaceId: string }) {
                 const groupedChats = groupChatsByDate(chatsFromHistory);
 
                 return (
-                  <div className="flex flex-col gap-6">
+                  <div className="flex flex-col gap-4">
                     {groupedChats.today.length > 0 && (
                       <div>
-                        <div className="px-2 py-1 text-xs text-sidebar-foreground/50">
+                        <div className="px-2 py-1 text-xs font-medium text-sidebar-foreground/60">
                           Today
                         </div>
                         {groupedChats.today.map((chat) => (
@@ -217,7 +220,7 @@ export function SidebarHistory({ workspaceId }: { workspaceId: string }) {
 
                     {groupedChats.yesterday.length > 0 && (
                       <div>
-                        <div className="px-2 py-1 text-xs text-sidebar-foreground/50">
+                        <div className="px-2 py-1 text-xs font-medium text-sidebar-foreground/60">
                           Yesterday
                         </div>
                         {groupedChats.yesterday.map((chat) => (
@@ -237,7 +240,7 @@ export function SidebarHistory({ workspaceId }: { workspaceId: string }) {
 
                     {groupedChats.lastWeek.length > 0 && (
                       <div>
-                        <div className="px-2 py-1 text-xs text-sidebar-foreground/50">
+                        <div className="px-2 py-1 text-xs font-medium text-sidebar-foreground/60">
                           Last 7 days
                         </div>
                         {groupedChats.lastWeek.map((chat) => (
@@ -257,7 +260,7 @@ export function SidebarHistory({ workspaceId }: { workspaceId: string }) {
 
                     {groupedChats.lastMonth.length > 0 && (
                       <div>
-                        <div className="px-2 py-1 text-xs text-sidebar-foreground/50">
+                        <div className="px-2 py-1 text-xs font-medium text-sidebar-foreground/60">
                           Last 30 days
                         </div>
                         {groupedChats.lastMonth.map((chat) => (
@@ -277,7 +280,7 @@ export function SidebarHistory({ workspaceId }: { workspaceId: string }) {
 
                     {groupedChats.older.length > 0 && (
                       <div>
-                        <div className="px-2 py-1 text-xs text-sidebar-foreground/50">
+                        <div className="px-2 py-1 text-xs font-medium text-sidebar-foreground/60">
                           Older than last month
                         </div>
                         {groupedChats.older.map((chat) => (

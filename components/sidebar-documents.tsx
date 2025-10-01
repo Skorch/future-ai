@@ -167,8 +167,10 @@ export function SidebarDocuments({ workspaceId }: { workspaceId: string }) {
   return (
     <>
       <SidebarGroup>
-        <div className="px-2 py-1 text-xs text-sidebar-foreground/50">
-          Documents
+        <div className="border-t border-sidebar-border pt-4">
+          <div className="px-2 pb-2 text-sm font-semibold text-sidebar-foreground">
+            Documents
+          </div>
         </div>
         <SidebarGroupContent>
           <SidebarMenu>
@@ -183,10 +185,10 @@ export function SidebarDocuments({ workspaceId }: { workspaceId: string }) {
                   groupDocumentsByDate(documentsFromHistory);
 
                 return (
-                  <div className="flex flex-col gap-6">
+                  <div className="flex flex-col gap-4">
                     {groupedDocuments.today.length > 0 && (
                       <div>
-                        <div className="px-2 py-1 text-xs text-sidebar-foreground/50">
+                        <div className="px-2 py-1 text-xs font-medium text-sidebar-foreground/60">
                           Today
                         </div>
                         {groupedDocuments.today.map((doc) => (
@@ -203,7 +205,7 @@ export function SidebarDocuments({ workspaceId }: { workspaceId: string }) {
 
                     {groupedDocuments.yesterday.length > 0 && (
                       <div>
-                        <div className="px-2 py-1 text-xs text-sidebar-foreground/50">
+                        <div className="px-2 py-1 text-xs font-medium text-sidebar-foreground/60">
                           Yesterday
                         </div>
                         {groupedDocuments.yesterday.map((doc) => (
@@ -220,7 +222,7 @@ export function SidebarDocuments({ workspaceId }: { workspaceId: string }) {
 
                     {groupedDocuments.lastWeek.length > 0 && (
                       <div>
-                        <div className="px-2 py-1 text-xs text-sidebar-foreground/50">
+                        <div className="px-2 py-1 text-xs font-medium text-sidebar-foreground/60">
                           Last 7 days
                         </div>
                         {groupedDocuments.lastWeek.map((doc) => (
@@ -237,7 +239,7 @@ export function SidebarDocuments({ workspaceId }: { workspaceId: string }) {
 
                     {groupedDocuments.lastMonth.length > 0 && (
                       <div>
-                        <div className="px-2 py-1 text-xs text-sidebar-foreground/50">
+                        <div className="px-2 py-1 text-xs font-medium text-sidebar-foreground/60">
                           Last 30 days
                         </div>
                         {groupedDocuments.lastMonth.map((doc) => (
@@ -254,7 +256,7 @@ export function SidebarDocuments({ workspaceId }: { workspaceId: string }) {
 
                     {groupedDocuments.older.length > 0 && (
                       <div>
-                        <div className="px-2 py-1 text-xs text-sidebar-foreground/50">
+                        <div className="px-2 py-1 text-xs font-medium text-sidebar-foreground/60">
                           Older than last month
                         </div>
                         {groupedDocuments.older.map((doc) => (

@@ -28,8 +28,8 @@ export function AppSidebar({ workspaceId }: { workspaceId: string }) {
 
   return (
     <Sidebar className="group-data-[side=left]:border-r-0">
-      <SidebarHeader>
-        <SidebarMenu>
+      <SidebarHeader className="pt-8 pb-4 border-b border-sidebar-border">
+        <SidebarMenu className="gap-3">
           <SidebarMenuItem>
             <WorkspaceSwitcher currentWorkspaceId={workspaceId} />
           </SidebarMenuItem>
