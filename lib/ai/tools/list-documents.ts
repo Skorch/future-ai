@@ -3,7 +3,7 @@ import { getLogger } from '@/lib/logger';
 const logger = getLogger('ListDocuments');
 import { tool } from 'ai';
 import { z } from 'zod';
-import { getAllUserDocuments } from '@/lib/db/queries';
+import { getAllUserDocuments } from '@/lib/db/documents';
 import { getAllDocumentTypes } from '@/lib/artifacts';
 
 interface ListDocumentsProps {

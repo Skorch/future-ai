@@ -5,7 +5,7 @@
  */
 
 import { streamText, smoothStream } from 'ai';
-import { getDocumentById, saveDocument } from '@/lib/db/queries';
+import { getDocumentById, saveDocument } from '@/lib/db/documents';
 import type { LanguageModel, UIMessageStreamWriter } from 'ai';
 import type { ChatMessage } from '@/lib/types';
 import type { ArtifactKind } from '@/components/artifact';

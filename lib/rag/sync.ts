@@ -1,4 +1,4 @@
-import { getDocumentById } from '@/lib/db/queries';
+import { getDocumentById } from '@/lib/db/documents';
 import { PineconeClient } from '@/lib/rag/pinecone-client';
 import { chunkTranscriptItems } from '@/lib/ai/utils/rag-chunker';
 import {

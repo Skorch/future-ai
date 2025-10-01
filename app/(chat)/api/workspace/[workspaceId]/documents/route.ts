@@ -4,7 +4,7 @@ import {
   deleteDocumentsByIdAfterTimestamp,
   getDocumentsById,
   saveDocument,
-} from '@/lib/db/queries';
+} from '@/lib/db/documents';
 import { ChatSDKError } from '@/lib/errors';
 import { getLogger } from '@/lib/logger';
 

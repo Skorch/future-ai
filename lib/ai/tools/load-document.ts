@@ -3,7 +3,7 @@ import { getLogger } from '@/lib/logger';
 const logger = getLogger('LoadDocument');
 import { tool } from 'ai';
 import { z } from 'zod';
-import { getDocumentForUser } from '@/lib/db/queries';
+import { getDocumentForUser } from '@/lib/db/documents';
 import type { DocumentType } from '@/lib/artifacts';
 
 // Extended type to include transcript (upload-only, not in registry)

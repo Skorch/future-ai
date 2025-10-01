@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { auth } from '@clerk/nextjs/server';
-import { saveDocument } from '@/lib/db/queries';
+import { saveDocument } from '@/lib/db/documents';
 import { generateUUID } from '@/lib/utils';
 import { getActiveWorkspace } from '@/lib/workspace/context';
 import { getLogger } from '@/lib/logger';

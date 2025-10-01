@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 
 import { config } from 'dotenv';
-import { saveDocument } from '@/lib/db/queries';
+import { saveDocument } from '@/lib/db/documents';
 import { generateUUID } from '@/lib/utils';
 
 config();

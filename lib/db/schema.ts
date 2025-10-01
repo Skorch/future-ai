@@ -132,19 +132,24 @@ export const document = pgTable(
     kind: varchar('kind', { enum: ['text'] }) // Only 'text' is implemented
       .notNull()
       .default('text'),
+    // NEW: Document type as first-class column (flexible string for dynamic types)
+    documentType: text('documentType').notNull().default('text'),
+    // NEW: Control whether document appears in RAG search results
+    isSearchable: boolean('isSearchable').notNull().default(true),
+    // NEW: Soft delete support (null = active, timestamp = deleted)
+    deletedAt: timestamp('deletedAt'),
     workspaceId: uuid('workspaceId')
       .references(() => workspace.id, { onDelete: 'cascade' })
-      .notNull(), // CHANGED from userId
+      .notNull(),
     createdByUserId: varchar('createdByUserId', { length: 255 }).references(
       () => user.id,
       {
         onDelete: 'set null',
       },
-    ), // NEW - track creator
-    // NEW FIELDS for RAG simplification
+    ),
     metadata: json('metadata')
       .$type<{
-        documentType?: string; // Generic string type for flexibility - no migrations needed when types change
+        documentType?: string; // Keep for backward compatibility during migration
         fileName?: string;
         fileSize?: number;
         uploadedAt?: string;
@@ -158,10 +163,26 @@ export const document = pgTable(
   (table) => ({
     pk: primaryKey({ columns: [table.id, table.createdAt] }),
     workspaceIdx: index('workspace_idx').on(table.workspaceId),
+    deletedAtIdx: index('idx_document_deleted_at').on(table.deletedAt),
+    searchableIdx: index('idx_document_searchable').on(table.isSearchable),
+    workspaceDeletedIdx: index('idx_document_workspace_deleted').on(
+      table.workspaceId,
+      table.deletedAt,
+    ),
   }),
 );
 
 export type Document = InferSelectModel<typeof document>;
+
+// Extended document type with computed fields for UI
+export interface DocumentWithMetadata extends Document {
+  documentType: string;
+  characterCount: number;
+  sourceChat?: {
+    id: string;
+    title: string;
+  };
+}
 
 // Mode-Based Agent System
 export type ChatMode = 'discovery' | 'build';

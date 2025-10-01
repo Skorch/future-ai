@@ -101,6 +101,9 @@ export function DocumentPreview({
           createdAt: new Date(),
           workspaceId: 'noop',
           createdByUserId: 'noop',
+          documentType: 'text',
+          isSearchable: true,
+          deletedAt: null,
           metadata: {},
           sourceDocumentIds: [],
         }

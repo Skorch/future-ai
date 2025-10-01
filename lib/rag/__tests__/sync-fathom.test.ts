@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { syncDocumentToRAG } from '../sync';
-import { getDocumentById } from '@/lib/db/queries';
+import { getDocumentById } from '@/lib/db/documents';
 import { PineconeClient } from '../pinecone-client';
 import { chunkTranscriptItems } from '@/lib/ai/utils/rag-chunker';
 import { parseTranscript } from '@/lib/ai/utils/transcript-parser';
 
 // Mock dependencies
-vi.mock('@/lib/db/queries');
+vi.mock('@/lib/db/documents');
 vi.mock('../pinecone-client');
 vi.mock('@/lib/ai/utils/rag-chunker');
 

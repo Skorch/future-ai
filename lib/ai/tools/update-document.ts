@@ -1,6 +1,6 @@
 import { tool, type UIMessageStreamWriter } from 'ai';
 import { z } from 'zod';
-import { getDocumentById } from '@/lib/db/queries';
+import { getDocumentById } from '@/lib/db/documents';
 import { getDocumentTypeDefinition, type DocumentType } from '@/lib/artifacts';
 import type { ChatMessage } from '@/lib/types';
 

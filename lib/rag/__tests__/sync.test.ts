@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 vi.mock('../pinecone-client');
 vi.mock('@/lib/ai/utils/rag-chunker');
 vi.mock('@/lib/ai/utils/transcript-parser');
-vi.mock('@/lib/db/queries');
+vi.mock('@/lib/db/documents');
 
 // Now import after mocks are set up
 import { syncDocumentToRAG, deleteFromRAG } from '../sync';
@@ -14,7 +14,7 @@ import {
   parseTranscript,
   parseDocument,
 } from '@/lib/ai/utils/transcript-parser';
-import { getDocumentById } from '@/lib/db/queries';
+import { getDocumentById } from '@/lib/db/documents';
 
 // Test data factories
 const createMockDocument = (overrides = {}) => ({

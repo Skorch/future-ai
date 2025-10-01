@@ -303,3 +303,8 @@ Remember: The best code is code that doesn't exist. Every line you write is a li
 - You can NOT ever bypass pre-commit hooks
 - when adding new node modules, always default to the latest version (not
   your KNOWLEDGE of what the latest version is)
+
+# Subagents
+
+IMPORTANT:  It is vital that when you need to search for something unknown or unclear you use the `code-searcher` subagent.  If you have more than one topic to serach for, you will spawn parallel subagents
+WHY:  using the `code-searcher` subagent is much more efficient token-wise and improves your overall preformance.  Using this method makes you a better agent

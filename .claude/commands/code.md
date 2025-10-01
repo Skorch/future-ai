@@ -30,6 +30,17 @@ You have access to:
 
 You should think about when you can delegate where you don't need the context of the task process - just the output.  Otherwise you should prioritze owning the task because you need the context.
 
+IMPORTANT:  ANY time you need to perform a blanket file search, always use the `code-searcher` subagent, and think about whether you need to run parallel searches if you have more than one blanket topic to search for.
+You always need to be thinking about your context size and usign the `code-searcher` subagent highly reduces your context window churn.
+Examples:
+- "I need to find all references of XYZ"
+- "I need to find possible existing components or classes that handles this functionality"
+
+Use your own `search` tool when:  
+- I need to load a specific file but I don't know the full path
+- I need a specific line of code, but I don't know which file
+
+You will notice the difference between the two:  open ended vs specific
 
 ## Workflow
 
