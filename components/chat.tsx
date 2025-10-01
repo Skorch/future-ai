@@ -173,6 +173,7 @@ export function Chat({
       <div className="flex flex-col min-w-0 h-dvh bg-background">
         <ChatHeader
           chatId={id}
+          workspaceId={workspaceId}
           selectedVisibilityType={initialVisibilityType}
           isReadonly={isReadonly}
         />

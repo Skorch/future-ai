@@ -22,7 +22,7 @@ export function AppSidebar({ workspaceId }: { workspaceId: string }) {
   const router = useRouter();
   const { setOpenMobile } = useSidebar();
 
-  const newChatUrl = `/workspace/${workspaceId}`;
+  const newChatUrl = `/workspace/${workspaceId}/chat/new`;
   const chatsUrl = `/workspace/${workspaceId}/chat`;
   const documentsUrl = `/workspace/${workspaceId}/document`;
 

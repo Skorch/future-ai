@@ -14,10 +14,12 @@ import { type VisibilityType, VisibilitySelector } from './visibility-selector';
 
 function PureChatHeader({
   chatId,
+  workspaceId,
   selectedVisibilityType,
   isReadonly,
 }: {
   chatId: string;
+  workspaceId: string;
   selectedVisibilityType: VisibilityType;
   isReadonly: boolean;
 }) {
@@ -37,7 +39,7 @@ function PureChatHeader({
               variant="outline"
               className="order-2 md:order-1 md:px-2 px-2 md:h-fit ml-auto md:ml-0"
               onClick={() => {
-                router.push('/');
+                router.push(`/workspace/${workspaceId}/chat/new`);
                 router.refresh();
               }}
             >
@@ -76,6 +78,7 @@ function PureChatHeader({
 export const ChatHeader = memo(PureChatHeader, (prevProps, nextProps) => {
   return (
     prevProps.chatId === nextProps.chatId &&
+    prevProps.workspaceId === nextProps.workspaceId &&
     prevProps.selectedVisibilityType === nextProps.selectedVisibilityType &&
     prevProps.isReadonly === nextProps.isReadonly
   );

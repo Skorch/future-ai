@@ -92,7 +92,7 @@ export default function ChatListPage({
             )}
             <Button
               onClick={() => {
-                router.push(`/workspace/${workspaceId}`);
+                router.push(`/workspace/${workspaceId}/chat/new`);
               }}
             >
               <PlusIcon size={16} />
@@ -125,7 +125,7 @@ export default function ChatListPage({
           </p>
           <Button
             onClick={() => {
-              router.push(`/workspace/${workspaceId}`);
+              router.push(`/workspace/${workspaceId}/chat/new`);
             }}
           >
             <PlusIcon size={16} />
