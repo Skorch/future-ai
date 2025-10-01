@@ -4,15 +4,36 @@ const logger = getLogger('ListDocuments');
 import { tool } from 'ai';
 import { z } from 'zod';
 import { getAllUserDocuments } from '@/lib/db/queries';
+import { getAllDocumentTypes } from '@/lib/artifacts';
 
 interface ListDocumentsProps {
   session: { user: { id: string } };
   workspaceId: string;
 }
 
-export const listDocuments = ({ session, workspaceId }: ListDocumentsProps) =>
-  tool({
-    description: `List all documents available to the current user.
+// Cache for tool description to avoid regenerating
+// Note: Module-level cache, cleared on server restart
+let toolDescriptionCache: string | null = null;
+
+// Build dynamic tool description from registry
+async function buildToolDescription(): Promise<string> {
+  // Return cached if available
+  if (toolDescriptionCache) return toolDescriptionCache;
+
+  try {
+    const docTypes = await getAllDocumentTypes();
+
+    // Build dynamic type descriptions from registry
+    const typeDescriptions = docTypes
+      .map((dt) => {
+        return `- '${dt.metadata.type}': ${dt.metadata.description}`;
+      })
+      .join('\n');
+
+    // Add transcript manually since it's not in registry (upload-only)
+    const allTypes = `${typeDescriptions}\n- 'transcript': Raw meeting audio/video - Load selectively or partially`;
+
+    toolDescriptionCache = `List all documents available to the current user.
 Returns document metadata including size information to help decide what to load.
 
 WHEN TO USE THIS TOOL:
@@ -36,12 +57,31 @@ DECISION FLOW FOR COMMON QUERIES:
    → list-documents → load that specific document fully
 
 DOCUMENT TYPES & LOADING STRATEGY:
-- 'meeting-analysis': AI-generated, concise (~2-5k tokens) - ALWAYS safe to load multiple
-- 'transcript': Raw meeting audio/video (~10-50k tokens) - Load selectively or partially
-- 'document': Other text files - Check size before loading
+${allTypes}
 
-PRO TIP: For time-period queries, loading ALL summaries gives more complete context
-than RAG search, which might miss important topics.`,
+PRO TIP: For time-period queries, loading ALL document summaries gives more complete context
+than RAG search, which might miss important topics. Check document size before loading.`;
+
+    return toolDescriptionCache;
+  } catch (error) {
+    logger.warn('Failed to load document types for tool description', error);
+    // Fallback description
+    return `List all documents available to the current user.
+Returns document metadata including size information to help decide what to load.
+
+Use this tool to discover available documents before loading them.`;
+  }
+}
+
+export const listDocuments = async ({
+  session,
+  workspaceId,
+}: ListDocumentsProps) => {
+  // Dynamically build description from registry
+  const description = await buildToolDescription();
+
+  return tool({
+    description,
     inputSchema: z.object({}),
     execute: async () => {
       logger.debug('[ListDocuments Tool] Executing list-documents tool call');
@@ -140,3 +180,4 @@ than RAG search, which might miss important topics.`,
       };
     },
   });
+};

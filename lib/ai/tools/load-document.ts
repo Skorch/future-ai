@@ -4,6 +4,10 @@ const logger = getLogger('LoadDocument');
 import { tool } from 'ai';
 import { z } from 'zod';
 import { getDocumentForUser } from '@/lib/db/queries';
+import type { DocumentType } from '@/lib/artifacts';
+
+// Extended type to include transcript (upload-only, not in registry)
+type ExtendedDocumentType = DocumentType | 'transcript';
 
 interface LoadDocumentProps {
   session: { user: { id: string } };
@@ -85,7 +89,7 @@ Reserve space for user messages, your responses, and other tool outputs.`,
           ).toLocaleString()} tokens)`;
 
       const metadata = document.metadata as {
-        documentType?: 'transcript' | 'meeting-analysis';
+        documentType?: ExtendedDocumentType;
         fileName?: string;
         fileSize?: number;
         uploadedAt?: string;
@@ -122,9 +126,7 @@ Reserve space for user messages, your responses, and other tool outputs.`,
         metadata: cleanedMetadata,
         sourceDocumentIds: document.sourceDocumentIds,
         createdAt: document.createdAt,
-        documentType:
-          metadata?.documentType ||
-          ('document' as 'transcript' | 'meeting-analysis' | 'document'),
+        documentType: metadata?.documentType || 'text',
         loadInfo: {
           truncated: document.truncated,
           loadedChars: document.loadedChars,

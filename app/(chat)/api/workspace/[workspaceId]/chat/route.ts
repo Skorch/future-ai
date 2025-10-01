@@ -430,7 +430,10 @@ export async function POST(
                       workspaceId,
                     }),
                     queryRAG: queryRAG({ session, dataStream, workspaceId }),
-                    listDocuments: listDocuments({ session, workspaceId }),
+                    listDocuments: await listDocuments({
+                      session,
+                      workspaceId,
+                    }),
                     loadDocument: loadDocument({ session, workspaceId }),
                     loadDocuments: loadDocuments({ session, workspaceId }),
                     askUser: askUser({ dataStream }),
