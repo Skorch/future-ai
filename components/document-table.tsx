@@ -142,13 +142,17 @@ export function DocumentTable({ documents, workspaceId }: DocumentTableProps) {
   }, [isMobile, isTablet, workspaceId, router]);
 
   return (
-    <div className="h-[calc(100vh-200px)]">
-      <DataGrid
-        columns={columns}
-        rows={documents}
-        rowKeyGetter={(row) => row.id}
-        className="rdg-light dark:rdg-dark"
-      />
-    </div>
+    <DataGrid
+      columns={columns}
+      rows={documents}
+      rowKeyGetter={(row) => row.id}
+      className="rdg-light dark:rdg-dark"
+      style={{
+        // Calculate height based on number of rows
+        // Header is ~35px, each row is ~53px (based on py-2 padding)
+        height: `${35 + documents.length * 53}px`,
+        minHeight: '400px',
+      }}
+    />
   );
 }

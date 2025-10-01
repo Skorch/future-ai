@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 
 import { PlusIcon } from '@/components/icons';
 import { SidebarHistory } from '@/components/sidebar-history';
+import { SidebarDocuments } from '@/components/sidebar-documents';
 import { SidebarUserNav } from '@/components/sidebar-user-nav';
 import { WorkspaceSwitcher } from '@/components/workspace-switcher';
 import { Button } from '@/components/ui/button';
@@ -22,6 +23,8 @@ export function AppSidebar({ workspaceId }: { workspaceId: string }) {
   const { setOpenMobile } = useSidebar();
 
   const newChatUrl = `/workspace/${workspaceId}`;
+  const chatsUrl = `/workspace/${workspaceId}/chat`;
+  const documentsUrl = `/workspace/${workspaceId}/document`;
 
   return (
     <Sidebar className="group-data-[side=left]:border-r-0">
@@ -48,6 +51,7 @@ export function AppSidebar({ workspaceId }: { workspaceId: string }) {
       </SidebarHeader>
       <SidebarContent>
         <SidebarHistory workspaceId={workspaceId} />
+        <SidebarDocuments workspaceId={workspaceId} />
       </SidebarContent>
       <SidebarFooter>
         <SidebarUserNav />

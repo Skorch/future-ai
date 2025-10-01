@@ -4,7 +4,6 @@ import { isToday, isYesterday, subMonths, subWeeks } from 'date-fns';
 import { useParams, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { motion } from 'framer-motion';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,7 +24,6 @@ import type { Chat } from '@/lib/db/schema';
 import { fetcher } from '@/lib/utils';
 import { ChatItem } from './sidebar-history-item';
 import useSWRInfinite from 'swr/infinite';
-import { LoaderIcon } from './icons';
 
 type GroupedChats = {
   today: Chat[];
@@ -82,21 +80,12 @@ export function getChatHistoryPaginationKey(
 ) {
   if (!workspaceId) return null;
 
-  if (previousPageData && previousPageData.hasMore === false) {
-    return null;
-  }
-
+  // Only fetch first page (20 recent chats) for sidebar
+  // No infinite scroll - users go to /workspace/[id]/chat for full list
   if (pageIndex === 0)
     return `/api/workspace/${workspaceId}/history?limit=${PAGE_SIZE}`;
 
-  // Check if previousPageData exists and has chats array
-  if (!previousPageData || !previousPageData.chats) return null;
-
-  const firstChatFromPage = previousPageData.chats.at(-1);
-
-  if (!firstChatFromPage) return null;
-
-  return `/api/workspace/${workspaceId}/history?ending_before=${firstChatFromPage.id}&limit=${PAGE_SIZE}`;
+  return null; // No pagination in sidebar
 }
 
 export function SidebarHistory({ workspaceId }: { workspaceId: string }) {
@@ -105,8 +94,6 @@ export function SidebarHistory({ workspaceId }: { workspaceId: string }) {
 
   const {
     data: paginatedChatHistories,
-    setSize,
-    isValidating,
     isLoading,
     mutate,
   } = useSWRInfinite<ChatHistory>(
@@ -118,10 +105,6 @@ export function SidebarHistory({ workspaceId }: { workspaceId: string }) {
   const router = useRouter();
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-
-  const hasReachedEnd = paginatedChatHistories
-    ? paginatedChatHistories.some((page) => page.hasMore === false)
-    : false;
 
   const hasEmptyChatHistory = paginatedChatHistories
     ? paginatedChatHistories.every((page) => page?.chats?.length === 0)
@@ -316,26 +299,19 @@ export function SidebarHistory({ workspaceId }: { workspaceId: string }) {
               })()}
           </SidebarMenu>
 
-          <motion.div
-            onViewportEnter={() => {
-              if (!isValidating && !hasReachedEnd) {
-                setSize((size) => size + 1);
-              }
-            }}
-          />
-
-          {hasReachedEnd ? (
-            <div className="flex flex-row gap-2 justify-center items-center px-2 mt-8 w-full text-sm text-zinc-500">
-              You have reached the end of your chat history.
-            </div>
-          ) : (
-            <div className="flex flex-row gap-2 items-center p-2 mt-8 text-zinc-500 dark:text-zinc-400">
-              <div className="animate-spin">
-                <LoaderIcon />
-              </div>
-              <div>Loading Chats...</div>
-            </div>
-          )}
+          {/* View All Chats link at bottom of chat list */}
+          <div className="p-2">
+            <button
+              type="button"
+              className="w-full text-left text-sm text-muted-foreground hover:text-foreground transition-colors py-1"
+              onClick={() => {
+                setOpenMobile(false);
+                router.push(`/workspace/${workspaceId}/chat`);
+              }}
+            >
+              View All Chats →
+            </button>
+          </div>
         </SidebarGroupContent>
       </SidebarGroup>
 

@@ -10,6 +10,7 @@ export const metadata: ArtifactMetadata = {
   description:
     'Pre-meeting preparation with structured agenda, topics, and time allocation',
   clientKind: 'text',
+  icon: 'Calendar',
 
   prompt:
     'Create a structured meeting agenda based on the topics and objectives provided',

@@ -8,6 +8,7 @@ export const metadata: ArtifactMetadata = {
   description:
     'Internal team knowledge base from meetings with action items and key decisions',
   clientKind: 'text',
+  icon: 'BarChart3',
 
   // Prompt and template content
   prompt: MEETING_SUMMARY_PROMPT,

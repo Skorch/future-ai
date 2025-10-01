@@ -10,6 +10,7 @@ export const metadata: ArtifactMetadata = {
   description:
     'Comprehensive BRD with detailed field definitions and acceptance criteria',
   clientKind: 'text',
+  icon: 'FileCheck',
 
   prompt:
     'Create a comprehensive Business Requirements Document from meeting transcripts',

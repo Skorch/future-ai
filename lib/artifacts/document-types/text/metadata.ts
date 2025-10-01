@@ -6,6 +6,7 @@ export const metadata: ArtifactMetadata = {
   name: 'Text Document',
   description: 'General purpose document for any text content',
   clientKind: 'text',
+  icon: 'FileText',
 
   // Prompt and template content
   prompt:

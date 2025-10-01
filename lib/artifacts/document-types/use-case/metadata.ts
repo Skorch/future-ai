@@ -10,6 +10,7 @@ export const metadata: ArtifactMetadata = {
   description:
     'Lightweight business discovery document from workshop transcripts',
   clientKind: 'text',
+  icon: 'Lightbulb',
 
   prompt: 'Generate a business use case document from workshop transcript',
   template: '', // Will be defined in prompts.ts

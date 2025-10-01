@@ -170,8 +170,28 @@ export async function getChatsByWorkspaceAndUser({
 
     const query = (whereCondition?: SQL<unknown>) =>
       db
-        .select()
+        .select({
+          // Select all chat columns
+          id: chat.id,
+          createdAt: chat.createdAt,
+          title: chat.title,
+          userId: chat.userId,
+          workspaceId: chat.workspaceId,
+          visibility: chat.visibility,
+          mode: chat.mode,
+          modeSetAt: chat.modeSetAt,
+          goal: chat.goal,
+          goalSetAt: chat.goalSetAt,
+          todoList: chat.todoList,
+          todoListUpdatedAt: chat.todoListUpdatedAt,
+          complete: chat.complete,
+          completedAt: chat.completedAt,
+          firstCompletedAt: chat.firstCompletedAt,
+          // Add message count
+          messageCount: count(message.id),
+        })
         .from(chat)
+        .leftJoin(message, eq(chat.id, message.chatId))
         .where(
           whereCondition
             ? and(
@@ -181,10 +201,27 @@ export async function getChatsByWorkspaceAndUser({
               )
             : and(eq(chat.workspaceId, workspaceId), eq(chat.userId, userId)),
         )
+        .groupBy(
+          chat.id,
+          chat.createdAt,
+          chat.title,
+          chat.userId,
+          chat.workspaceId,
+          chat.visibility,
+          chat.mode,
+          chat.modeSetAt,
+          chat.goal,
+          chat.goalSetAt,
+          chat.todoList,
+          chat.todoListUpdatedAt,
+          chat.complete,
+          chat.completedAt,
+          chat.firstCompletedAt,
+        )
         .orderBy(desc(chat.createdAt))
         .limit(extendedLimit);
 
-    let filteredChats: Array<Chat> = [];
+    let filteredChats: Array<Chat & { messageCount: number }> = [];
 
     if (startingAfter) {
       const [selectedChat] = await db

@@ -10,6 +10,7 @@ export const metadata: ArtifactMetadata = {
   description:
     'Concise, email-ready meeting minutes optimized for quick scanning and action',
   clientKind: 'text',
+  icon: 'Mail',
 
   prompt:
     'Create brief, impactful meeting minutes suitable for email distribution',

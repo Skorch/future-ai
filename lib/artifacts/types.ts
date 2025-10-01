@@ -22,6 +22,7 @@ export interface ArtifactMetadata {
   name: string;
   description: string;
   clientKind: 'text';
+  icon?: string; // lucide-react icon name for UI display
 
   // Prompt and template content
   prompt: string;

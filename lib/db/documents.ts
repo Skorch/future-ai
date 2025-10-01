@@ -727,41 +727,6 @@ export async function toggleDocumentSearchable(
 }
 
 /**
- * Get recent documents for sidebar display
- * Returns workspace documents ordered by creation date
- */
-export async function getRecentDocuments(workspaceId: string, limit = 20) {
-  try {
-    const documents = await db
-      .select({
-        id: document.id,
-        title: document.title,
-        documentType: document.documentType,
-        createdAt: document.createdAt,
-        isSearchable: document.isSearchable,
-        metadata: document.metadata,
-      })
-      .from(document)
-      .where(
-        and(eq(document.workspaceId, workspaceId), isNull(document.deletedAt)),
-      )
-      .orderBy(desc(document.createdAt))
-      .limit(limit);
-
-    return documents.map((doc) => ({
-      ...doc,
-      sourceChat: extractSourceChat(doc.metadata),
-    }));
-  } catch (error) {
-    logger.error('[getRecentDocuments] Failed', { workspaceId, limit, error });
-    throw new ChatSDKError(
-      'bad_request:database',
-      'Failed to fetch recent documents',
-    );
-  }
-}
-
-/**
  * Group documents by date for UI display
  * Matches chat grouping logic for consistency
  */

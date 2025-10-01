@@ -13,6 +13,6 @@ export default async function Page({
     redirect('/login');
   }
 
-  // Redirect to document list as the default workspace view
-  redirect(`/workspace/${workspaceId}/document`);
+  // Redirect to chat list as the default workspace view
+  redirect(`/workspace/${workspaceId}/chat`);
 }
