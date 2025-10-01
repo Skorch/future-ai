@@ -162,3 +162,57 @@
 .suggestion-highlight {
     @apply bg-blue-200 hover:bg-blue-300 dark:hover:bg-blue-400/50 dark:text-blue-50 dark:bg-blue-500/40;
 }
+
+/* Tiptap Editor Styling */
+.tiptap {
+    @apply focus:outline-none;
+}
+
+.tiptap p {
+    @apply my-4 first:mt-0 last:mb-0;
+}
+
+.tiptap h1 {
+    @apply text-3xl font-bold mt-8 mb-4 first:mt-0;
+}
+
+.tiptap h2 {
+    @apply text-2xl font-bold mt-6 mb-3 first:mt-0;
+}
+
+.tiptap h3 {
+    @apply text-xl font-bold mt-4 mb-2 first:mt-0;
+}
+
+.tiptap ul, .tiptap ol {
+    @apply my-4 pl-6;
+}
+
+.tiptap li {
+    @apply my-1;
+}
+
+.tiptap code {
+    @apply bg-muted px-1 py-0.5 rounded text-sm;
+}
+
+.tiptap pre {
+    @apply bg-muted p-4 rounded-lg my-4 overflow-x-auto;
+}
+
+.tiptap blockquote {
+    @apply border-l-4 border-muted-foreground pl-4 my-4 italic;
+}
+
+/* React Data Grid Document Table Styling */
+.rdg {
+    --rdg-row-height: 56px;
+}
+
+.rdg .rdg-cell {
+    @apply px-4;
+}
+
+.rdg .rdg-row:hover {
+    @apply bg-muted/50;
+}

@@ -59,11 +59,11 @@ export const VersionFooter = ({
 
             mutate(
               workspaceId
-                ? `/api/workspace/${workspaceId}/documents?id=${artifact.documentId}`
+                ? `/api/workspace/${workspaceId}/document/${artifact.documentId}`
                 : `/api/document?id=${artifact.documentId}`,
               await fetch(
                 workspaceId
-                  ? `/api/workspace/${workspaceId}/documents?id=${artifact.documentId}&timestamp=${getDocumentTimestampByIndex(
+                  ? `/api/workspace/${workspaceId}/document/${artifact.documentId}?timestamp=${getDocumentTimestampByIndex(
                       documents,
                       currentVersionIndex,
                     )}`

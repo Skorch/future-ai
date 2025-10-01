@@ -12,22 +12,12 @@ const logger = getLogger('DocumentAPI');
 
 export async function GET(
   request: Request,
-  props: { params: Promise<{ workspaceId: string }> },
+  props: { params: Promise<{ workspaceId: string; id: string }> },
 ) {
   const params = await props.params;
-  const { workspaceId } = params;
-  const { searchParams } = new URL(request.url);
-  const id = searchParams.get('id');
+  const { workspaceId, id } = params;
 
   logger.debug('GET request for document:', id);
-
-  if (!id) {
-    logger.error('Missing document ID');
-    return new ChatSDKError(
-      'bad_request:api',
-      'Parameter id is missing',
-    ).toResponse();
-  }
 
   const { userId } = await auth();
 
@@ -41,11 +31,9 @@ export async function GET(
 
   logger.debug('Documents fetched:', {
     count: documents.length,
-    // Only log metadata, not actual content
     hasContent: documents.map((d) => ({
       hasContent: !!d.content,
       contentLength: d.content?.length || 0,
-      // title removed - may contain sensitive data
     })),
   });
 
@@ -62,24 +50,15 @@ export async function GET(
 
 export async function POST(
   request: Request,
-  props: { params: Promise<{ workspaceId: string }> },
+  props: { params: Promise<{ workspaceId: string; id: string }> },
 ) {
   const params = await props.params;
-  const { workspaceId } = params;
-  const { searchParams } = new URL(request.url);
-  const id = searchParams.get('id');
-
-  if (!id) {
-    return new ChatSDKError(
-      'bad_request:api',
-      'Parameter id is required.',
-    ).toResponse();
-  }
+  const { workspaceId, id } = params;
 
   const { userId } = await auth();
 
   if (!userId) {
-    return new ChatSDKError('not_found:document').toResponse();
+    return new ChatSDKError('unauthorized:document').toResponse();
   }
 
   const {
@@ -109,20 +88,12 @@ export async function POST(
 
 export async function DELETE(
   request: Request,
-  props: { params: Promise<{ workspaceId: string }> },
+  props: { params: Promise<{ workspaceId: string; id: string }> },
 ) {
   const params = await props.params;
-  const { workspaceId } = params;
+  const { workspaceId, id } = params;
   const { searchParams } = new URL(request.url);
-  const id = searchParams.get('id');
   const timestamp = searchParams.get('timestamp');
-
-  if (!id) {
-    return new ChatSDKError(
-      'bad_request:api',
-      'Parameter id is required.',
-    ).toResponse();
-  }
 
   if (!timestamp) {
     return new ChatSDKError(

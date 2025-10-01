@@ -1,6 +1,3 @@
-import { Chat } from '@/components/chat';
-import { generateUUID } from '@/lib/utils';
-import { DataStreamHandler } from '@/components/data-stream-handler';
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 
@@ -16,20 +13,6 @@ export default async function Page({
     redirect('/login');
   }
 
-  const id = generateUUID();
-
-  return (
-    <>
-      <Chat
-        key={id}
-        id={id}
-        workspaceId={workspaceId}
-        initialMessages={[]}
-        initialVisibilityType="private"
-        isReadonly={false}
-        autoResume={false}
-      />
-      <DataStreamHandler />
-    </>
-  );
+  // Redirect to document list as the default workspace view
+  redirect(`/workspace/${workspaceId}/document`);
 }

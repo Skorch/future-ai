@@ -3,7 +3,18 @@ import { getLogger } from '@/lib/logger';
 const logger = getLogger('documents');
 import 'server-only';
 
-import { and, asc, desc, eq, gt, inArray, isNull, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gt,
+  inArray,
+  isNull,
+  lt,
+  or,
+  sql,
+} from 'drizzle-orm';
 
 import { document } from './schema';
 import { db } from './queries';
@@ -275,7 +286,189 @@ export async function getAllUserDocuments({
   return getWorkspaceDocuments(workspaceId);
 }
 
-// New workspace-centric function name
+// Paginated version with search/filter/sort
+export async function getWorkspaceDocumentsPaginated({
+  workspaceId,
+  limit = 50,
+  cursor,
+  search,
+  type,
+  sortBy = 'created',
+  sortOrder = 'desc',
+}: {
+  workspaceId: string;
+  limit?: number;
+  cursor?: string; // Format: "timestamp_id"
+  search?: string;
+  type?: string;
+  sortBy?: 'created' | 'title';
+  sortOrder?: 'asc' | 'desc';
+}) {
+  try {
+    // Parse cursor if provided
+    let cursorDate: Date | null = null;
+    let cursorId: string | null = null;
+    if (cursor) {
+      const [timestamp, id] = cursor.split('_');
+      cursorDate = new Date(timestamp);
+      cursorId = id;
+    }
+
+    // Build where conditions
+    const conditions = [
+      eq(document.workspaceId, workspaceId),
+      isNull(document.deletedAt),
+    ];
+
+    // Add cursor conditions for pagination
+    if (cursorDate && cursorId) {
+      if (sortOrder === 'desc') {
+        const cursorCondition = or(
+          lt(document.createdAt, cursorDate),
+          and(eq(document.createdAt, cursorDate), lt(document.id, cursorId)),
+        );
+        if (cursorCondition) conditions.push(cursorCondition);
+      } else {
+        const cursorCondition = or(
+          gt(document.createdAt, cursorDate),
+          and(eq(document.createdAt, cursorDate), gt(document.id, cursorId)),
+        );
+        if (cursorCondition) conditions.push(cursorCondition);
+      }
+    }
+
+    // Add search filter (title search)
+    if (search) {
+      conditions.push(
+        sql`LOWER(${document.title}) LIKE ${`%${search.toLowerCase()}%`}`,
+      );
+    }
+
+    // Get documents with DISTINCT ON for latest version
+    const documentsQuery = await db
+      .selectDistinctOn([document.id], {
+        id: document.id,
+        title: document.title,
+        createdAt: document.createdAt,
+        metadata: document.metadata,
+        sourceDocumentIds: document.sourceDocumentIds,
+        contentLength: sql<number>`LENGTH(${document.content})`,
+        contentPreview: sql<string>`SUBSTRING(${document.content}, 1, 500)`,
+      })
+      .from(document)
+      .where(and(...conditions))
+      .orderBy(
+        document.id,
+        sortOrder === 'desc'
+          ? desc(document.createdAt)
+          : asc(document.createdAt),
+      )
+      .limit(limit + 1); // Fetch one extra to check if more exist
+
+    // Filter by type if specified (post-query since it's in metadata)
+    let documents = documentsQuery.map((doc) => {
+      const metadata = doc.metadata as {
+        documentType?: string;
+        fileName?: string;
+        fileSize?: number;
+        uploadedAt?: string;
+        meetingDate?: string;
+        participants?: string[];
+        [key: string]: unknown;
+      } | null;
+
+      return {
+        ...doc,
+        estimatedTokens: Math.ceil(doc.contentLength / 4),
+        humanReadableSize: formatBytes(doc.contentLength),
+        documentType: metadata?.documentType || 'document',
+        sourceDocumentIds: (doc.sourceDocumentIds || []) as string[],
+        metadata,
+      };
+    });
+
+    // Filter by type if specified
+    if (type) {
+      documents = documents.filter((doc) => doc.documentType === type);
+    }
+
+    // Sort by title if requested (post-query)
+    if (sortBy === 'title') {
+      documents.sort((a, b) =>
+        sortOrder === 'desc'
+          ? b.title.localeCompare(a.title)
+          : a.title.localeCompare(b.title),
+      );
+    } else {
+      // Sort by createdAt
+      documents.sort((a, b) =>
+        sortOrder === 'desc'
+          ? b.createdAt.getTime() - a.createdAt.getTime()
+          : a.createdAt.getTime() - b.createdAt.getTime(),
+      );
+    }
+
+    // Check if there are more results
+    const hasMore = documents.length > limit;
+    const results = hasMore ? documents.slice(0, limit) : documents;
+
+    // Generate next cursor from last item
+    const nextCursor =
+      hasMore && results.length > 0
+        ? `${results[results.length - 1].createdAt.toISOString()}_${results[results.length - 1].id}`
+        : null;
+
+    // Get total count for the current filters
+    const countConditions = [
+      eq(document.workspaceId, workspaceId),
+      isNull(document.deletedAt),
+    ];
+    if (search) {
+      countConditions.push(
+        sql`LOWER(${document.title}) LIKE ${`%${search.toLowerCase()}%`}`,
+      );
+    }
+
+    const countResult = await db
+      .select({ count: sql<number>`COUNT(DISTINCT ${document.id})` })
+      .from(document)
+      .where(and(...countConditions));
+
+    let totalCount = countResult[0]?.count || 0;
+
+    // Adjust count if type filter is applied (since it's post-query)
+    if (type) {
+      const allDocs = await db
+        .selectDistinctOn([document.id], {
+          id: document.id,
+          metadata: document.metadata,
+        })
+        .from(document)
+        .where(and(...countConditions))
+        .orderBy(document.id);
+
+      totalCount = allDocs.filter((doc) => {
+        const meta = doc.metadata as { documentType?: string } | null;
+        return meta?.documentType === type;
+      }).length;
+    }
+
+    return {
+      documents: results,
+      totalCount,
+      hasMore,
+      nextCursor,
+    };
+  } catch (error) {
+    logger.error('[getWorkspaceDocumentsPaginated] Error:', error);
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get workspace documents',
+    );
+  }
+}
+
+// New workspace-centric function name (non-paginated, for backwards compatibility)
 export async function getWorkspaceDocuments(workspaceId: string) {
   try {
     // Get the latest version of each document by using DISTINCT ON with document.id

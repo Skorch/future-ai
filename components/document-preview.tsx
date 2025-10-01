@@ -38,7 +38,7 @@ export function DocumentPreview({
     Array<Document>
   >(
     result && workspaceId
-      ? `/api/workspace/${workspaceId}/documents?id=${result.id}`
+      ? `/api/workspace/${workspaceId}/document/${result.id}`
       : null,
     fetcher,
   );

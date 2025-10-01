@@ -101,7 +101,7 @@ function PureArtifact({
     artifact.documentId !== 'init' && artifact.status !== 'streaming';
   const fetchUrl =
     shouldFetchDocument && workspaceId
-      ? `/api/workspace/${workspaceId}/documents?id=${artifact.documentId}`
+      ? `/api/workspace/${workspaceId}/document/${artifact.documentId}`
       : null;
 
   logger.debug('Document fetch conditions:', {
@@ -181,7 +181,7 @@ function PureArtifact({
           if (currentDocument.content !== updatedContent) {
             await fetch(
               workspaceId
-                ? `/api/workspace/${workspaceId}/documents?id=${artifact.documentId}`
+                ? `/api/workspace/${workspaceId}/document/${artifact.documentId}`
                 : `/api/document?id=${artifact.documentId}`,
               {
                 method: 'POST',
