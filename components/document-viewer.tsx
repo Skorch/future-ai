@@ -1,8 +1,8 @@
 'use client';
 
 import { useEditor, EditorContent } from '@tiptap/react';
-import { Markdown } from 'tiptap-markdown';
 import TiptapStarterKit from '@tiptap/starter-kit';
+import { Markdown } from 'tiptap-markdown';
 
 interface DocumentViewerProps {
   content: string;
