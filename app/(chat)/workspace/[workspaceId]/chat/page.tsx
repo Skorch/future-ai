@@ -46,7 +46,7 @@ export default function ChatListPage({
   const { data, error, size, setSize, isLoading, isValidating, mutate } =
     useSWRInfinite<ChatHistory>(getKey, fetcher, {
       revalidateFirstPage: false,
-      revalidateOnFocus: false,
+      revalidateOnFocus: true,
     });
 
   // Flatten all pages into single array
