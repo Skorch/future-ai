@@ -18,7 +18,11 @@ export interface CreateDocumentCallbackProps {
   dataStream: UIMessageStreamWriter<ChatMessage>;
   session: { user: { id: string } };
   workspaceId: string;
-  metadata?: Record<string, unknown>;
+  metadata?: Record<string, unknown> & {
+    sourceDocumentIds?: string[];
+    agentInstruction?: string;
+    primarySourceDocumentId?: string;
+  };
 }
 
 export interface UpdateDocumentCallbackProps {

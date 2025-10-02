@@ -35,7 +35,7 @@ export const metadata: ArtifactMetadata = {
 
   // Parameters configuration
   requiredParams: ['sourceDocumentIds'],
-  optionalParams: ['meetingDate', 'participants'],
+  optionalParams: ['meetingDate', 'participants', 'primarySourceDocumentId'],
 
   // Generation configuration
   outputSize: OutputSize.MEDIUM, // 2500 tokens for concise meeting summaries

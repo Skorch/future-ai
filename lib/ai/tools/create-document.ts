@@ -30,7 +30,13 @@ const createDocumentSchema = z.object({
     .array(z.string().uuid())
     .optional()
     .describe(
-      'Array of source document IDs (required for some types like meeting-analysis)',
+      'Array of source document IDs for reference or analysis (check document type definition for requirements)',
+    ),
+  agentInstruction: z
+    .string()
+    .optional()
+    .describe(
+      'Custom instructions for the document generation agent. Use this to specify: (1) How to use source documents (e.g., "Primary document is the transcript to analyze, others are historical context"), (2) Any custom format or output requirements beyond the standard template, (3) Specific guidance on emphasis areas or analysis focus, (4) Context about the user\'s goals or downstream usage of this document.',
     ),
   metadata: z
     .record(z.unknown())
@@ -92,6 +98,7 @@ export const createDocument = async ({
       kind,
       documentType,
       sourceDocumentIds,
+      agentInstruction,
       metadata,
     }) => {
       const startTime = Date.now();
@@ -159,6 +166,7 @@ export const createDocument = async ({
           metadata: {
             ...metadata,
             sourceDocumentIds, // Pass through - handler validates if needed
+            agentInstruction, // Pass through custom instructions to handler
           },
         });
 

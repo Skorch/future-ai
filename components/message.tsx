@@ -28,6 +28,7 @@ import { DocumentPreview } from './document-preview';
 import { MessageReasoning } from './message-reasoning';
 import type { UseChatHelpers } from '@ai-sdk/react';
 import type { ChatMessage } from '@/lib/types';
+import { documentTypeDisplayNames } from '@/lib/artifacts/client';
 import { useDataStream } from './data-stream-provider';
 import {
   Collapsible,
@@ -103,14 +104,15 @@ const getDocumentType = (
   if (!docType) return null;
 
   const docTypeStr = String(docType);
-  const typeMap: Record<string, string> = {
-    transcript: 'Transcript',
-    'meeting-analysis': 'Meeting Summary',
-    document: 'Document',
-    artifact: 'Artifact',
-  };
 
-  return typeMap[docTypeStr] || docTypeStr;
+  // Use registry-based display names with fallback to formatted type string
+  return (
+    documentTypeDisplayNames[docTypeStr] ||
+    docTypeStr
+      .split('-')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ')
+  );
 };
 
 // RAG Query Result Component - defined outside to prevent re-creation on every render

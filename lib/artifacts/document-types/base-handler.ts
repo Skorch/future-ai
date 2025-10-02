@@ -110,35 +110,88 @@ export async function saveGeneratedDocument(
 }
 
 /**
- * Fetch and combine source documents for types that need them (e.g., meeting-analysis)
+ * Fetch and combine source documents for types that require source content
+ * Supports optional primary document distinction for analysis types
  * Returns empty string if no source documents provided
  */
 export async function fetchSourceDocuments(
   sourceDocumentIds: string[] | undefined,
   workspaceId: string,
-): Promise<string> {
-  if (!sourceDocumentIds?.length) {
+): Promise<string>;
+
+export async function fetchSourceDocuments(
+  sourceDocumentIds: string[] | undefined,
+  workspaceId: string,
+  primaryDocumentId: string,
+): Promise<{
+  primaryDocument: string;
+  supportingDocuments: string;
+}>;
+
+export async function fetchSourceDocuments(
+  sourceDocumentIds: string[] | undefined,
+  workspaceId: string,
+  primaryDocumentId?: string,
+): Promise<string | { primaryDocument: string; supportingDocuments: string }> {
+  // If primaryDocumentId specified, ensure it's in the fetch list
+  let docIdsToFetch = sourceDocumentIds || [];
+
+  if (primaryDocumentId) {
+    // Always fetch primary, add to list if not present
+    if (!docIdsToFetch.includes(primaryDocumentId)) {
+      docIdsToFetch = [primaryDocumentId, ...docIdsToFetch];
+    }
+  }
+
+  if (!docIdsToFetch.length) {
+    if (primaryDocumentId) {
+      return { primaryDocument: '', supportingDocuments: '' };
+    }
     return '';
   }
 
   // Fetch all source documents in parallel
   const sourceDocuments = await Promise.all(
-    sourceDocumentIds.map((docId) =>
-      getDocumentById({ id: docId, workspaceId }),
-    ),
+    docIdsToFetch.map((docId) => getDocumentById({ id: docId, workspaceId })),
   );
 
-  // Filter out null/undefined documents and combine their content
+  // Filter out null/undefined documents
   const validDocuments = sourceDocuments.filter(
     (doc): doc is NonNullable<typeof doc> =>
       doc?.content !== null && doc?.content !== undefined,
   );
 
   if (validDocuments.length === 0) {
+    if (primaryDocumentId) {
+      return { primaryDocument: '', supportingDocuments: '' };
+    }
     return '';
   }
 
-  // Combine documents with clear separators
+  // If primaryDocumentId specified, separate primary from supporting
+  if (primaryDocumentId) {
+    const primaryDoc = validDocuments.find(
+      (doc) => doc.id === primaryDocumentId,
+    );
+    // Remove primary from supporting docs list
+    const supportingDocs = validDocuments.filter(
+      (doc) => doc.id !== primaryDocumentId,
+    );
+
+    return {
+      primaryDocument: primaryDoc
+        ? `--- ${primaryDoc.title} ---\n${primaryDoc.content}`
+        : '',
+      supportingDocuments:
+        supportingDocs.length > 0
+          ? supportingDocs
+              .map((doc) => `--- ${doc.title} ---\n${doc.content}`)
+              .join('\n\n')
+          : '',
+    };
+  }
+
+  // Backward compatible: combine all documents
   return validDocuments
     .map((doc) => `--- ${doc.title} ---\n${doc.content}`)
     .join('\n\n');

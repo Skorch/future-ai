@@ -6,6 +6,7 @@ import {
   BarChart3,
   Lightbulb,
   Mic,
+  Handshake,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -28,6 +29,7 @@ const DOCUMENT_ICON_MAP: Record<string, LucideIcon> = {
   'meeting-minutes': Mail,
   'meeting-analysis': BarChart3,
   'use-case': Lightbulb,
+  'sales-analysis': Handshake,
   transcript: Mic, // Special case: not in artifact registry
 };
 
