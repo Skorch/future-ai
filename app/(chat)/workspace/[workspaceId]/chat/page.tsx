@@ -44,10 +44,7 @@ export default function ChatListPage({
   };
 
   const { data, error, size, setSize, isLoading, isValidating, mutate } =
-    useSWRInfinite<ChatHistory>(getKey, fetcher, {
-      revalidateFirstPage: false,
-      revalidateOnFocus: true,
-    });
+    useSWRInfinite<ChatHistory>(getKey, fetcher);
 
   // Flatten all pages into single array
   const chats = useMemo(() => {
