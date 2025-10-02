@@ -7,6 +7,9 @@ import { ChatTable } from '@/components/chat-table';
 import { Button } from '@/components/ui/button';
 import { LoaderIcon, PlusIcon } from '@/components/icons';
 import { useRouter } from 'next/navigation';
+import { SidebarToggle } from '@/components/sidebar-toggle';
+import { useSidebar } from '@/components/ui/sidebar';
+import { useWindowSize } from 'usehooks-ts';
 
 interface ChatHistory {
   chats: Array<{
@@ -25,6 +28,8 @@ export default function ChatListPage({
 }) {
   const { workspaceId } = use(params);
   const router = useRouter();
+  const { open } = useSidebar();
+  const { width } = useWindowSize();
 
   const getKey = (pageIndex: number, previousPageData: ChatHistory | null) => {
     // If no more data, return null
@@ -78,9 +83,12 @@ export default function ChatListPage({
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-semibold tracking-tight border-b pb-2 flex-1">
-            Chat History
-          </h1>
+          <div className="flex items-center gap-2">
+            {(!open || width < 768) && <SidebarToggle />}
+            <h1 className="text-3xl font-semibold tracking-tight border-b pb-2">
+              Chat History
+            </h1>
+          </div>
           <div className="flex items-center gap-2">
             {isValidating && !isInitialLoad && (
               <div className="animate-spin text-muted-foreground">

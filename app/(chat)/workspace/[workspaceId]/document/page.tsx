@@ -2,7 +2,7 @@
 
 import { use, useState, useMemo } from 'react';
 import useSWRInfinite from 'swr/infinite';
-import { useDebounceCallback } from 'usehooks-ts';
+import { useDebounceCallback, useWindowSize } from 'usehooks-ts';
 import { fetcher } from '@/lib/utils';
 import { DocumentTable } from '@/components/document-table';
 import { DocumentsEmptyState } from '@/components/documents-empty-state';
@@ -11,6 +11,8 @@ import { DocumentFilterBar } from '@/components/document-filter-bar';
 import { Button } from '@/components/ui/button';
 import { LoaderIcon } from '@/components/icons';
 import type { Document } from '@/lib/db/schema';
+import { SidebarToggle } from '@/components/sidebar-toggle';
+import { useSidebar } from '@/components/ui/sidebar';
 
 interface PaginatedResponse {
   documents: Array<
@@ -30,6 +32,8 @@ export default function DocumentListPage({
   params: Promise<{ workspaceId: string }>;
 }) {
   const { workspaceId } = use(params);
+  const { open } = useSidebar();
+  const { width } = useWindowSize();
 
   // Immediate state for input (no flicker)
   const [searchInput, setSearchInput] = useState('');
@@ -92,9 +96,12 @@ export default function DocumentListPage({
       {/* Header - always visible */}
       <div className="mb-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-semibold tracking-tight border-b pb-2 flex-1">
-            Knowledge Management
-          </h1>
+          <div className="flex items-center gap-2">
+            {(!open || width < 768) && <SidebarToggle />}
+            <h1 className="text-3xl font-semibold tracking-tight border-b pb-2">
+              Knowledge Management
+            </h1>
+          </div>
           {isValidating && !isInitialLoad && (
             <div className="animate-spin text-muted-foreground">
               <LoaderIcon size={20} />
