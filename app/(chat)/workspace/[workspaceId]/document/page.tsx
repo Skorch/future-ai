@@ -63,11 +63,8 @@ export default function DocumentListPage({
     return `/api/workspace/${workspaceId}/document?${params.toString()}`;
   };
 
-  const { data, error, size, setSize, isLoading, isValidating } =
-    useSWRInfinite<PaginatedResponse>(getKey, fetcher, {
-      revalidateFirstPage: false,
-      revalidateOnFocus: false,
-    });
+  const { data, error, size, setSize, isLoading, isValidating, mutate } =
+    useSWRInfinite<PaginatedResponse>(getKey, fetcher);
 
   // Flatten all pages into single array
   const documents = useMemo(() => {
@@ -151,7 +148,11 @@ export default function DocumentListPage({
         <DocumentsEmptyState workspaceId={workspaceId} />
       ) : (
         <>
-          <DocumentTable documents={documents} workspaceId={workspaceId} />
+          <DocumentTable
+            documents={documents}
+            workspaceId={workspaceId}
+            onDocumentDeleted={mutate}
+          />
 
           {hasMore && (
             <div className="flex justify-center mt-6">

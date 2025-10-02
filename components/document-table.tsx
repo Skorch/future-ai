@@ -1,13 +1,15 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import DataGrid, { type Column } from 'react-data-grid';
 import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import { useWindowSize } from 'usehooks-ts';
+import { toast } from 'sonner';
+import { mutate } from 'swr';
 import { DocumentTypeBadge } from './document-type-badge';
 import { DocumentByteSize } from './document-byte-size';
-import { MoreHorizontalIcon, Edit, Trash } from 'lucide-react';
+import { MoreHorizontalIcon, Edit, Trash, Check, X } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,6 +17,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from './ui/alert-dialog';
 import { Button } from './ui/button';
 import 'react-data-grid/lib/styles.css';
 
@@ -24,21 +36,51 @@ interface DocumentRow {
   metadata: { documentType?: string } | null;
   createdAt: Date;
   contentLength: number;
+  isSearchable: boolean;
 }
 
 interface DocumentTableProps {
   documents: DocumentRow[];
   workspaceId: string;
+  onDocumentDeleted?: () => void;
 }
 
-export function DocumentTable({ documents, workspaceId }: DocumentTableProps) {
+export function DocumentTable({
+  documents,
+  workspaceId,
+  onDocumentDeleted,
+}: DocumentTableProps) {
   const router = useRouter();
   const { width } = useWindowSize();
+  const [deleteDialogDoc, setDeleteDialogDoc] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
 
   // Responsive breakpoints
   const isMobile = width < 640;
   const isTablet = width >= 640 && width < 1024;
   const isDesktop = width >= 1024;
+
+  // Delete handler
+  const handleDelete = async (doc: { id: string; title: string }) => {
+    const promise = fetch(
+      `/api/workspace/${workspaceId}/document/${doc.id}/delete`,
+      { method: 'POST' }
+    );
+
+    toast.promise(promise, {
+      loading: 'Deleting document...',
+      success: () => {
+        // Trigger parent callback to revalidate
+        onDocumentDeleted?.();
+        return 'Document deleted successfully';
+      },
+      error: 'Failed to delete document',
+    });
+
+    setDeleteDialogDoc(null);
+  };
 
   const columns = useMemo<Column<DocumentRow>[]>(() => {
     const allColumns: Column<DocumentRow>[] = [
@@ -90,10 +132,24 @@ export function DocumentTable({ documents, workspaceId }: DocumentTableProps) {
         ),
       },
       {
+        key: 'isSearchable',
+        name: 'In KB',
+        width: 80,
+        renderCell: ({ row }) => (
+          <div className="flex items-center justify-center py-2">
+            {row.isSearchable ? (
+              <Check className="size-4 text-green-600 dark:text-green-500" />
+            ) : (
+              <X className="size-4 text-gray-400 dark:text-gray-600" />
+            )}
+          </div>
+        ),
+      },
+      {
         key: 'actions',
         name: 'Actions',
         width: 80,
-        renderCell: () => (
+        renderCell: ({ row }) => (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -107,16 +163,29 @@ export function DocumentTable({ documents, workspaceId }: DocumentTableProps) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuItem
-                disabled
-                className="cursor-not-allowed opacity-50"
+                onClick={() =>
+                  router.push(`/workspace/${workspaceId}/document/${row.id}`)
+                }
+              >
+                <Edit className="mr-2 size-4" />
+                <span>View Document</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() =>
+                  router.push(
+                    `/workspace/${workspaceId}/document/${row.id}/edit`
+                  )
+                }
               >
                 <Edit className="mr-2 size-4" />
                 <span>Edit Document</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                disabled
-                className="cursor-not-allowed opacity-50 text-destructive focus:text-destructive"
+                className="text-destructive focus:text-destructive"
+                onClick={() =>
+                  setDeleteDialogDoc({ id: row.id, title: row.title })
+                }
               >
                 <Trash className="mr-2 size-4" />
                 <span>Delete</span>
@@ -130,29 +199,56 @@ export function DocumentTable({ documents, workspaceId }: DocumentTableProps) {
     // Filter columns based on viewport
     if (isMobile) {
       return allColumns.filter((col) =>
-        ['title', 'contentLength'].includes(col.key),
+        ['title', 'isSearchable', 'actions'].includes(col.key),
       );
     }
     if (isTablet) {
       return allColumns.filter((col) =>
-        ['title', 'type', 'actions'].includes(col.key),
+        ['title', 'type', 'isSearchable', 'actions'].includes(col.key),
       );
     }
     return allColumns; // Desktop shows all
   }, [isMobile, isTablet, workspaceId, router]);
 
   return (
-    <DataGrid
-      columns={columns}
-      rows={documents}
-      rowKeyGetter={(row) => row.id}
-      className="rdg-light dark:rdg-dark"
-      style={{
-        // Calculate height based on number of rows
-        // Header is ~35px, each row is ~53px (based on py-2 padding)
-        height: `${35 + documents.length * 53}px`,
-        minHeight: '400px',
-      }}
-    />
+    <>
+      <DataGrid
+        columns={columns}
+        rows={documents}
+        rowKeyGetter={(row) => row.id}
+        className="rdg-light dark:rdg-dark"
+        style={{
+          // Calculate height based on number of rows
+          // Header is ~35px, each row is ~53px (based on py-2 padding)
+          height: `${35 + documents.length * 53}px`,
+          minHeight: '400px',
+        }}
+      />
+
+      <AlertDialog
+        open={!!deleteDialogDoc}
+        onOpenChange={(open) => !open && setDeleteDialogDoc(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Document</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete &ldquo;{deleteDialogDoc?.title}
+              &rdquo;? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() =>
+                deleteDialogDoc && handleDelete(deleteDialogDoc)
+              }
+            >
+              Delete Document
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

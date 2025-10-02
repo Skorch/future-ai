@@ -352,6 +352,7 @@ export async function getWorkspaceDocumentsPaginated({
         createdAt: document.createdAt,
         metadata: document.metadata,
         sourceDocumentIds: document.sourceDocumentIds,
+        isSearchable: document.isSearchable,
         contentLength: sql<number>`LENGTH(${document.content})`,
         contentPreview: sql<string>`SUBSTRING(${document.content}, 1, 500)`,
       })

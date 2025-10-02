@@ -47,7 +47,9 @@ export default async function DocumentDetailPage({
           metadata: document.metadata as { documentType?: string },
           createdAt: document.createdAt,
           contentLength,
+          isSearchable: document.isSearchable,
         }}
+        workspaceId={workspaceId}
       />
 
       <div className="border rounded-lg bg-card">

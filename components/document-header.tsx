@@ -1,15 +1,25 @@
 'use client';
 
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { DocumentTypeBadge } from './document-type-badge';
 import { DocumentByteSize } from './document-byte-size';
 import { Button } from './ui/button';
+import { Switch } from './ui/switch';
+import { Label } from './ui/label';
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from './ui/tooltip';
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from './ui/alert-dialog';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 
 interface DocumentHeaderProps {
@@ -19,10 +29,77 @@ interface DocumentHeaderProps {
     metadata: { documentType?: string };
     createdAt: Date;
     contentLength: number;
+    isSearchable: boolean;
   };
+  workspaceId: string;
 }
 
-export function DocumentHeader({ document }: DocumentHeaderProps) {
+export function DocumentHeader({
+  document,
+  workspaceId,
+}: DocumentHeaderProps) {
+  const router = useRouter();
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isSearchable, setIsSearchable] = useState(document.isSearchable);
+
+  // Toggle searchable handler
+  const handleToggleSearchable = () => {
+    const newState = !isSearchable;
+
+    // Optimistic update - update UI immediately
+    setIsSearchable(newState);
+
+    const promise = fetch(
+      `/api/workspace/${workspaceId}/document/${document.id}/searchable`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isSearchable: newState }),
+      }
+    );
+
+    toast.promise(promise, {
+      loading: 'Updating knowledge base...',
+      success: () => {
+        // Refresh the page data
+        router.refresh();
+        return newState
+          ? 'Added to knowledge base'
+          : 'Removed from knowledge base';
+      },
+      error: () => {
+        // Rollback on error
+        setIsSearchable(!newState);
+        return 'Failed to update document';
+      },
+    });
+  };
+
+  // Delete handler
+  const handleDelete = () => {
+    const promise = fetch(
+      `/api/workspace/${workspaceId}/document/${document.id}/delete`,
+      { method: 'POST' }
+    );
+
+    toast.promise(promise, {
+      loading: 'Deleting document...',
+      success: () => {
+        // Navigate away after successful delete
+        router.push(`/workspace/${workspaceId}/document`);
+        return 'Document deleted successfully';
+      },
+      error: 'Failed to delete document',
+    });
+
+    setShowDeleteDialog(false);
+  };
+
+  // Edit handler
+  const handleEdit = () => {
+    router.push(`/workspace/${workspaceId}/document/${document.id}/edit`);
+  };
+
   return (
     <Card className="mb-6">
       <CardHeader>
@@ -54,57 +131,56 @@ export function DocumentHeader({ document }: DocumentHeaderProps) {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2 pt-2">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  disabled
-                  variant="outline"
-                  className="cursor-not-allowed"
-                >
-                  In Knowledge Base
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Available in next release</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+        <div className="flex flex-wrap gap-3 pt-2">
+          {/* Toggle Searchable */}
+          <div className="flex items-center gap-2">
+            <Switch
+              id="searchable"
+              checked={isSearchable}
+              onCheckedChange={handleToggleSearchable}
+            />
+            <Label htmlFor="searchable" className="cursor-pointer">
+              In Knowledge Base
+            </Label>
+          </div>
 
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  disabled
-                  variant="outline"
-                  className="cursor-not-allowed"
-                >
-                  Edit Doc
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Available in next release</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          {/* Edit Button */}
+          <Button onClick={handleEdit} variant="outline">
+            Edit Document
+          </Button>
 
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  disabled
-                  variant="destructive"
-                  className="cursor-not-allowed"
-                >
-                  Delete
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Available in next release</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          {/* Delete Button with Confirmation */}
+          <AlertDialog
+            open={showDeleteDialog}
+            onOpenChange={setShowDeleteDialog}
+          >
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive">Delete</Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete Document</AlertDialogTitle>
+                <div className="space-y-2">
+                  <AlertDialogDescription>
+                    Are you sure you want to delete &ldquo;{document.title}
+                    &rdquo;?
+                  </AlertDialogDescription>
+                  <AlertDialogDescription>This will:</AlertDialogDescription>
+                  <ul className="list-disc list-inside text-sm text-muted-foreground ml-4">
+                    <li>Remove the document from your library</li>
+                    <li>Remove it from the knowledge base</li>
+                    <li>This cannot be undone</li>
+                  </ul>
+                </div>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDelete}>
+                  Delete Document
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </CardContent>
     </Card>
