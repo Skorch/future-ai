@@ -82,17 +82,26 @@ export function ChatTable({
         key: 'title',
         name: 'Title',
         resizable: true,
-        renderCell: ({ row }) => (
-          <button
-            type="button"
-            className="text-left text-base font-semibold hover:underline focus:outline-none w-full py-2"
-            onClick={() =>
-              router.push(`/workspace/${workspaceId}/chat/${row.id}`)
-            }
-          >
-            {row.title}
-          </button>
-        ),
+        renderCell: ({ row }) => {
+          const maxLength = isMobile ? 20 : 100;
+          const displayTitle =
+            row.title.length > maxLength
+              ? `${row.title.slice(0, maxLength)}...`
+              : row.title;
+
+          return (
+            <button
+              type="button"
+              className="text-left text-base font-semibold hover:underline focus:outline-none w-full py-2"
+              onClick={() =>
+                router.push(`/workspace/${workspaceId}/chat/${row.id}`)
+              }
+              title={row.title}
+            >
+              {displayTitle}
+            </button>
+          );
+        },
       },
       {
         key: 'createdAt',
