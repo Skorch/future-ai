@@ -2,7 +2,7 @@ import { updateDocumentContentAction } from '@/lib/workspace/document-actions';
 
 export async function PATCH(
   request: Request,
-  { params }: { params: Promise<{ workspaceId: string; id: string }> }
+  { params }: { params: Promise<{ workspaceId: string; id: string }> },
 ) {
   const { workspaceId, id } = await params;
 
@@ -13,14 +13,14 @@ export async function PATCH(
     if (!content || typeof content !== 'string') {
       return Response.json(
         { error: 'Content is required and must be a string' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (title !== undefined && typeof title !== 'string') {
       return Response.json(
         { error: 'Title must be a string' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -28,7 +28,7 @@ export async function PATCH(
       id,
       workspaceId,
       content,
-      title
+      title,
     );
 
     return Response.json(result);
@@ -38,7 +38,7 @@ export async function PATCH(
         error:
           error instanceof Error ? error.message : 'Failed to update document',
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

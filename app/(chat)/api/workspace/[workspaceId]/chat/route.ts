@@ -13,7 +13,7 @@ import {
 } from '@/lib/ai/utils/token-analyzer';
 import { auth } from '@clerk/nextjs/server';
 import { composeSystemPrompt } from '@/lib/ai/prompts/system';
-import { MEETING_INTELLIGENCE_PROMPT } from '@/lib/ai/prompts/domains/meeting-intelligence';
+import { SALES_INTELLIGENCE_PROMPT } from '@/lib/ai/prompts/domains/sales-intelligence';
 import {
   createStreamId,
   getChatById,
@@ -221,7 +221,7 @@ export async function POST(
 
     // Calculate token usage BEFORE creating the stream
     const systemPromptText = await composeSystemPrompt({
-      domainPrompts: [MEETING_INTELLIGENCE_PROMPT],
+      domainPrompts: [SALES_INTELLIGENCE_PROMPT],
     });
 
     const modelMessages = convertToModelMessages(processedMessages);

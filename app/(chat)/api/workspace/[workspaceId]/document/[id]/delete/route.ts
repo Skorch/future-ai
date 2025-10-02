@@ -7,7 +7,7 @@ import { deleteDocumentAction } from '@/lib/workspace/document-actions';
  */
 export async function POST(
   request: Request,
-  { params }: { params: Promise<{ workspaceId: string; id: string }> }
+  { params }: { params: Promise<{ workspaceId: string; id: string }> },
 ) {
   const { workspaceId, id } = await params;
 
@@ -20,7 +20,7 @@ export async function POST(
         error:
           error instanceof Error ? error.message : 'Failed to delete document',
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

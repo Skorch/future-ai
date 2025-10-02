@@ -9,7 +9,7 @@
 // biome-ignore lint/suspicious/noExplicitAny: Generic utility requires any for flexibility
 export function debounce<T extends (...args: any[]) => any>(
   func: T,
-  wait: number
+  wait: number,
 ): (...args: Parameters<T>) => void {
   let timeout: NodeJS.Timeout | null = null;
 

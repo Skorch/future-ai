@@ -27,14 +27,16 @@ export interface DocumentEditorRef {
   saveNow: () => Promise<void>;
 }
 
-export const DocumentEditor = forwardRef<DocumentEditorRef, DocumentEditorProps>(
-  function DocumentEditor(
-    { documentId, workspaceId, initialContent, initialTitle },
-    ref
-  ) {
-    const [title, setTitle] = useState(initialTitle);
-    const [isSaving, setIsSaving] = useState(false);
-    const [lastSaved, setLastSaved] = useState<Date | null>(null);
+export const DocumentEditor = forwardRef<
+  DocumentEditorRef,
+  DocumentEditorProps
+>(function DocumentEditor(
+  { documentId, workspaceId, initialContent, initialTitle },
+  ref,
+) {
+  const [title, setTitle] = useState(initialTitle);
+  const [isSaving, setIsSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
   const editor = useEditor({
     extensions: [
@@ -71,7 +73,7 @@ export const DocumentEditor = forwardRef<DocumentEditorRef, DocumentEditorProps>
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ content, title: titleToSave }),
-          }
+          },
         );
 
         if (!response.ok) {
@@ -86,7 +88,7 @@ export const DocumentEditor = forwardRef<DocumentEditorRef, DocumentEditorProps>
         setIsSaving(false);
       }
     },
-    [documentId, workspaceId]
+    [documentId, workspaceId],
   );
 
   // Debounced auto-save (2 second delay)
@@ -95,93 +97,90 @@ export const DocumentEditor = forwardRef<DocumentEditorRef, DocumentEditorProps>
     debounce((content: string, titleToSave: string) => {
       saveDocument(content, titleToSave);
     }, 2000),
-    [saveDocument]
+    [saveDocument],
   );
 
-    // Expose saveNow method via ref
-    useImperativeHandle(ref, () => ({
-      saveNow: async () => {
-        if (!editor) return;
-        const markdown =
-          // biome-ignore lint/suspicious/noExplicitAny: Tiptap storage types don't include markdown extension
-          (editor.storage as any).markdown?.getMarkdown?.() ||
-          editor.getText();
-        await saveDocument(markdown, title);
-      },
-    }));
-
-    // Listen for content changes
-    useEffect(() => {
+  // Expose saveNow method via ref
+  useImperativeHandle(ref, () => ({
+    saveNow: async () => {
       if (!editor) return;
+      const markdown =
+        // biome-ignore lint/suspicious/noExplicitAny: Tiptap storage types don't include markdown extension
+        (editor.storage as any).markdown?.getMarkdown?.() || editor.getText();
+      await saveDocument(markdown, title);
+    },
+  }));
 
-      const handleUpdate = () => {
-        // Get markdown content from editor
-        const markdown =
-          // biome-ignore lint/suspicious/noExplicitAny: Tiptap storage types don't include markdown extension
-          (editor.storage as any).markdown?.getMarkdown?.() ||
-          editor.getText();
-        debouncedSave(markdown, title);
-      };
+  // Listen for content changes
+  useEffect(() => {
+    if (!editor) return;
 
-      editor.on('update', handleUpdate);
-
-      return () => {
-        editor.off('update', handleUpdate);
-      };
-    }, [editor, title, debouncedSave]);
-
-    // Listen for title changes
-    useEffect(() => {
-      if (!editor) return;
+    const handleUpdate = () => {
       // Get markdown content from editor
       const markdown =
         // biome-ignore lint/suspicious/noExplicitAny: Tiptap storage types don't include markdown extension
         (editor.storage as any).markdown?.getMarkdown?.() || editor.getText();
       debouncedSave(markdown, title);
-    }, [title, editor, debouncedSave]);
+    };
 
-    if (!editor) {
-      return <div className="p-6 text-muted-foreground">Loading editor...</div>;
-    }
+    editor.on('update', handleUpdate);
 
-    const characterCount = (
+    return () => {
+      editor.off('update', handleUpdate);
+    };
+  }, [editor, title, debouncedSave]);
+
+  // Listen for title changes
+  useEffect(() => {
+    if (!editor) return;
+    // Get markdown content from editor
+    const markdown =
       // biome-ignore lint/suspicious/noExplicitAny: Tiptap storage types don't include markdown extension
-      (editor.storage as any).markdown?.getMarkdown?.() || editor.getText()
-    ).length;
+      (editor.storage as any).markdown?.getMarkdown?.() || editor.getText();
+    debouncedSave(markdown, title);
+  }, [title, editor, debouncedSave]);
 
-    return (
-      <Card>
-        <CardHeader>
-          <div className="space-y-2">
-            <Label htmlFor="title">Document Title</Label>
-            <Input
-              id="title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Enter document title..."
-              className="text-lg font-semibold"
-            />
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="border rounded-lg bg-background">
-            <EditorContent editor={editor} />
-          </div>
-
-          <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
-            <div>
-              {isSaving ? (
-                <span>Saving...</span>
-              ) : lastSaved ? (
-                <span>Last saved: {lastSaved.toLocaleTimeString()}</span>
-              ) : (
-                <span>No changes yet</span>
-              )}
-            </div>
-            <div>{characterCount} characters</div>
-          </div>
-        </CardContent>
-      </Card>
-    );
+  if (!editor) {
+    return <div className="p-6 text-muted-foreground">Loading editor...</div>;
   }
-);
+
+  const characterCount =
+    // biome-ignore lint/suspicious/noExplicitAny: Tiptap storage types don't include markdown extension
+    ((editor.storage as any).markdown?.getMarkdown?.() || editor.getText())
+      .length;
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="space-y-2">
+          <Label htmlFor="title">Document Title</Label>
+          <Input
+            id="title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Enter document title..."
+            className="text-lg font-semibold"
+          />
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="border rounded-lg bg-background">
+          <EditorContent editor={editor} />
+        </div>
+
+        <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+          <div>
+            {isSaving ? (
+              <span>Saving...</span>
+            ) : lastSaved ? (
+              <span>Last saved: {lastSaved.toLocaleTimeString()}</span>
+            ) : (
+              <span>No changes yet</span>
+            )}
+          </div>
+          <div>{characterCount} characters</div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+});

@@ -34,10 +34,7 @@ interface DocumentHeaderProps {
   workspaceId: string;
 }
 
-export function DocumentHeader({
-  document,
-  workspaceId,
-}: DocumentHeaderProps) {
+export function DocumentHeader({ document, workspaceId }: DocumentHeaderProps) {
   const router = useRouter();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isSearchable, setIsSearchable] = useState(document.isSearchable);
@@ -55,7 +52,7 @@ export function DocumentHeader({
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isSearchable: newState }),
-      }
+      },
     );
 
     toast.promise(promise, {
@@ -79,7 +76,7 @@ export function DocumentHeader({
   const handleDelete = () => {
     const promise = fetch(
       `/api/workspace/${workspaceId}/document/${document.id}/delete`,
-      { method: 'POST' }
+      { method: 'POST' },
     );
 
     toast.promise(promise, {

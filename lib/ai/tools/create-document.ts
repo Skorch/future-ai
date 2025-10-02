@@ -26,17 +26,27 @@ const createDocumentSchema = z.object({
     .enum(documentTypes as [DocumentType, ...DocumentType[]])
     .default('text')
     .describe(`Document type. Available types: ${documentTypes.join(', ')}`),
-  sourceDocumentIds: z
+
+  primarySourceDocumentId: z
+    .string()
+    .uuid()
+    .optional()
+    .describe(
+      'The main document to analyze (required for analysis types like sales-analysis, meeting-analysis). This is the transcript or content being analyzed in THIS generation.',
+    ),
+
+  referenceDocumentIds: z
     .array(z.string().uuid())
     .optional()
     .describe(
-      'Array of source document IDs for reference or analysis (check document type definition for requirements)',
+      'Supporting documents for historical context (optional). For sales-analysis: include previous call analyses to track deal progression. For meeting-analysis: include previous meetings if comparison requested.',
     ),
+
   agentInstruction: z
     .string()
     .optional()
     .describe(
-      'Custom instructions for the document generation agent. Use this to specify: (1) How to use source documents (e.g., "Primary document is the transcript to analyze, others are historical context"), (2) Any custom format or output requirements beyond the standard template, (3) Specific guidance on emphasis areas or analysis focus, (4) Context about the user\'s goals or downstream usage of this document.',
+      "Custom instructions for the document generation agent. Use this to specify: (1) How to use reference documents, (2) Any custom format or output requirements beyond the standard template, (3) Specific guidance on emphasis areas or analysis focus, (4) Context about the user's goals or downstream usage of this document.",
     ),
   metadata: z
     .record(z.unknown())
@@ -97,17 +107,32 @@ export const createDocument = async ({
       title,
       kind,
       documentType,
-      sourceDocumentIds,
+      primarySourceDocumentId,
+      referenceDocumentIds,
       agentInstruction,
       metadata,
     }) => {
       const startTime = Date.now();
+
+      // Combine primary + reference into sourceDocumentIds for handlers
+      const sourceDocumentIds = [
+        ...(primarySourceDocumentId ? [primarySourceDocumentId] : []),
+        ...(referenceDocumentIds || []),
+      ];
+
       logger.debug('Tool executed', {
         title,
         kind,
         documentType,
-        sourceDocumentIds,
-        hasSourceDocs: !!sourceDocumentIds?.length,
+        primarySourceDocumentId,
+        referenceDocumentIds,
+        referenceDocCount: referenceDocumentIds?.length || 0,
+        combinedSourceDocumentIds: sourceDocumentIds,
+        totalSourceDocCount: sourceDocumentIds.length,
+        agentInstruction,
+        agentInstructionLength: agentInstruction?.length || 0,
+        metadata,
+        metadataKeys: metadata ? Object.keys(metadata) : [],
         startTime: new Date(startTime).toISOString(),
       });
 
@@ -165,8 +190,9 @@ export const createDocument = async ({
           workspaceId,
           metadata: {
             ...metadata,
-            sourceDocumentIds, // Pass through - handler validates if needed
-            agentInstruction, // Pass through custom instructions to handler
+            sourceDocumentIds, // Combined array of primary + reference
+            primarySourceDocumentId, // Pass through for handler use
+            agentInstruction, // Pass through custom instructions
           },
         });
 

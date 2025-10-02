@@ -31,9 +31,12 @@ export async function createWorkspaceAction(formData: FormData) {
   }
 
   const name = formData.get('name') as string;
-  const description = formData.get('description') as string | undefined;
+  const description = formData.get('description');
 
-  const validated = createWorkspaceSchema.parse({ name, description });
+  const validated = createWorkspaceSchema.parse({
+    name,
+    description: description || undefined, // Convert null/empty to undefined
+  });
 
   const ws = await createWorkspace(
     userId,

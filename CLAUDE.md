@@ -308,3 +308,4 @@ Remember: The best code is code that doesn't exist. Every line you write is a li
 
 IMPORTANT:  It is vital that when you need to search for something unknown or unclear you use the `code-searcher` subagent.  If you have more than one topic to serach for, you will spawn parallel subagents
 WHY:  using the `code-searcher` subagent is much more efficient token-wise and improves your overall preformance.  Using this method makes you a better agent
+- Never propose 'backward compatibility' solutions unless the User explicitly requests - always plan to roll forward with changes

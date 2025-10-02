@@ -2,7 +2,7 @@ import { toggleDocumentSearchableAction } from '@/lib/workspace/document-actions
 
 export async function PATCH(
   request: Request,
-  { params }: { params: Promise<{ workspaceId: string; id: string }> }
+  { params }: { params: Promise<{ workspaceId: string; id: string }> },
 ) {
   const { workspaceId, id } = await params;
 
@@ -13,14 +13,14 @@ export async function PATCH(
     if (typeof isSearchable !== 'boolean') {
       return Response.json(
         { error: 'isSearchable must be a boolean' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     const result = await toggleDocumentSearchableAction(
       id,
       workspaceId,
-      isSearchable
+      isSearchable,
     );
 
     return Response.json(result);
@@ -32,7 +32,7 @@ export async function PATCH(
             ? error.message
             : 'Failed to toggle searchable',
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

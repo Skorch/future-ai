@@ -16,7 +16,7 @@ const logger = getLogger('DocumentActions');
 export async function toggleDocumentSearchableAction(
   documentId: string,
   workspaceId: string,
-  isSearchable: boolean
+  isSearchable: boolean,
 ) {
   const { userId } = await auth();
 
@@ -51,7 +51,7 @@ export async function toggleDocumentSearchableAction(
  */
 export async function deleteDocumentAction(
   documentId: string,
-  workspaceId: string
+  workspaceId: string,
 ) {
   const { userId } = await auth();
 
@@ -86,7 +86,7 @@ export async function updateDocumentContentAction(
   documentId: string,
   workspaceId: string,
   content: string,
-  title?: string
+  title?: string,
 ) {
   const { userId } = await auth();
 

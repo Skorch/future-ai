@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import { useWindowSize } from 'usehooks-ts';
 import { toast } from 'sonner';
-import { mutate } from 'swr';
 import { DocumentTypeBadge } from './document-type-badge';
 import { DocumentByteSize } from './document-byte-size';
 import { MoreHorizontalIcon, Edit, Trash, Check, X } from 'lucide-react';
@@ -66,7 +65,7 @@ export function DocumentTable({
   const handleDelete = async (doc: { id: string; title: string }) => {
     const promise = fetch(
       `/api/workspace/${workspaceId}/document/${doc.id}/delete`,
-      { method: 'POST' }
+      { method: 'POST' },
     );
 
     toast.promise(promise, {
@@ -173,7 +172,7 @@ export function DocumentTable({
               <DropdownMenuItem
                 onClick={() =>
                   router.push(
-                    `/workspace/${workspaceId}/document/${row.id}/edit`
+                    `/workspace/${workspaceId}/document/${row.id}/edit`,
                   )
                 }
               >
@@ -240,9 +239,7 @@ export function DocumentTable({
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() =>
-                deleteDialogDoc && handleDelete(deleteDialogDoc)
-              }
+              onClick={() => deleteDialogDoc && handleDelete(deleteDialogDoc)}
             >
               Delete Document
             </AlertDialogAction>

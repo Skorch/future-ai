@@ -37,10 +37,11 @@ async function buildToolDescription(): Promise<string> {
 Returns document metadata including size information to help decide what to load.
 
 WHEN TO USE THIS TOOL:
-- ALWAYS use this before loading documents to see what's available
-- When user asks about meetings/topics over a time period
-- When you need to understand document sizes before loading
-- To discover document types (summaries vs transcripts)
+- ALWAYS use this FIRST when you need to discover what documents exist
+- When user asks about topics over time (list all, then load relevant ones)
+- Before using queryRAG to search content (know what's available first)
+- To get document metadata (IDs, types, dates, titles) for tool calls
+- When you need document IDs for createDocument parameters
 
 DECISION FLOW FOR COMMON QUERIES:
 1. "Topics from meetings in [time period]":
