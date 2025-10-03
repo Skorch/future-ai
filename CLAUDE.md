@@ -315,6 +315,8 @@ WHY:  using the `code-searcher` subagent is much more efficient token-wise and i
 ## Committing Code
 Any time you need to commit code, you ALWAYS delegate to the `commit-orchestrator` subagent.  This results in a CLEAN CONTEXT that you don't waste any of your resources on churning through fixing pre-commit issues
 
+## Prompt Engineering
+Any time you need to work on your Agent prompts or tool descriptions you always delegate to the `prompt-architect` subagent.  This agent will spend time thinking wholistically about the 'total prompt' of this app and provide you with detailed prompt tuning recommendations.
 
 # General Rules
 
