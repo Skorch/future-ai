@@ -33,6 +33,22 @@ async function buildToolDescription(domainId: DomainId): Promise<string> {
 Returns document metadata including size information to help decide what to load.
 
 WHEN TO USE THIS TOOL:
+
+**MANDATORY for Transcript Uploads in Discovery Mode:**
+After user confirms transcript classification, ALWAYS:
+1. Call listDocuments to get ALL documents
+2. Filter results in your code for matching type and metadata
+3. Sort by date to find 2-3 most recent related documents
+4. Include these IDs in your analysis plan for user approval
+
+**Historical Context Patterns:**
+- Sales calls: Filter \`documentType === 'sales-analysis'\` AND match \`metadata.dealName\` or \`metadata.prospectCompany\`
+- Project meetings: Filter \`documentType === 'meeting-analysis'\` AND match \`metadata.projectName\`
+- Client calls: Filter by client company in metadata
+- Sort by date (callDate, meetingDate) descending
+- Select 2-3 most recent for progression tracking
+
+**General Usage:**
 - ALWAYS use this FIRST when you need to discover what documents exist
 - When user asks about topics over time (list all, then load relevant ones)
 - Before using queryRAG to search content (know what's available first)

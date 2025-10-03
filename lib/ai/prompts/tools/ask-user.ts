@@ -5,7 +5,20 @@ Request stakeholder input with optional quick-response buttons.
 
 WHEN TO USE:
 
-IN DISCOVERY MODE (Last Resort - After Investigation):
+IN DISCOVERY MODE:
+
+**MANDATORY for Transcript Uploads (Two-Phase Confirmation):**
+1. **First askUser (Classification)**: ALWAYS confirm transcript type
+   - "Is this a sales call with [Company]?"
+   - "Is this a project meeting about [Initiative]?"
+   - Get deal name, project name, or other identifiers
+
+2. **Second askUser (Analysis Plan)**: ALWAYS confirm approach
+   - "I found [X] previous calls. Create analysis with historical context?"
+   - "Should I track BANT progression from previous calls?"
+   - Get approval before transitioning to build mode
+
+**For Other Investigations (Last Resort - After Investigation):**
 - ONLY after investigation finds no relevant information
 - To get preferences between options YOU discovered
 - To validate your synthesis of findings
