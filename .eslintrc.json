@@ -22,7 +22,15 @@
       }
     }
   },
-  "ignorePatterns": ["**/components/ui/**"],
+  "ignorePatterns": [
+    "**/components/ui/**",
+    "playwright-report/**",
+    "test-results/**",
+    ".next/**",
+    "node_modules/**",
+    "test-*.js",
+    "test-*.ts"
+  ],
   "overrides": [
     {
       "files": ["lib/logger/**/*.ts", "scripts/**/*.ts", "test-data/**/*.ts"],

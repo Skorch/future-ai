@@ -14,10 +14,10 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import path from 'node:path';
-import dotenv from 'dotenv';
+import { config } from 'dotenv';
 
 // Load environment variables
-dotenv.config({ path: '.env.local' });
+config({ path: '.env.local' });
 
 // Create database connection
 if (!process.env.POSTGRES_URL) {

@@ -6,8 +6,8 @@
     "dev": "next dev --turbo",
     "build": "tsx lib/db/migrate && next build",
     "start": "next start",
-    "lint": "next lint && biome lint --write --unsafe",
-    "lint:fix": "next lint --fix && biome lint --write --unsafe",
+    "lint": "eslint . && biome lint --write --unsafe",
+    "lint:fix": "eslint --fix . && biome lint --write --unsafe",
     "format": "biome format --write",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "npx tsx lib/db/migrate.ts",
@@ -124,6 +124,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "1.9.4",
+    "@eslint/eslintrc": "^3.3.1",
     "@playwright/test": "^1.50.1",
     "@tailwindcss/typography": "^0.5.15",
     "@types/d3-scale": "^4.0.8",
