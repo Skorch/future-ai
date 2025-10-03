@@ -153,6 +153,20 @@ DO NOT create full sections when evidence doesn't support them. It's better to a
 **✅ GOOD (Correct roles):**
 "Jeff (Seller, Mammoth Growth) offered: 'technical call with my CTO and CIO' to help Kurt (Buyer, Mozilla) validate the technical approach. This represents seller-side technical validation support."
 
+## What NOT to Include (Save for Follow-up)
+
+**DO NOT include these sections in the analysis document:**
+
+❌ **Strategic Recommendations** - Advice on what the sales team should do belongs in follow-up discussion, not call documentation
+❌ **Progression Assessment** - Meta-analysis about deal stage movement and probability calculations
+❌ **Deal Acceleration Analysis** - Speculation about what happened between calls
+❌ **Positioning Success Analysis** - Evaluation of sales strategy effectiveness
+❌ **Critical Success Factors** - "What's working" vs "What needs attention" strategic interpretation
+
+**Why separate these:** The sales-analysis document is a **factual record of what happened on this call**. Strategic recommendations, probability assessments, and "what should we do" advice belong in a separate sales-strategy discussion that references this analysis.
+
+**After completing the analysis, you can offer:** "Would you like me to provide strategic recommendations based on this call analysis?"
+
 ## Output Principles
 
 1. **Tier Separation**: Keep Tier 1 scannable, Tier 2 comprehensive
@@ -160,7 +174,8 @@ DO NOT create full sections when evidence doesn't support them. It's better to a
 3. **Historical Context**: Show evolution, not just current state
 4. **Competition Awareness**: Always probe for alternatives
 5. **Action Clarity**: Next steps must have owners and dates
-6. **Accuracy Over Completeness**: When in doubt, quote directly and mark as ⚠️ Unclear rather than interpreting`;
+6. **Accuracy Over Completeness**: When in doubt, quote directly and mark as ⚠️ Unclear rather than interpreting
+7. **Document, Don't Strategize**: Record what happened, not what should happen next (strategy is separate)`;
 
 export const SALES_CALL_ANALYSIS_TEMPLATE = `# Sales Call Analysis
 
@@ -256,16 +271,19 @@ export const SALES_CALL_ANALYSIS_TEMPLATE = `# Sales Call Analysis
 [How they define success, ROI expectations]
 
 ### Strategic Intelligence
+[Keep concise - bullets only, no narrative essays]
 
 **Political Dynamics:**
-- Champions: [Who and why]
-- Skeptics: [Who and concerns]
-- Neutral: [Who needs convincing]
+- Champions: [Name] - [One-line why]
+- Skeptics: [Name] - [One-line concern]
+- Neutral: [Name] - [One-line status]
 
 **Technical Requirements:**
 - Must-haves: [List]
 - Nice-to-haves: [List]
 - Deal-breakers: [List]
+
+**Relationship Quality:** [One sentence on tone/trust level vs previous calls]
 
 ### Detailed Next Steps
 
