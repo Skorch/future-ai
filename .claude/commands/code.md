@@ -73,11 +73,9 @@ Always turn this workflow into a task list using the `TodoWrite` tool. You never
    - [ ] Run tests to verify functionality
    - [ ] Review test results thoroughly
    - [ ] Fix implementation if tests are failing
-   - [ ] Have `code-quality-pragmatist` review the quality of the changes
+   - [ ] Have `code-reviewer` review the quality of the changes
       - [ ] Create a suggested list of updates and `Ask the User` to approve the suggested changes
    - [ ] Have `test-runner` run the unit tests and create a report of failed tests and the suggested fix
-      - [ ] Create a suggested list of updates and `Ask the User` to approve the suggested changes
-   - [ ] Have `karen` verify the task has been fully completed
       - [ ] Create a suggested list of updates and `Ask the User` to approve the suggested changes
    - [ ] Ask the User to visually verify the fix
 
