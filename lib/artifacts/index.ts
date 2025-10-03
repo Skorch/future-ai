@@ -12,6 +12,7 @@ export const artifactRegistry = {
   'business-requirements': () =>
     import('./document-types/business-requirements'),
   'sales-analysis': () => import('./document-types/sales-analysis'),
+  'sales-strategy': () => import('./document-types/sales-strategy'),
 } as const;
 
 // TypeScript type derived from registry keys

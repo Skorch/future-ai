@@ -16,6 +16,11 @@ export const DOCUMENT_METADATA_SCHEMAS: Record<
     dealName: z.string().default('Not specified'),
     prospectCompany: z.string().default('Not specified'),
   }),
+  'sales-strategy': z.object({
+    dealName: z.string().default('Not specified'),
+    prospectCompany: z.string().default('Not specified'),
+    specificQuestion: z.string().optional(),
+  }),
   'meeting-analysis': z.object({
     meetingDate: z.string().default(new Date().toISOString().split('T')[0]),
     participants: z.array(z.string()).default([]),

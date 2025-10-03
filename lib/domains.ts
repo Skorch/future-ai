@@ -23,8 +23,12 @@ export const DOMAINS = {
     label: 'Sales',
     description: 'Sales call analysis & strategy',
     prompt: SALES_INTELLIGENCE_PROMPT,
-    // ONLY sales-analysis + text
-    allowedTypes: ['sales-analysis', 'text'] as DocumentType[],
+    // ONLY sales-analysis, sales-strategy + text
+    allowedTypes: [
+      'sales-analysis',
+      'sales-strategy',
+      'text',
+    ] as DocumentType[],
   },
 } as const;
 
