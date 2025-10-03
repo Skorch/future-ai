@@ -10,7 +10,7 @@ import {
 import { DocConfigForm, type DocConfig } from './_components/doc-config-form';
 import { PromptPreview } from './_components/prompt-preview';
 import { StreamConfigDisplay } from './_components/stream-config-display';
-import { ToolDescriptionDisplay } from './_components/tool-description-display';
+import { ToolsDisplay } from './_components/tools-display';
 import type {
   MainAgentPromptResult,
   DocGenPromptResult,
@@ -138,9 +138,14 @@ ${JSON.stringify(agentPrompt.streamConfig, null, 2)}
 
 ${agentPrompt.systemPrompt}
 
-## Tool Description: createDocument
+## Tool Descriptions
 
-${agentPrompt.toolDescription}
+${agentPrompt.toolDescriptions
+  .map(
+    (tool) =>
+      `### ${tool.name} ${tool.isActive ? '(Active)' : '(Inactive)'}\n\n${tool.description}`,
+  )
+  .join('\n\n---\n\n')}
 `;
     } else if (activeTab === 'doc' && docPrompt) {
       markdown = `# Document Generation Prompt
@@ -199,9 +204,7 @@ ${docPrompt.userPrompt}
             <>
               <StreamConfigDisplay config={agentPrompt.streamConfig} />
 
-              <ToolDescriptionDisplay
-                description={agentPrompt.toolDescription}
-              />
+              <ToolsDisplay tools={agentPrompt.toolDescriptions} />
 
               <PromptPreview
                 title="System Prompt"

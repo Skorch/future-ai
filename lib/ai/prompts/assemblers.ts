@@ -14,10 +14,8 @@ import { DOMAINS } from '@/lib/domains';
 import { getModeConfig } from '@/lib/ai/modes';
 import { composeSystemPrompt } from './system';
 import type { DocumentType } from '@/lib/artifacts';
-import {
-  getDocumentTypeDefinition,
-  getAllDocumentTypes,
-} from '@/lib/artifacts';
+import { getDocumentTypeDefinition } from '@/lib/artifacts';
+import * as tools from '@/lib/ai/tools';
 
 /**
  * Assembled sections of the main agent system prompt
@@ -42,13 +40,22 @@ export interface MainAgentStreamConfig {
 }
 
 /**
+ * Tool description for display
+ */
+export interface ToolDescription {
+  name: string;
+  description: string;
+  isActive: boolean;
+}
+
+/**
  * Result of assembling the main agent prompt
  */
 export interface MainAgentPromptResult {
   systemPrompt: string;
   sections: MainAgentPromptSections;
   streamConfig: MainAgentStreamConfig;
-  toolDescription: string; // createDocument tool description
+  toolDescriptions: ToolDescription[]; // All tool descriptions
 }
 
 /**
@@ -89,23 +96,64 @@ export async function assembleMainAgentPrompt(params: {
   // Final system prompt (mode overrides base)
   const systemPrompt = modePrompt + (completionStatus || '');
 
-  // Get tool description (dynamic per domain)
-  const docTypes = await getAllDocumentTypes(domainId);
-  const toolDescription = `Creates business documents. Available types for ${domain.label} domain:
+  // Get all tool descriptions dynamically
+  const activeToolNames = new Set(modeConfig.experimental_activeTools);
+  const toolDescriptions: ToolDescription[] = [];
 
-${docTypes
-  .map((dt) => {
-    const required = dt.metadata.requiredParams?.includes('sourceDocumentIds')
-      ? '📎 Requires source documents'
-      : '✏️ Can create from scratch';
+  // Create mock context for tools
+  const mockSession = { user: { id: 'preview' } };
+  // biome-ignore lint/suspicious/noExplicitAny: Mock data stream for preview purposes
+  const mockDataStream = {} as any;
+  const mockWorkspaceId = 'preview';
 
-    return `**${dt.metadata.type}**
-  ${dt.metadata.description}
-  ${required}
-  Use when: ${dt.metadata.agentGuidance.when}
-  Keywords: ${dt.metadata.agentGuidance.triggers.slice(0, 3).join(', ')}`;
-  })
-  .join('\n\n')}`;
+  // Gather tool descriptions by calling their factories
+  for (const [toolName, toolFactory] of Object.entries(tools)) {
+    try {
+      // biome-ignore lint/suspicious/noImplicitAnyLet: Tool instance type varies by tool
+      let toolInstance;
+
+      // Call tool factory with required context based on tool type
+      if (toolName === 'createDocument') {
+        // biome-ignore lint/suspicious/noExplicitAny: Tool factories have different signatures
+        toolInstance = await (toolFactory as any)({
+          session: mockSession,
+          dataStream: mockDataStream,
+          workspaceId: mockWorkspaceId,
+          domainId,
+        });
+      } else if (
+        [
+          'updateDocument',
+          'queryRAG',
+          'listDocuments',
+          'loadDocument',
+          'loadDocuments',
+        ].includes(toolName)
+      ) {
+        // biome-ignore lint/suspicious/noExplicitAny: Tool factories have different signatures
+        toolInstance = (toolFactory as any)({
+          session: mockSession,
+          dataStream: mockDataStream,
+          workspaceId: mockWorkspaceId,
+        });
+      } else if (['setMode', 'askUser', 'setComplete'].includes(toolName)) {
+        // biome-ignore lint/suspicious/noExplicitAny: Tool factories have different signatures
+        toolInstance = (toolFactory as any)({
+          dataStream: mockDataStream,
+        });
+      }
+
+      if (toolInstance?.description) {
+        toolDescriptions.push({
+          name: toolName,
+          description: toolInstance.description,
+          isActive: activeToolNames.has(toolName),
+        });
+      }
+    } catch (error) {
+      // Skip tools that can't be instantiated for preview
+    }
+  }
 
   return {
     systemPrompt,
@@ -123,7 +171,7 @@ ${docTypes
       maxOutputTokens: modeConfig.maxOutputTokens,
       activeTools: modeConfig.experimental_activeTools,
     },
-    toolDescription,
+    toolDescriptions,
   };
 }
 
