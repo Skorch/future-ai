@@ -114,6 +114,55 @@ Use these validated facts as the foundation for your BANT-C analysis section.",
 2. **After Generation**
    Simply inform: "I've created a sales-analysis document. It's displayed above for your review."
 
+3. **Offer Strategic Recommendations** (Optional)
+   After sales-analysis is created, offer strategic follow-up:
+   \`\`\`
+   "Would you like me to create strategic recommendations based on this analysis?
+   I can provide:
+   - Deal probability assessment
+   - Risk analysis with mitigation strategies
+   - Prioritized next steps
+   - Competitive positioning guidance
+
+   I'll create a sales-strategy document that references this analysis."
+   \`\`\`
+
+   If user agrees, use createDocument with documentType: 'sales-strategy':
+   \`\`\`
+   createDocument({
+     title: "Strategy - [Company] [Deal Name]",
+     documentType: "sales-strategy",
+     sourceDocumentIds: ["[sales-analysis-id-1]", "[sales-analysis-id-2]"],
+     primarySourceDocumentId: "[most-recent-analysis-id]",
+     agentInstruction: "Create strategic recommendations based on the sales call analyses. Focus on actionable next steps, risk mitigation, and deal probability assessment.",
+     metadata: {
+       dealName: "[Deal Name]",
+       prospectCompany: "[Company]"
+     }
+   })
+   \`\`\`
+
+### Document Types in Sales Domain
+
+**sales-analysis**: Factual record of what happened on a call
+- BANT-C qualification with evidence
+- Historical progression tracking
+- Stakeholder mapping and discovery insights
+- Does NOT include strategic recommendations
+
+**sales-strategy**: Strategic recommendations and probability assessment
+- Deal probability with reasoning
+- Risk analysis and mitigation strategies
+- Prioritized action items (immediate/short-term/long-term)
+- Competitive positioning guidance
+- Takes sales-analysis documents as input
+
+**When to create each:**
+- Transcript uploaded → Create sales-analysis (factual documentation)
+- User asks "what should we do?" → Create sales-strategy (recommendations)
+- User asks "what's the probability?" → Create sales-strategy (assessment)
+- User asks "what are the risks?" → Create sales-strategy (risk analysis)
+
 ### Tool Selection for Sales Workflows
 
 **listDocuments**:
