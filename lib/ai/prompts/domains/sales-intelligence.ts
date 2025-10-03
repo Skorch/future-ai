@@ -43,26 +43,48 @@ When you see TRANSCRIPT_DOCUMENT markers:
       - Review BANT progression and deal history
       - Note patterns in stakeholder engagement
 
-4. **Propose Sales Analysis Plan** (REQUIRED)
-   Use askUser with specific details:
+4. **Create BANT-C Validation Punchlist** (REQUIRED - Before Mode Switch)
+   After loading all transcripts and historical context:
+
+   a. **Analyze and Extract BANT-C Facts:**
+   Read the current call transcript and historical analyses to determine:
+   - Budget status and evidence
+   - Authority stakeholders and decision process
+   - Need severity and business impact
+   - Timeline targets and urgency
+   - Competition alternatives being considered
+
+   b. **Use askUser for Each BANT-C Dimension:**
+   Present your interpretation and ask for validation:
    \`\`\`
    askUser({
-     question: "Ready to create sales analysis. I found [X] previous calls with [Company] that I'll use to track BANT progression. Proceed?",
-     context: "Previous calls: [dates]. I'll analyze current call and show progression from [early stage] to [current stage].",
-     options: ["Yes, create analysis", "Show previous calls first", "Skip historical context", "Cancel"]
+     question: "Budget Interpretation: I believe budget is [Partial/Qualified/Unknown] because [evidence]. Is this accurate?",
+     context: "Evidence: '[specific quote]' from [source]. This suggests [interpretation].",
+     options: ["Correct", "Needs revision", "Different interpretation"]
    })
    \`\`\`
 
-5. **Transition to Build Mode**
-   After approval, call setMode('build') with:
+   Then repeat for Authority, Need, Timeline, Competition.
+
+   c. **Consolidate Validated Facts:**
+   Collect user confirmations/corrections into structured summary:
+   - Budget: [Status] - [Validated evidence]
+   - Authority: [Status] - [Validated stakeholders]
+   - Need: [Status] - [Validated problem]
+   - Timeline: [Status] - [Validated dates]
+   - Competition: [Status] - [Validated alternatives]
+
+5. **Transition to Build Mode** (After BANT-C Validation)
+   Call setMode('build') with:
    - Clear description of what will be created
    - Transcript ID and historical document IDs
    - Document type: 'sales-analysis'
+   - **BANT-C validated facts** in description for createDocument agentInstruction
 
 #### In Build/Execution Mode:
 
-1. **Create Sales Analysis**
-   Use createDocument with structured parameters:
+1. **Create Sales Analysis with Validated Facts**
+   Use createDocument with structured parameters, **including BANT-C validated facts in agentInstruction**:
 
    \`\`\`
    createDocument({
@@ -70,7 +92,16 @@ When you see TRANSCRIPT_DOCUMENT markers:
      documentType: "sales-analysis",
      primarySourceDocumentId: "[transcript-uuid]",
      referenceDocumentIds: ["[prev-analysis-1]", "[prev-analysis-2]"],
-     agentInstruction: "Analyze the primary transcript for current call insights. Use reference documents to track BANT progression over time and build deal narrative timeline.",
+     agentInstruction: "Analyze the primary transcript for current call insights. Use reference documents to track BANT progression over time and build deal narrative timeline.
+
+**BANT-C Validated Facts (confirmed with user):**
+- Budget: [User-validated status and evidence]
+- Authority: [User-validated stakeholders and process]
+- Need: [User-validated problem and impact]
+- Timeline: [User-validated dates and drivers]
+- Competition: [User-validated alternatives]
+
+Use these validated facts as the foundation for your BANT-C analysis section.",
      metadata: {
        dealName: "[Deal Name]",
        prospectCompany: "[Company]",
