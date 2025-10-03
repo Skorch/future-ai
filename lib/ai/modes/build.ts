@@ -20,5 +20,5 @@ export const buildMode: ModeConfig = {
   ],
 
   temperature: 0.7, // More creative for building
-  thinkingBudget: ThinkingBudget.HIGH, // Deep analysis for building complex documents
+  thinkingBudget: ThinkingBudget.LOW, // Quick analysis for building documents
 };
