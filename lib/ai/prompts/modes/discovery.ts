@@ -57,7 +57,7 @@ Once the user confirms the classification:
 
 **For Sales Calls:**
 1. Use listDocuments to get all documents
-2. Filter for: \`documentType === 'sales-analysis'\`
+2. Filter for: \`documentType === 'sales-call-summary'\`
 3. Match by: \`metadata.prospectCompany\` or \`metadata.dealName\`
 4. Sort by: \`metadata.callDate\` descending
 5. Identify 2-3 most recent related calls
@@ -73,7 +73,7 @@ Once the user confirms the classification:
 Use askUser again to recommend your analysis approach:
 \`\`\`
 askUser({
-  question: "Based on my analysis and the [X] previous [calls/meetings] I found, should I proceed with creating a comprehensive [sales-analysis/meeting-analysis]?",
+  question: "Based on my analysis and the [X] previous [calls/meetings] I found, should I proceed with creating a comprehensive [sales-call-summary/meeting-analysis]?",
   context: "I'll track [BANT progression/project status] and compare with historical data from [dates].",
   options: ["Yes, proceed", "Show me what you found first", "Skip historical context", "Different approach"]
 })

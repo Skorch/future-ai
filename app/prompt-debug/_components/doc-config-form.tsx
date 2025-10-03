@@ -28,7 +28,7 @@ export function DocConfigForm({ config, onChange }: DocConfigFormProps) {
   // Render metadata fields based on document type
   const renderMetadataFields = () => {
     switch (config.documentType) {
-      case 'sales-analysis':
+      case 'sales-call-summary':
         return (
           <>
             <div className="space-y-1.5">
@@ -216,7 +216,7 @@ export function DocConfigForm({ config, onChange }: DocConfigFormProps) {
                   metadata: {},
                 });
               }}
-              className="h-4 w-4"
+              className="size-4"
             />
             <span>Sales</span>
           </label>
@@ -236,7 +236,7 @@ export function DocConfigForm({ config, onChange }: DocConfigFormProps) {
                   metadata: {},
                 });
               }}
-              className="h-4 w-4"
+              className="size-4"
             />
             <span>Meeting</span>
           </label>

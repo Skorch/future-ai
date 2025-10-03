@@ -10,7 +10,7 @@ export const DOCUMENT_METADATA_SCHEMAS: Record<
   // biome-ignore lint/suspicious/noExplicitAny: Zod schema types require generic any
   z.ZodObject<any>
 > = {
-  'sales-analysis': z.object({
+  'sales-call-summary': z.object({
     callDate: z.string().default('Not specified'),
     participants: z.array(z.string()).default([]),
     dealName: z.string().default('Not specified'),

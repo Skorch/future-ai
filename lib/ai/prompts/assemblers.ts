@@ -12,7 +12,7 @@ import type { ChatMode, ModeContext } from '@/lib/db/schema';
 import type { DomainId } from '@/lib/domains';
 import { DOMAINS } from '@/lib/domains';
 import { getModeConfig } from '@/lib/ai/modes';
-import { composeSystemPrompt } from './system';
+import { composeSystemPrompt, getSystemPromptHeader } from './system';
 import type { DocumentType } from '@/lib/artifacts';
 import { getDocumentTypeDefinition } from '@/lib/artifacts';
 import * as tools from '@/lib/ai/tools';
@@ -93,8 +93,8 @@ export async function assembleMainAgentPrompt(params: {
     ? '\n\n📋 STATUS: This task/conversation has been marked as COMPLETE. The user believes all requirements have been met. You should:\n- Acknowledge the completion if asked\n- Be ready to help with new tasks\n- Avoid reopening completed work unless explicitly requested\n- Transition smoothly to any new topics or requests'
     : null;
 
-  // Final system prompt (mode overrides base)
-  const systemPrompt = modePrompt + (completionStatus || '');
+  // Final system prompt (mode overrides base) with current date context
+  const systemPrompt = `${getSystemPromptHeader()}\n\n${modePrompt}${completionStatus || ''}`;
 
   // Get all tool descriptions dynamically
   const activeToolNames = new Set(modeConfig.experimental_activeTools);
@@ -267,7 +267,7 @@ export async function assembleDocumentPrompt(params: {
 
   // Placeholder for primary document
   const primaryDoc =
-    documentType === 'sales-analysis'
+    documentType === 'sales-call-summary'
       ? '## Sales Call Transcript (Analyze This)\n[CONTENT FROM PRIMARY DOC]\n\n'
       : documentType === 'meeting-analysis' ||
           documentType === 'meeting-minutes'
@@ -276,7 +276,7 @@ export async function assembleDocumentPrompt(params: {
 
   // Placeholder for reference documents
   const referenceDocs =
-    documentType === 'sales-analysis'
+    documentType === 'sales-call-summary'
       ? '## Reference Documents (Previous Call Analyses)\n[CONTENT FROM REF DOC]\n\n**Citation Requirement:** When referencing information from these previous analyses, cite them using the format [Doc: "Document Title"].\n\n**Usage Guidance:** Leverage these reference documents to build the deal narrative timeline, track BANT progression, and identify momentum patterns.\n\n'
       : documentType === 'meeting-analysis'
         ? '## Reference Documents (Historical Meeting Analyses)\n[CONTENT FROM REF DOC]\n\n**Citation Requirement:** When referencing information from these historical documents, cite them using the format [Doc: "Document Title"].\n\n'
@@ -284,7 +284,7 @@ export async function assembleDocumentPrompt(params: {
 
   // Build metadata section
   let metadataSection = '';
-  if (documentType === 'sales-analysis') {
+  if (documentType === 'sales-call-summary') {
     metadataSection = `## Call Metadata
 - **Call Date:** ${userMetadata.callDate || 'Not specified'}
 - **Participants:** ${userMetadata.participants ? (userMetadata.participants as string[]).join(', ') : 'Not specified'}

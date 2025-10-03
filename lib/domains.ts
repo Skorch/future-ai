@@ -21,11 +21,11 @@ export const DOMAINS = {
   sales: {
     id: 'sales' as const,
     label: 'Sales',
-    description: 'Sales call analysis & strategy',
+    description: 'Sales call summaries & strategy',
     prompt: SALES_INTELLIGENCE_PROMPT,
-    // ONLY sales-analysis, sales-strategy + text
+    // ONLY sales-call-summary, sales-strategy + text
     allowedTypes: [
-      'sales-analysis',
+      'sales-call-summary',
       'sales-strategy',
       'text',
     ] as DocumentType[],

@@ -32,7 +32,7 @@ function createQueryRAGSchema(allowedTypes: DocumentType[]) {
       .optional()
       .default('all')
       .describe(
-        `Filter results by content type. Available types: ${contentTypes.join(', ')}. Use 'transcript' for raw transcripts, 'meeting-analysis' or 'sales-analysis' for AI-generated summaries, 'document' for other content.`,
+        `Filter results by content type. Available types: ${contentTypes.join(', ')}. Use 'transcript' for raw transcripts, 'meeting-analysis' or 'sales-call-summary' for AI-generated summaries, 'document' for other content.`,
       ),
     filter: z
       .object({

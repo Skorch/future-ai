@@ -1,8 +1,8 @@
 import type { DocumentHandler } from '@/lib/artifacts/server';
 import { metadata } from './metadata';
 import {
-  SALES_CALL_ANALYSIS_PROMPT,
-  SALES_CALL_ANALYSIS_TEMPLATE,
+  SALES_CALL_SUMMARY_PROMPT,
+  SALES_CALL_SUMMARY_TEMPLATE,
 } from './prompts';
 import {
   fetchSourceDocuments,
@@ -14,7 +14,7 @@ import { OutputSize } from '@/lib/artifacts/types';
 import { updateDocumentPrompt } from '@/lib/ai/prompts';
 import { myProvider } from '@/lib/ai/providers';
 
-export const salesAnalysisHandler: DocumentHandler<'text'> = {
+export const salesCallSummaryHandler: DocumentHandler<'text'> = {
   kind: 'text',
   metadata,
 
@@ -56,7 +56,7 @@ export const salesAnalysisHandler: DocumentHandler<'text'> = {
           primaryDocId,
         );
 
-      promptContent = `Create a comprehensive sales call analysis from this transcript:
+      promptContent = `Create a comprehensive sales call summary from this transcript:
 
 ${agentInstruction ? `## Agent Context\n${agentInstruction}\n\n` : ''}
 
@@ -86,7 +86,7 @@ ${supportingDocuments}
         workspaceId,
       );
 
-      promptContent = `Create a comprehensive sales call analysis from this transcript:
+      promptContent = `Create a comprehensive sales call summary from this transcript:
 
 ${agentInstruction ? `## Agent Context\n${agentInstruction}\n\n` : ''}
 
@@ -100,9 +100,9 @@ ${transcript}
 
     // Compose system prompt directly - no redundant middle layer
     const systemPrompt = [
-      SALES_CALL_ANALYSIS_PROMPT,
+      SALES_CALL_SUMMARY_PROMPT,
       '\n## Required Output Format\n',
-      SALES_CALL_ANALYSIS_TEMPLATE,
+      SALES_CALL_SUMMARY_TEMPLATE,
     ].join('\n');
 
     // Build stream configuration
@@ -125,7 +125,7 @@ ${transcript}
       workspaceId,
       metadata: {
         ...docMetadata,
-        documentType: 'sales-analysis',
+        documentType: 'sales-call-summary',
         sourceDocumentIds: typedMetadata?.sourceDocumentIds || [],
       },
     });

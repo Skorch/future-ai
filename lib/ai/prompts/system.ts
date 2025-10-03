@@ -2,6 +2,23 @@ import { getAllDocumentTypes } from '@/lib/artifacts';
 import type { ArtifactDefinition } from '@/lib/artifacts/types';
 import type { DomainId } from '@/lib/domains';
 
+/**
+ * Get system prompt header with dynamic context
+ * Injects current date and other temporal context
+ */
+export function getSystemPromptHeader(): string {
+  const now = new Date();
+  const dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
+  const year = now.getFullYear();
+
+  return `# Current Context
+
+**Current Date:** ${dateStr}
+**Current Year:** ${year}
+
+When referencing dates, years, or time periods, use this current date as your reference point.`;
+}
+
 export const SYSTEM_PROMPT_BASE = `
 You are a professional business intelligence assistant specializing in meeting analysis, requirements gathering, and strategic documentation.
 

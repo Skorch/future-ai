@@ -29,7 +29,7 @@ const DOCUMENT_ICON_MAP: Record<string, LucideIcon> = {
   'meeting-minutes': Mail,
   'meeting-analysis': BarChart3,
   'use-case': Lightbulb,
-  'sales-analysis': Handshake,
+  'sales-call-summary': Handshake,
   transcript: Mic, // Special case: not in artifact registry
 };
 

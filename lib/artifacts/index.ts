@@ -11,7 +11,7 @@ export const artifactRegistry = {
   'use-case': () => import('./document-types/use-case'),
   'business-requirements': () =>
     import('./document-types/business-requirements'),
-  'sales-analysis': () => import('./document-types/sales-analysis'),
+  'sales-call-summary': () => import('./document-types/sales-call-summary'),
   'sales-strategy': () => import('./document-types/sales-strategy'),
 } as const;
 

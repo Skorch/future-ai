@@ -10,6 +10,7 @@ import type { LanguageModel, UIMessageStreamWriter } from 'ai';
 import type { ChatMessage } from '@/lib/types';
 import type { ArtifactKind } from '@/components/artifact';
 import type { AnthropicProviderOptions } from '@ai-sdk/anthropic';
+import { getSystemPromptHeader } from '@/lib/ai/prompts/system';
 
 /**
  * Provider options type for AI models
@@ -234,9 +235,12 @@ export function buildStreamConfig({
   temperature?: number;
   prediction?: string;
 }): StreamConfig {
+  // Prepend system prompt header with current date context
+  const systemWithContext = `${getSystemPromptHeader()}\n\n${system}`;
+
   const config: StreamConfig = {
     model,
-    system,
+    system: systemWithContext,
     prompt,
     maxOutputTokens,
     temperature,

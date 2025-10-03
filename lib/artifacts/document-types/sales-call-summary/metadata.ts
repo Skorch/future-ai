@@ -1,20 +1,20 @@
 import type { ArtifactMetadata } from '@/lib/artifacts/types';
 import { ThinkingBudget } from '@/lib/artifacts/types';
 import {
-  SALES_CALL_ANALYSIS_PROMPT,
-  SALES_CALL_ANALYSIS_TEMPLATE,
+  SALES_CALL_SUMMARY_PROMPT,
+  SALES_CALL_SUMMARY_TEMPLATE,
 } from './prompts';
 
 export const metadata: ArtifactMetadata = {
-  type: 'sales-analysis',
-  name: 'Sales Call Analysis',
+  type: 'sales-call-summary',
+  name: 'Sales Call Summary',
   description:
-    'Two-tier sales analysis: executive dashboard + detailed narrative with BANT-C qualification, historical progression, and competitive intelligence',
+    'Two-tier sales summary: executive dashboard + detailed narrative with BANT-C qualification, historical progression, and competitive intelligence',
   clientKind: 'text',
   icon: 'Handshake',
 
-  prompt: SALES_CALL_ANALYSIS_PROMPT,
-  template: SALES_CALL_ANALYSIS_TEMPLATE,
+  prompt: SALES_CALL_SUMMARY_PROMPT,
+  template: SALES_CALL_SUMMARY_TEMPLATE,
 
   agentGuidance: {
     when: 'User uploads sales call transcripts or asks to analyze sales conversations for deal progression',

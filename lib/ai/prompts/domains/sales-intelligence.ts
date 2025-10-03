@@ -34,7 +34,7 @@ When you see TRANSCRIPT_DOCUMENT markers:
 
    a. **Use listDocuments** → Get all documents with metadata
       - Returns structured data: IDs, types, dates, titles
-      - Filter for \`documentType === 'sales-analysis'\`
+      - Filter for \`documentType === 'sales-call-summary'\`
       - Look for same deal (check title, metadata.dealName)
       - Sort by date to find 2-3 most recent calls
 
@@ -78,7 +78,7 @@ When you see TRANSCRIPT_DOCUMENT markers:
    Call setMode('build') with:
    - Clear description of what will be created
    - Transcript ID and historical document IDs
-   - Document type: 'sales-analysis'
+   - Document type: 'sales-call-summary'
    - **BANT-C validated facts** in description for createDocument agentInstruction
 
 #### In Build/Execution Mode:
@@ -89,7 +89,7 @@ When you see TRANSCRIPT_DOCUMENT markers:
    \`\`\`
    createDocument({
      title: "Sales Call - [Company] [Stage] [Date]",
-     documentType: "sales-analysis",
+     documentType: "sales-call-summary",
      primarySourceDocumentId: "[transcript-uuid]",
      referenceDocumentIds: ["[prev-analysis-1]", "[prev-analysis-2]"],
      agentInstruction: "Analyze the primary transcript for current call insights. Use reference documents to track BANT progression over time and build deal narrative timeline.
@@ -112,7 +112,7 @@ Use these validated facts as the foundation for your BANT-C analysis section.",
    \`\`\`
 
 2. **After Generation**
-   Simply inform: "I've created a sales-analysis document. It's displayed above for your review."
+   Simply inform: "I've created a sales-call-summary document. It's displayed above for your review."
 
 3. **Offer Strategic Recommendations** (Optional)
    After sales-analysis is created, offer strategic follow-up:
@@ -144,7 +144,7 @@ Use these validated facts as the foundation for your BANT-C analysis section.",
 
 ### Document Types in Sales Domain
 
-**sales-analysis**: Factual record of what happened on a call
+**sales-call-summary**: Factual record of what happened on a call
 - BANT-C qualification with evidence
 - Historical progression tracking
 - Stakeholder mapping and discovery insights
@@ -155,10 +155,10 @@ Use these validated facts as the foundation for your BANT-C analysis section.",
 - Risk analysis and mitigation strategies
 - Prioritized action items (immediate/short-term/long-term)
 - Competitive positioning guidance
-- Takes sales-analysis documents as input
+- Takes sales-call-summary documents as input
 
 **When to create each:**
-- Transcript uploaded → Create sales-analysis (factual documentation)
+- Transcript uploaded → Create sales-call-summary (factual documentation)
 - User asks "what should we do?" → Create sales-strategy (recommendations)
 - User asks "what's the probability?" → Create sales-strategy (assessment)
 - User asks "what are the risks?" → Create sales-strategy (risk analysis)
@@ -166,7 +166,7 @@ Use these validated facts as the foundation for your BANT-C analysis section.",
 ### Tool Selection for Sales Workflows
 
 **listDocuments**:
-- Finding previous sales-analysis by deal
+- Finding previous sales-call-summary by deal
 - Getting document IDs for createDocument
 - Discovering what analyses exist in workspace
 
@@ -176,7 +176,7 @@ Use these validated facts as the foundation for your BANT-C analysis section.",
 - Reviewing context
 
 **createDocument**:
-- Generating new sales-analysis from transcript
+- Generating new sales-call-summary from transcript
 - Always set primarySourceDocumentId (the transcript)
 - Include referenceDocumentIds (previous analyses)
 - Use agentInstruction to guide analysis
@@ -189,7 +189,7 @@ Use these validated facts as the foundation for your BANT-C analysis section.",
 
 ### Sales Analysis Focus Areas
 
-When generating sales-analysis documents, the template handles:
+When generating sales-call-summary documents, the template handles:
 - Call stage identification (Introduction, Discovery, Deep Dive, Proposal, Pursuit/Close)
 - BANT qualification (Budget, Authority, Need, Timeline)
 - Deal progression tracking (forward/backward/stalled momentum)
@@ -202,7 +202,7 @@ Your role: Route to the right tool chain, provide context via agentInstruction.
 
 When users ask about deals or prospects:
 
-**List deals**: Use listDocuments, filter by sales-analysis
+**List deals**: Use listDocuments, filter by sales-call-summary
 **Deal timeline**: Load multiple analyses for same deal, chronologically
 **BANT status**: Load most recent analysis for that deal
 **Quote validation**: Use queryRAG to find specific statements in transcripts

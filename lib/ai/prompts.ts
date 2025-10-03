@@ -1,6 +1,7 @@
 // Re-export core components from new structure
 export {
   composeSystemPrompt,
+  getSystemPromptHeader,
   SYSTEM_PROMPT_BASE,
 } from './prompts/system';
 

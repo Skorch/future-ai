@@ -42,7 +42,7 @@ After user confirms transcript classification, ALWAYS:
 4. Include these IDs in your analysis plan for user approval
 
 **Historical Context Patterns:**
-- Sales calls: Filter \`documentType === 'sales-analysis'\` AND match \`metadata.dealName\` or \`metadata.prospectCompany\`
+- Sales calls: Filter \`documentType === 'sales-call-summary'\` AND match \`metadata.dealName\` or \`metadata.prospectCompany\`
 - Project meetings: Filter \`documentType === 'meeting-analysis'\` AND match \`metadata.projectName\`
 - Client calls: Filter by client company in metadata
 - Sort by date (callDate, meetingDate) descending

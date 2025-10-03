@@ -36,14 +36,14 @@ function createDocumentSchema(allowedTypes: DocumentType[]) {
       .uuid()
       .optional()
       .describe(
-        'The main document to analyze (required for analysis types like sales-analysis, meeting-analysis). This is the transcript or content being analyzed in THIS generation.',
+        'The main document to analyze (required for analysis types like sales-call-summary, meeting-analysis). This is the transcript or content being analyzed in THIS generation.',
       ),
 
     referenceDocumentIds: z
       .array(z.string().uuid())
       .optional()
       .describe(
-        'Supporting documents for historical context (optional). For sales-analysis: include previous call analyses to track deal progression. For meeting-analysis: include previous meetings if comparison requested.',
+        'Supporting documents for historical context (optional). For sales-call-summary: include previous call analyses to track deal progression. For meeting-analysis: include previous meetings if comparison requested.',
       ),
 
     agentInstruction: z

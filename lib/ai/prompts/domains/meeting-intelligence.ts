@@ -107,16 +107,16 @@ Analyze the transcript to determine the appropriate document type:
 
 4. **For Sales Analysis: Find Historical Context**
 
-   When creating a **sales-analysis** document:
+   When creating a **sales-call-summary** document:
 
    a. **List Previous Analyses:**
       - Use \`listDocuments\` tool to get all documents
-      - Filter results for \`documentType: 'sales-analysis'\`
+      - Filter results for \`documentType: 'sales-call-summary'\`
       - Look for documents related to same deal/prospect (check title, metadata)
 
    b. **Include in sourceDocumentIds:**
       - Set \`primarySourceDocumentId\` to the transcript being analyzed
-      - Add relevant previous sales-analysis document IDs to \`sourceDocumentIds\` array
+      - Add relevant previous sales-call-summary document IDs to \`sourceDocumentIds\` array
       - Typical pattern: Include 2-3 most recent previous calls for the same deal
 
    c. **Provide Context via agentInstruction:**
@@ -130,7 +130,7 @@ Analyze the transcript to determine the appropriate document type:
    \`\`\`
    createDocument({
      title: "Sales Call - Acme Corp Discovery 2024-10-02",
-     documentType: "sales-analysis",
+     documentType: "sales-call-summary",
      primarySourceDocumentId: "[transcript-uuid]",
      sourceDocumentIds: [
        "[transcript-uuid]",      // Current call transcript

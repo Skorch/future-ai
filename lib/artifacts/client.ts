@@ -6,7 +6,7 @@ export const documentTypeDisplayNames: Record<string, string> = {
   'meeting-minutes': 'Meeting Minutes',
   'use-case': 'Business Use Case',
   'business-requirements': 'Business Requirements',
-  'sales-analysis': 'Sales Call Analysis',
+  'sales-call-summary': 'Sales Call Summary',
   transcript: 'Transcript',
   document: 'Document',
   artifact: 'Artifact',
