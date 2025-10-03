@@ -161,6 +161,52 @@ function PureMultimodalInput({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadQueue, setUploadQueue] = useState<Array<string>>([]);
 
+  const uploadFile = useCallback(
+    async (
+      file: File,
+    ): Promise<TranscriptAttachment | Attachment | undefined> => {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('chatId', chatId);
+
+      try {
+        const response = await fetch('/api/files/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+
+          // Handle transcript uploads (new direct document creation)
+          if (data.documentId && data.message) {
+            // For transcripts, we'll store the message to append to the text
+            const transcriptAttachment: TranscriptAttachment = {
+              url: `document://${data.documentId}`, // Special URL format for documents
+              name: data.fileName,
+              contentType: 'application/transcript',
+              transcriptMessage: data.message, // Store the TRANSCRIPT_DOCUMENT marker
+            };
+            return transcriptAttachment;
+          }
+
+          // Handle regular file uploads (legacy blob storage)
+          const { url, pathname, contentType } = data;
+          return {
+            url,
+            name: pathname,
+            contentType: contentType,
+          };
+        }
+        const { error } = await response.json();
+        toast.error(error);
+      } catch (error) {
+        toast.error('Failed to upload file, please try again!');
+      }
+    },
+    [chatId],
+  );
+
   const convertToAttachment = useCallback(async () => {
     if (!pastedText) return;
 
@@ -186,7 +232,7 @@ function PureMultimodalInput({
       setUploadQueue([]);
       setPastedText('');
     }
-  }, [pastedText, setAttachments]);
+  }, [pastedText, setAttachments, uploadFile]);
 
   const keepAsText = useCallback(() => {
     if (pastedText) {
@@ -262,50 +308,8 @@ function PureMultimodalInput({
     setLocalStorageInput,
     width,
     chatId,
+    workspaceId,
   ]);
-
-  const uploadFile = async (
-    file: File,
-  ): Promise<TranscriptAttachment | Attachment | undefined> => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('chatId', chatId);
-
-    try {
-      const response = await fetch('/api/files/upload', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-
-        // Handle transcript uploads (new direct document creation)
-        if (data.documentId && data.message) {
-          // For transcripts, we'll store the message to append to the text
-          const transcriptAttachment: TranscriptAttachment = {
-            url: `document://${data.documentId}`, // Special URL format for documents
-            name: data.fileName,
-            contentType: 'application/transcript',
-            transcriptMessage: data.message, // Store the TRANSCRIPT_DOCUMENT marker
-          };
-          return transcriptAttachment;
-        }
-
-        // Handle regular file uploads (legacy blob storage)
-        const { url, pathname, contentType } = data;
-        return {
-          url,
-          name: pathname,
-          contentType: contentType,
-        };
-      }
-      const { error } = await response.json();
-      toast.error(error);
-    } catch (error) {
-      toast.error('Failed to upload file, please try again!');
-    }
-  };
 
   const handleFileChange = useCallback(
     async (event: ChangeEvent<HTMLInputElement>) => {
@@ -330,7 +334,7 @@ function PureMultimodalInput({
         setUploadQueue([]);
       }
     },
-    [setAttachments],
+    [setAttachments, uploadFile],
   );
 
   const { isAtBottom, scrollToBottom } = useScrollToBottom();
@@ -390,7 +394,7 @@ function PureMultimodalInput({
       />
 
       {showPasteSuggestion && (
-        <div className="absolute bottom-full mb-2 left-0 right-0 mx-4 z-50">
+        <div className="absolute bottom-full mb-2 inset-x-0 mx-4 z-50">
           <div className="bg-background border rounded-lg shadow-lg p-3 flex items-center justify-between">
             <div className="flex-1">
               <p className="text-sm font-medium">

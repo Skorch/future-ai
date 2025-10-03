@@ -12,6 +12,7 @@ export const Image = ({
   mediaType,
   ...props
 }: ImageProps) => (
+  // eslint-disable-next-line @next/next/no-img-element -- Using native img for base64 data URLs which Next.js Image doesn't support
   <img
     {...props}
     alt={props.alt}

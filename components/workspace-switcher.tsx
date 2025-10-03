@@ -112,7 +112,7 @@ function WorkspaceSwitcherContent({
   if (isLoading) {
     return (
       <div className="flex items-center gap-2 px-2">
-        <LoaderIcon className="h-4 w-4 animate-spin" />
+        <LoaderIcon className="size-4 animate-spin" />
         <span className="text-lg font-semibold">Loading...</span>
       </div>
     );
@@ -130,12 +130,12 @@ function WorkspaceSwitcherContent({
         <DropdownMenuTrigger className="flex items-center gap-2 px-2 hover:bg-muted rounded-md transition-colors">
           <span className="text-lg font-semibold">
             {isPending ? (
-              <LoaderIcon className="h-4 w-4 animate-spin" />
+              <LoaderIcon className="size-4 animate-spin" />
             ) : (
               currentWorkspace?.name || 'Select Workspace'
             )}
           </span>
-          <ChevronDown className="h-4 w-4 opacity-50" />
+          <ChevronDown className="size-4 opacity-50" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-[240px]">
           {workspaces.map((workspace) => (
@@ -153,7 +153,7 @@ function WorkspaceSwitcherContent({
                 )}
               </div>
               {workspace.id === currentWorkspaceId && (
-                <Check className="h-4 w-4" />
+                <Check className="size-4" />
               )}
             </DropdownMenuItem>
           ))}
@@ -164,7 +164,7 @@ function WorkspaceSwitcherContent({
             onClick={() => setShowCreateDialog(true)}
             className="flex items-center gap-2"
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="size-4" />
             <span>Create New Workspace</span>
           </DropdownMenuItem>
 
@@ -173,7 +173,7 @@ function WorkspaceSwitcherContent({
               onClick={() => setShowDeleteDialog(true)}
               className="flex items-center gap-2 text-destructive focus:text-destructive"
             >
-              <Trash2 className="h-4 w-4" />
+              <Trash2 className="size-4" />
               <span>Delete Current Workspace</span>
             </DropdownMenuItem>
           )}

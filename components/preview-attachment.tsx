@@ -22,6 +22,7 @@ export const PreviewAttachment = ({
       className="group relative size-16 rounded-lg overflow-hidden bg-muted border"
     >
       {contentType?.startsWith('image') ? (
+        // eslint-disable-next-line @next/next/no-img-element -- Using native img for user-uploaded blob URLs
         <img
           src={url}
           alt={name ?? 'An image attachment'}
