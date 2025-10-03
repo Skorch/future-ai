@@ -1,5 +1,5 @@
 import type { ArtifactMetadata } from '@/lib/artifacts/types';
-import { OutputSize, ThinkingBudget } from '@/lib/artifacts/types';
+import { ThinkingBudget } from '@/lib/artifacts/types';
 import {
   SALES_CALL_ANALYSIS_PROMPT,
   SALES_CALL_ANALYSIS_TEMPLATE,
@@ -9,7 +9,7 @@ export const metadata: ArtifactMetadata = {
   type: 'sales-analysis',
   name: 'Sales Call Analysis',
   description:
-    'Strategic sales call analysis with BANT qualification, deal risk assessment, and progress tracking',
+    'Two-tier sales analysis: executive dashboard + detailed narrative with BANT-C qualification, historical progression, and competitive intelligence',
   clientKind: 'text',
   icon: 'Handshake',
 
@@ -47,8 +47,9 @@ export const metadata: ArtifactMetadata = {
     'prospectCompany',
   ],
 
-  outputSize: OutputSize.MEDIUM, // 2500 tokens
+  outputSize: 2200, // Increased for two-tier format (was 1500)
   thinkingBudget: ThinkingBudget.MEDIUM, // 8000 tokens for BANT reasoning
+  temperature: 0.3, // Lower temperature for consistent, factual analysis
 
   chunkingStrategy: 'section-based',
 };

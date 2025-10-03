@@ -29,7 +29,7 @@ export interface ArtifactMetadata {
   optionalParams?: string[];
 
   // Generation configuration
-  outputSize?: OutputSize; // Optional, defaults to LARGE if not specified
+  outputSize?: OutputSize | number; // Optional, defaults to LARGE if not specified. Can use enum or custom token count.
   thinkingBudget?: ThinkingBudget; // Optional, defaults to NONE if not specified
   temperature?: number; // Optional, defaults to 0.6 if not specified
 
