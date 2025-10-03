@@ -1,6 +1,6 @@
 {
   "*.{ts,tsx,js,jsx}": [
-    "bash -c 'eslint --max-warnings 0 \"$@\" 2>&1 | grep -v \"File ignored\" || true' --",
+    "eslint --max-warnings 0",
     "biome check --write --unsafe --error-on-warnings"
   ],
   "!(lib/db/migrations/**).{json,css}": ["biome format --write"]

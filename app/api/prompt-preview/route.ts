@@ -6,6 +6,9 @@ import {
 import type { DomainId } from '@/lib/domains';
 import type { ChatMode, ModeContext } from '@/lib/db/schema';
 import type { DocumentType } from '@/lib/artifacts';
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('prompt-preview');
 
 export async function POST(req: NextRequest) {
   try {
@@ -39,7 +42,7 @@ export async function POST(req: NextRequest) {
       { status: 400 },
     );
   } catch (error) {
-    console.error('Prompt preview error:', error);
+    logger.error('Failed to generate prompt preview', error);
     return NextResponse.json(
       { error: 'Failed to generate prompt preview' },
       { status: 500 },

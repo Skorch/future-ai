@@ -17,6 +17,9 @@ import type {
 } from '@/lib/ai/prompts/assemblers';
 import { Copy } from 'lucide-react';
 import { getDefaultMetadata } from '@/lib/artifacts/metadata-schemas';
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('prompt-debug');
 
 export default function PromptDebugPage() {
   const [activeTab, setActiveTab] = useState('agent');
@@ -78,7 +81,7 @@ export default function PromptDebugPage() {
         const data = await response.json();
         setAgentPrompt(data);
       } catch (error) {
-        console.error('Failed to fetch agent prompt:', error);
+        logger.error('Failed to fetch agent prompt', error);
       } finally {
         setLoading(false);
       }
@@ -103,7 +106,7 @@ export default function PromptDebugPage() {
         const data = await response.json();
         setDocPrompt(data);
       } catch (error) {
-        console.error('Failed to fetch doc prompt:', error);
+        logger.error('Failed to fetch doc prompt', error);
       } finally {
         setLoading(false);
       }
@@ -173,7 +176,7 @@ ${docPrompt.userPrompt}
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-3xl font-bold">🔍 Prompt Debugger</h1>
         <Button onClick={copyAsMarkdown} className="gap-2">
-          <Copy className="h-4 w-4" />
+          <Copy className="size-4" />
           Copy as Markdown
         </Button>
       </div>
