@@ -32,6 +32,7 @@ export interface StreamConfig {
   system: string;
   prompt: string;
   maxOutputTokens?: number;
+  temperature?: number;
   experimental_transform?: ReturnType<typeof smoothStream>;
   providerOptions?: ProviderOptions;
 }
@@ -222,6 +223,7 @@ export function buildStreamConfig({
   prompt,
   maxOutputTokens,
   thinkingBudget,
+  temperature = 0.6,
   prediction,
 }: {
   model: LanguageModel;
@@ -229,6 +231,7 @@ export function buildStreamConfig({
   prompt: string;
   maxOutputTokens?: number;
   thinkingBudget?: number;
+  temperature?: number;
   prediction?: string;
 }): StreamConfig {
   const config: StreamConfig = {
@@ -236,6 +239,7 @@ export function buildStreamConfig({
     system,
     prompt,
     maxOutputTokens,
+    temperature,
     experimental_transform: smoothStream({ chunking: 'word' }),
   };
 

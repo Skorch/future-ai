@@ -311,7 +311,7 @@ export async function assembleDocumentPrompt(params: {
   // Build stream config
   const streamConfig: DocGenStreamConfig = {
     model: 'claude-sonnet-4', // artifact-model
-    temperature: undefined, // Will show as 'default'
+    temperature: docMetadata.temperature || 0.6,
     maxOutputTokens: docMetadata.outputSize || 16000,
     thinkingBudget: docMetadata.thinkingBudget,
     experimental_transform: 'smoothStream({ chunking: "word" })',

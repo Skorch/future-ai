@@ -16,6 +16,6 @@ export const discoveryMode: ModeConfig = {
     'setComplete', // Allow marking task complete in any mode
   ],
 
-  temperature: 0.6, // Slightly more focused for analysis
+  temperature: 0.4, // Slightly more focused for analysis
   thinkingBudget: ThinkingBudget.MEDIUM, // Standard analysis for discovery
 };

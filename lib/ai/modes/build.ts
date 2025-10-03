@@ -19,6 +19,6 @@ export const buildMode: ModeConfig = {
     'setComplete', // Allow marking task complete in any mode
   ],
 
-  temperature: 0.7, // More creative for building
+  temperature: 0.5, // More creative for building
   thinkingBudget: ThinkingBudget.LOW, // Quick analysis for building documents
 };

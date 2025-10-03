@@ -31,6 +31,7 @@ export interface ArtifactMetadata {
   // Generation configuration
   outputSize?: OutputSize; // Optional, defaults to LARGE if not specified
   thinkingBudget?: ThinkingBudget; // Optional, defaults to NONE if not specified
+  temperature?: number; // Optional, defaults to 0.6 if not specified
 
   // RAG configuration for document chunking strategy
   chunkingStrategy?: ChunkingStrategy; // Defaults to 'section-based' if not specified
