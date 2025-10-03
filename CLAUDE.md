@@ -304,8 +304,19 @@ Remember: The best code is code that doesn't exist. Every line you write is a li
 - when adding new node modules, always default to the latest version (not
   your KNOWLEDGE of what the latest version is)
 
+
 # Subagents
 
+
+## Searching for Files
 IMPORTANT:  It is vital that when you need to search for something unknown or unclear you use the `code-searcher` subagent.  If you have more than one topic to serach for, you will spawn parallel subagents
 WHY:  using the `code-searcher` subagent is much more efficient token-wise and improves your overall preformance.  Using this method makes you a better agent
+
+## Committing Code
+Any time you need to commit code, you ALWAYS delegate to the `commit-orchestrator` subagent.  This results in a CLEAN CONTEXT that you don't waste any of your resources on churning through fixing pre-commit issues
+
+
+# General Rules
+
 - Never propose 'backward compatibility' solutions unless the User explicitly requests - always plan to roll forward with changes
+
