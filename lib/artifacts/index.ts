@@ -1,4 +1,6 @@
 import type { ArtifactDefinition } from './types';
+import type { DomainId } from '@/lib/domains';
+import { getDomain } from '@/lib/domains';
 
 // Artifact registry - single source of truth for all document types
 export const artifactRegistry = {
@@ -36,7 +38,32 @@ export async function getDocumentTypeDefinition(
 }
 
 // Load all definitions (for prompts, UI, etc.)
-export async function getAllDocumentTypes(): Promise<ArtifactDefinition[]> {
+// Filtered by domain - only returns types allowed in the given domain
+export async function getAllDocumentTypes(
+  domainId: DomainId,
+): Promise<ArtifactDefinition[]> {
+  const domain = getDomain(domainId);
+  const allowedTypes = domain.allowedTypes;
+
+  // Filter registry entries by domain's allowed types
+  const entries = Object.entries(artifactRegistry).filter(([key]) =>
+    allowedTypes.includes(key as DocumentType),
+  );
+
+  const definitions = await Promise.all(
+    entries.map(async ([, loader]) => {
+      const artifactModule = await loader();
+      return {
+        metadata: artifactModule.metadata,
+        handler: artifactModule.handler,
+      };
+    }),
+  );
+  return definitions;
+}
+
+// Internal function to load ALL document types (unfiltered)
+async function getAllDocumentTypesUnfiltered(): Promise<ArtifactDefinition[]> {
   const definitions = await Promise.all(
     Object.values(artifactRegistry).map(async (loader) => {
       const artifactModule = await loader();
@@ -49,11 +76,11 @@ export async function getAllDocumentTypes(): Promise<ArtifactDefinition[]> {
   return definitions;
 }
 
-// Get display name map for all document types
+// Get display name map for all document types (unfiltered - for display purposes)
 export async function getDocumentTypeDisplayMap(): Promise<
   Record<string, string>
 > {
-  const types = await getAllDocumentTypes();
+  const types = await getAllDocumentTypesUnfiltered();
   const displayMap: Record<string, string> = {};
 
   types.forEach((typeDef) => {

@@ -5,23 +5,19 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import { getAllUserDocuments } from '@/lib/db/documents';
 import { getAllDocumentTypes } from '@/lib/artifacts';
+import type { DomainId } from '@/lib/domains';
 
 interface ListDocumentsProps {
   session: { user: { id: string } };
   workspaceId: string;
+  domainId: DomainId;
 }
 
-// Cache for tool description to avoid regenerating
-// Note: Module-level cache, cleared on server restart
-let toolDescriptionCache: string | null = null;
-
 // Build dynamic tool description from registry
-async function buildToolDescription(): Promise<string> {
-  // Return cached if available
-  if (toolDescriptionCache) return toolDescriptionCache;
-
+// Domain-specific - no cache (descriptions differ by domain)
+async function buildToolDescription(domainId: DomainId): Promise<string> {
   try {
-    const docTypes = await getAllDocumentTypes();
+    const docTypes = await getAllDocumentTypes(domainId);
 
     // Build dynamic type descriptions from registry
     const typeDescriptions = docTypes
@@ -33,7 +29,7 @@ async function buildToolDescription(): Promise<string> {
     // Add transcript manually since it's not in registry (upload-only)
     const allTypes = `${typeDescriptions}\n- 'transcript': Raw meeting audio/video - Load selectively or partially`;
 
-    toolDescriptionCache = `List all documents available to the current user.
+    return `List all documents available to the current user.
 Returns document metadata including size information to help decide what to load.
 
 WHEN TO USE THIS TOOL:
@@ -62,8 +58,6 @@ ${allTypes}
 
 PRO TIP: For time-period queries, loading ALL document summaries gives more complete context
 than RAG search, which might miss important topics. Check document size before loading.`;
-
-    return toolDescriptionCache;
   } catch (error) {
     logger.warn('Failed to load document types for tool description', error);
     // Fallback description
@@ -77,9 +71,10 @@ Use this tool to discover available documents before loading them.`;
 export const listDocuments = async ({
   session,
   workspaceId,
+  domainId,
 }: ListDocumentsProps) => {
-  // Dynamically build description from registry
-  const description = await buildToolDescription();
+  // Dynamically build description from registry (filtered by domain)
+  const description = await buildToolDescription(domainId);
 
   return tool({
     description,

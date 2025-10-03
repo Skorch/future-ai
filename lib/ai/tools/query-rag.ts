@@ -9,57 +9,71 @@ import { rerankWithLLM, type LLMRerankResult } from '../../rag/llm-reranker';
 import type { QueryResult, QueryMatch, RAGMetadata } from '../../rag/types';
 import type { ChatMessage } from '@/lib/types';
 import { QUERY_RAG_PROMPT } from '@/lib/ai/prompts/tools/query-rag';
-import { documentTypes, getDocumentTypeDisplayMap } from '@/lib/artifacts';
+import { getDocumentTypeDisplayMap, type DocumentType } from '@/lib/artifacts';
+import type { DomainId } from '@/lib/domains';
+import { getDomain } from '@/lib/domains';
 
-// Build dynamic content types: registry types + special metadata filters
-// Note: 'transcript' and 'document' are metadata filters, not registry types
-const contentTypesArray: string[] = [
-  ...documentTypes,
-  'transcript',
-  'document',
-  'all',
-];
-const contentTypes = contentTypesArray as [string, ...string[]];
+// Build schema dynamically based on allowed document types for domain
+function createQueryRAGSchema(allowedTypes: DocumentType[]) {
+  // Build dynamic content types: registry types + special metadata filters
+  // Note: 'transcript' and 'document' are metadata filters, not registry types
+  const contentTypesArray: string[] = [
+    ...allowedTypes,
+    'transcript',
+    'document',
+    'all',
+  ];
+  const contentTypes = contentTypesArray as [string, ...string[]];
 
-// Tool parameter schema - only expose what LLM needs to control
-const queryRAGSchema = z.object({
-  query: z.string().describe('Search query to find relevant content'),
-  contentType: z
-    .enum(contentTypes)
-    .optional()
-    .default('all')
-    .describe(
-      `Filter results by content type. Available types: ${contentTypes.join(', ')}. Use 'transcript' for raw transcripts, 'meeting-analysis' or 'sales-analysis' for AI-generated summaries, 'document' for other content.`,
-    ),
-  filter: z
-    .object({
-      topics: z.array(z.string()).optional().describe('Filter by topics'),
-      speakers: z
-        .array(z.string())
-        .optional()
-        .describe('Filter by speakers (for transcripts)'),
-      dateRange: z
-        .object({
-          start: z.string().describe('ISO date string'),
-          end: z.string().describe('ISO date string'),
-        })
-        .optional()
-        .describe('Filter by date range'),
-    })
-    .optional()
-    .describe('Additional filters for search'),
-  rerankMethod: z
-    .enum(['llm', 'voyage'])
-    .optional()
-    .default('voyage')
-    .describe('Reranking method: llm (Claude Haiku) or voyage (Voyage AI)'),
-});
-
-type QueryRAGParams = z.infer<typeof queryRAGSchema>;
+  return z.object({
+    query: z.string().describe('Search query to find relevant content'),
+    contentType: z
+      .enum(contentTypes)
+      .optional()
+      .default('all')
+      .describe(
+        `Filter results by content type. Available types: ${contentTypes.join(', ')}. Use 'transcript' for raw transcripts, 'meeting-analysis' or 'sales-analysis' for AI-generated summaries, 'document' for other content.`,
+      ),
+    filter: z
+      .object({
+        topics: z.array(z.string()).optional().describe('Filter by topics'),
+        speakers: z
+          .array(z.string())
+          .optional()
+          .describe('Filter by speakers (for transcripts)'),
+        dateRange: z
+          .object({
+            start: z.string().describe('ISO date string'),
+            end: z.string().describe('ISO date string'),
+          })
+          .optional()
+          .describe('Filter by date range'),
+      })
+      .optional()
+      .describe('Additional filters for search'),
+    rerankMethod: z
+      .enum(['llm', 'voyage'])
+      .optional()
+      .default('voyage')
+      .describe('Reranking method: llm (Claude Haiku) or voyage (Voyage AI)'),
+  });
+}
 
 // Simple in-memory cache for query results
 const queryCache = new Map<string, { result: unknown; timestamp: number }>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+// Type for query parameters (inferred from schema)
+type QueryRAGParams = {
+  query: string;
+  contentType?: string;
+  filter?: {
+    topics?: string[];
+    speakers?: string[];
+    dateRange?: { start: string; end: string };
+  };
+  rerankMethod?: 'llm' | 'voyage';
+};
 
 /**
  * Build Pinecone filter object from parameters
@@ -241,10 +255,16 @@ interface QueryRAGProps {
   session: { user: { id: string } };
   dataStream: UIMessageStreamWriter<ChatMessage>;
   workspaceId: string;
+  domainId: DomainId;
 }
 
 export const queryRAG = (props: QueryRAGProps) => {
-  const { session, dataStream, workspaceId } = props;
+  const { session, dataStream, workspaceId, domainId } = props;
+
+  // Get domain-specific allowed types
+  const domain = getDomain(domainId);
+  const allowedTypes = domain.allowedTypes;
+
   logger.debug(
     '[queryRAG] Creating tool with session user:',
     props.session?.user?.id,
@@ -252,7 +272,7 @@ export const queryRAG = (props: QueryRAGProps) => {
 
   return tool({
     description: QUERY_RAG_PROMPT,
-    inputSchema: queryRAGSchema,
+    inputSchema: createQueryRAGSchema(allowedTypes),
     execute: async (params) => {
       const startTime = Date.now();
 

@@ -1,5 +1,6 @@
 import { getAllDocumentTypes } from '@/lib/artifacts';
 import type { ArtifactDefinition } from '@/lib/artifacts/types';
+import type { DomainId } from '@/lib/domains';
 
 export const SYSTEM_PROMPT_BASE = `
 You are a professional business intelligence assistant specializing in meeting analysis, requirements gathering, and strategic documentation.
@@ -59,20 +60,13 @@ Your operational modes reflect different phases of business analysis:
 - Consistency across all deliverables
 `;
 
-// Cache capabilities to avoid multiple generations
-// Note: This is module-level cache, cleared on server restart
-// If document types are added dynamically, consider request-scoped caching
-let capabilityCache: string | null = null;
-
 // Generate system capabilities from registry
-async function generateSystemCapabilities(): Promise<string> {
-  // Return cached if available
-  if (capabilityCache) return capabilityCache;
-
+// Domain-specific - no cache (capabilities differ by domain)
+async function generateSystemCapabilities(domainId: DomainId): Promise<string> {
   try {
-    const docTypes = await getAllDocumentTypes();
+    const docTypes = await getAllDocumentTypes(domainId);
 
-    capabilityCache = `
+    return `
 ## My Core Capabilities
 
 ### Document Creation
@@ -102,8 +96,6 @@ To get started, you can:
 - Upload a transcript for automatic processing
 - Describe the document you need
 - Ask me to search for existing information`;
-
-    return capabilityCache;
   } catch (error) {
     // Log error silently and return empty string - don't break the prompt
     // Consider using a proper logger here if available
@@ -114,11 +106,13 @@ To get started, you can:
 // Main system prompt composer - NOW ASYNC
 export async function composeSystemPrompt({
   domainPrompts = [],
+  domainId,
 }: {
   domainPrompts?: string[];
-} = {}): Promise<string> {
-  // Generate capabilities at system level
-  const capabilities = await generateSystemCapabilities();
+  domainId: DomainId;
+}): Promise<string> {
+  // Generate capabilities at system level (filtered by domain)
+  const capabilities = await generateSystemCapabilities(domainId);
 
   const components = [
     SYSTEM_PROMPT_BASE,

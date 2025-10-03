@@ -4,11 +4,12 @@ import { z } from 'zod';
 import { artifactKinds } from '@/lib/artifacts/server';
 import type { ChatMessage } from '@/lib/types';
 import {
-  loadAllArtifactDefinitions,
+  getAllDocumentTypes,
   getDocumentTypeDefinition,
-  documentTypes,
   type DocumentType,
 } from '@/lib/artifacts';
+import type { DomainId } from '@/lib/domains';
+import { getDomain } from '@/lib/domains';
 import { getLogger } from '@/lib/logger';
 
 const logger = getLogger('CreateDocument');
@@ -17,54 +18,52 @@ interface CreateDocumentProps {
   session: { user: { id: string } };
   dataStream: UIMessageStreamWriter<ChatMessage>;
   workspaceId: string;
+  domainId: DomainId;
 }
 
-const createDocumentSchema = z.object({
-  title: z.string().describe('Title for the document'),
-  kind: z.enum(artifactKinds).default('text'),
-  documentType: z
-    .enum(documentTypes as [DocumentType, ...DocumentType[]])
-    .default('text')
-    .describe(`Document type. Available types: ${documentTypes.join(', ')}`),
+// Build schema dynamically based on allowed document types for domain
+function createDocumentSchema(allowedTypes: DocumentType[]) {
+  return z.object({
+    title: z.string().describe('Title for the document'),
+    kind: z.enum(artifactKinds).default('text'),
+    documentType: z
+      .enum(allowedTypes as [DocumentType, ...DocumentType[]])
+      .default('text')
+      .describe(`Document type. Available types: ${allowedTypes.join(', ')}`),
 
-  primarySourceDocumentId: z
-    .string()
-    .uuid()
-    .optional()
-    .describe(
-      'The main document to analyze (required for analysis types like sales-analysis, meeting-analysis). This is the transcript or content being analyzed in THIS generation.',
-    ),
+    primarySourceDocumentId: z
+      .string()
+      .uuid()
+      .optional()
+      .describe(
+        'The main document to analyze (required for analysis types like sales-analysis, meeting-analysis). This is the transcript or content being analyzed in THIS generation.',
+      ),
 
-  referenceDocumentIds: z
-    .array(z.string().uuid())
-    .optional()
-    .describe(
-      'Supporting documents for historical context (optional). For sales-analysis: include previous call analyses to track deal progression. For meeting-analysis: include previous meetings if comparison requested.',
-    ),
+    referenceDocumentIds: z
+      .array(z.string().uuid())
+      .optional()
+      .describe(
+        'Supporting documents for historical context (optional). For sales-analysis: include previous call analyses to track deal progression. For meeting-analysis: include previous meetings if comparison requested.',
+      ),
 
-  agentInstruction: z
-    .string()
-    .optional()
-    .describe(
-      "Custom instructions for the document generation agent. Use this to specify: (1) How to use reference documents, (2) Any custom format or output requirements beyond the standard template, (3) Specific guidance on emphasis areas or analysis focus, (4) Context about the user's goals or downstream usage of this document.",
-    ),
-  metadata: z
-    .record(z.unknown())
-    .optional()
-    .describe('Additional metadata specific to the document type'),
-});
-
-// Cache for tool description to avoid regenerating
-// Note: Module-level cache, cleared on server restart
-let toolDescriptionCache: string | null = null;
+    agentInstruction: z
+      .string()
+      .optional()
+      .describe(
+        "Custom instructions for the document generation agent. Use this to specify: (1) How to use reference documents, (2) Any custom format or output requirements beyond the standard template, (3) Specific guidance on emphasis areas or analysis focus, (4) Context about the user's goals or downstream usage of this document.",
+      ),
+    metadata: z
+      .record(z.unknown())
+      .optional()
+      .describe('Additional metadata specific to the document type'),
+  });
+}
 
 // Build dynamic tool description from registry
-async function buildToolDescription(): Promise<string> {
-  // Return cached if available
-  if (toolDescriptionCache) return toolDescriptionCache;
-
+// Domain-specific - no cache (descriptions differ by domain)
+async function buildToolDescription(domainId: DomainId): Promise<string> {
   try {
-    const definitions = await loadAllArtifactDefinitions();
+    const definitions = await getAllDocumentTypes(domainId);
     const descriptions = definitions
       .map((d) => {
         const required = d.metadata.requiredParams?.includes(
@@ -76,12 +75,10 @@ async function buildToolDescription(): Promise<string> {
       })
       .join('\n');
 
-    toolDescriptionCache = `Create business documents. Available types:
+    return `Create business documents. Available types:
 ${descriptions}
 
 Each type may have specific requirements. The tool will guide you if parameters are missing.`;
-
-    return toolDescriptionCache;
   } catch (error) {
     logger.warn(
       'Failed to load artifact definitions for tool description',
@@ -96,13 +93,18 @@ export const createDocument = async ({
   session,
   dataStream,
   workspaceId,
+  domainId,
 }: CreateDocumentProps) => {
-  // Dynamically build description from registry
-  const description = await buildToolDescription();
+  // Get domain-specific allowed types
+  const domain = getDomain(domainId);
+  const allowedTypes = domain.allowedTypes;
+
+  // Dynamically build description from registry (filtered by domain)
+  const description = await buildToolDescription(domainId);
 
   return tool({
     description,
-    inputSchema: createDocumentSchema,
+    inputSchema: createDocumentSchema(allowedTypes),
     execute: async ({
       title,
       kind,

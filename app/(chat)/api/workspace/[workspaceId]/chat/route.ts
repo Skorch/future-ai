@@ -13,7 +13,7 @@ import {
 } from '@/lib/ai/utils/token-analyzer';
 import { auth } from '@clerk/nextjs/server';
 import { composeSystemPrompt } from '@/lib/ai/prompts/system';
-import { SALES_INTELLIGENCE_PROMPT } from '@/lib/ai/prompts/domains/sales-intelligence';
+import { getDomain, DEFAULT_DOMAIN, type DomainId } from '@/lib/domains';
 import {
   createStreamId,
   getChatById,
@@ -108,11 +108,19 @@ export async function POST(
       hasFileParts: message.parts?.some((p) => p.type === 'file'),
     });
 
-    const { userId } = await auth();
+    const { userId, sessionClaims } = await auth();
 
     if (!userId) {
       return new ChatSDKError('unauthorized:chat').toResponse();
     }
+
+    // Load agent domain from session claims (set via Clerk publicMetadata)
+    // Falls back to DEFAULT_DOMAIN if not set
+    const domainId =
+      (sessionClaims?.agentDomain as DomainId | undefined) || DEFAULT_DOMAIN;
+    const domain = getDomain(domainId);
+
+    logger.debug(`Agent domain: ${domainId}`, { domainLabel: domain.label });
 
     // Create session object for AI tools
     const session = { user: { id: userId } };
@@ -220,8 +228,10 @@ export async function POST(
     const processedMessages = await processMessageFiles(uiMessages);
 
     // Calculate token usage BEFORE creating the stream
+    // Use domain-specific prompt and capabilities
     const systemPromptText = await composeSystemPrompt({
-      domainPrompts: [SALES_INTELLIGENCE_PROMPT],
+      domainPrompts: [domain.prompt],
+      domainId,
     });
 
     const modelMessages = convertToModelMessages(processedMessages);
@@ -394,8 +404,28 @@ export async function POST(
               system: _modeSystemPrompt, // prepareStep will handle system prompt
               model: _model, // We use modelInstance instead
               stopWhen: _stopWhen, // Ignore mode-specific stopWhen
+              thinkingBudget,
               ...restModeConfig
             } = modeConfig;
+
+            // Build provider options with thinking budget if configured
+            const providerOptions: {
+              anthropic?: {
+                thinking?: {
+                  type: 'enabled';
+                  budgetTokens: number;
+                };
+              };
+            } = {};
+
+            if (thinkingBudget && thinkingBudget > 0) {
+              providerOptions.anthropic = {
+                thinking: {
+                  type: 'enabled' as const,
+                  budgetTokens: thinkingBudget,
+                },
+              };
+            }
 
             const streamOptions: Parameters<typeof streamText>[0] = {
               // Spread safe mode config (excluding stopWhen which is added later)
@@ -410,6 +440,11 @@ export async function POST(
               // Standard messages
               messages: modelMessages,
 
+              // Add provider options if thinking budget is set
+              ...(Object.keys(providerOptions).length > 0 && {
+                providerOptions,
+              }),
+
               // Tools - define all, experimental_activeTools from mode config filters them
               tools: shouldDisableTools
                 ? {}
@@ -418,21 +453,28 @@ export async function POST(
                     setMode: setMode({ chatId: id, dataStream }),
                     setComplete: setComplete({ chatId: id, dataStream }),
 
-                    // Existing tools
+                    // Existing tools (domain-filtered)
                     createDocument: await createDocument({
                       session,
                       dataStream,
                       workspaceId,
+                      domainId,
                     }),
                     updateDocument: updateDocument({
                       session,
                       dataStream,
                       workspaceId,
                     }),
-                    queryRAG: queryRAG({ session, dataStream, workspaceId }),
+                    queryRAG: queryRAG({
+                      session,
+                      dataStream,
+                      workspaceId,
+                      domainId,
+                    }),
                     listDocuments: await listDocuments({
                       session,
                       workspaceId,
+                      domainId,
                     }),
                     loadDocument: loadDocument({ session, workspaceId }),
                     loadDocuments: loadDocuments({ session, workspaceId }),

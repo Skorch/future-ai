@@ -17,8 +17,15 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar';
+import type { DomainId } from '@/lib/domains';
 
-export function AppSidebar({ workspaceId }: { workspaceId: string }) {
+export function AppSidebar({
+  workspaceId,
+  initialDomain,
+}: {
+  workspaceId: string;
+  initialDomain: DomainId;
+}) {
   const router = useRouter();
   const { setOpenMobile } = useSidebar();
 
@@ -54,7 +61,7 @@ export function AppSidebar({ workspaceId }: { workspaceId: string }) {
         <SidebarDocuments workspaceId={workspaceId} />
       </SidebarContent>
       <SidebarFooter>
-        <SidebarUserNav />
+        <SidebarUserNav initialDomain={initialDomain} />
       </SidebarFooter>
     </Sidebar>
   );

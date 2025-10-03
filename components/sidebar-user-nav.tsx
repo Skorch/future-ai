@@ -20,8 +20,14 @@ import {
 import { useRouter } from 'next/navigation';
 import { toast } from './toast';
 import { LoaderIcon } from './icons';
+import { DomainSelector } from './domain-selector';
+import type { DomainId } from '@/lib/domains';
 
-export function SidebarUserNav() {
+export function SidebarUserNav({
+  initialDomain,
+}: {
+  initialDomain: DomainId;
+}) {
   const router = useRouter();
   const { user, isLoaded } = useUser();
   const { signOut } = useClerk();
@@ -71,6 +77,8 @@ export function SidebarUserNav() {
             side="top"
             className="w-[--radix-popper-anchor-width]"
           >
+            <DomainSelector initialDomain={initialDomain} />
+            <DropdownMenuSeparator />
             <DropdownMenuItem
               data-testid="user-nav-item-theme"
               className="cursor-pointer"

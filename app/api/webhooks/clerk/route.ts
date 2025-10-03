@@ -1,10 +1,11 @@
 import { Webhook } from 'svix';
 import { headers } from 'next/headers';
-import type { WebhookEvent } from '@clerk/nextjs/server';
+import { clerkClient, type WebhookEvent } from '@clerk/nextjs/server';
 import { eq } from 'drizzle-orm';
 import { db, upsertUser } from '@/lib/db/queries';
 import { user as userTable } from '@/lib/db/schema';
 import { createWorkspace } from '@/lib/workspace/queries';
+import { DEFAULT_DOMAIN } from '@/lib/domains';
 import { getLogger } from '@/lib/logger';
 
 const logger = getLogger('ClerkWebhook');
@@ -72,6 +73,18 @@ export async function POST(req: Request) {
             email_addresses[0]?.verification?.status === 'verified',
           createdAt: new Date(created_at),
           updatedAt: new Date(created_at),
+        });
+
+        // Set default agent domain in Clerk metadata
+        const client = await clerkClient();
+        await client.users.updateUserMetadata(id, {
+          publicMetadata: {
+            agentDomain: DEFAULT_DOMAIN,
+          },
+        });
+
+        logger.debug(`Set default agent domain for new user: ${id}`, {
+          domain: DEFAULT_DOMAIN,
         });
 
         // Create default workspace for new user

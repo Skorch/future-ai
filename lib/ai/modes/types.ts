@@ -18,6 +18,7 @@ export interface ModeConfig {
   presencePenalty?: number;
   frequencyPenalty?: number;
   stopSequences?: string[];
+  thinkingBudget?: number; // Extended thinking budget for complex analysis
 
   // Still experimental in v5
   experimental_prepareStep?: (
