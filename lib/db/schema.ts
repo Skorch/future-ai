@@ -10,6 +10,8 @@ import {
   foreignKey,
   boolean,
   index,
+  integer,
+  unique,
 } from 'drizzle-orm/pg-core';
 
 export const user = pgTable('User', {
@@ -227,3 +229,51 @@ export const stream = pgTable(
 );
 
 export type Stream = InferSelectModel<typeof stream>;
+
+// Playbook tables for workflow guidance
+export const playbook = pgTable('Playbook', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: varchar('name', { length: 255 }).unique().notNull(),
+  description: text('description'),
+  whenToUse: text('whenToUse'),
+  domains: text('domains').array().notNull(),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt').defaultNow().notNull(),
+});
+
+export const playbookStep = pgTable(
+  'PlaybookStep',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    playbookId: uuid('playbookId')
+      .references(() => playbook.id, { onDelete: 'cascade' })
+      .notNull(),
+    sequence: integer('sequence').notNull(),
+    instruction: text('instruction').notNull(),
+    createdAt: timestamp('createdAt').defaultNow().notNull(),
+    updatedAt: timestamp('updatedAt').defaultNow().notNull(),
+  },
+  (table) => ({
+    uniqueSequence: unique().on(table.playbookId, table.sequence),
+    playbookStepsIdx: index('playbook_steps_idx').on(
+      table.playbookId,
+      table.sequence,
+    ),
+  }),
+);
+
+export type Playbook = InferSelectModel<typeof playbook>;
+export type PlaybookStep = InferSelectModel<typeof playbookStep>;
+
+// Types for API responses
+export interface PlaybookWithSteps extends Playbook {
+  steps: PlaybookStep[];
+}
+
+export interface PlaybookMetadata {
+  id: string;
+  name: string;
+  description: string | null;
+  whenToUse: string | null;
+  domains: string[];
+}
