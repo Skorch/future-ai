@@ -76,7 +76,7 @@ export function PromptPreview({
                     onClick={() => copySection(section.content)}
                     className="h-7 px-2"
                   >
-                    <Copy className="h-3 w-3" />
+                    <Copy className="size-3" />
                   </Button>
                 </div>
                 <pre className="text-xs text-muted-foreground whitespace-pre-wrap">
@@ -96,9 +96,9 @@ export function PromptPreview({
                 <div className="flex items-center justify-between">
                   <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium hover:underline">
                     {isExpanded ? (
-                      <ChevronDown className="h-4 w-4" />
+                      <ChevronDown className="size-4" />
                     ) : (
-                      <ChevronRight className="h-4 w-4" />
+                      <ChevronRight className="size-4" />
                     )}
                     {section.title}
                   </CollapsibleTrigger>
@@ -108,7 +108,7 @@ export function PromptPreview({
                     onClick={() => copySection(section.content)}
                     className="h-7 px-2"
                   >
-                    <Copy className="h-3 w-3" />
+                    <Copy className="size-3" />
                   </Button>
                 </div>
 

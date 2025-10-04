@@ -26,9 +26,9 @@ export function ToolDescriptionDisplay({
           className="h-7 px-2"
         >
           {isExpanded ? (
-            <ChevronDown className="h-4 w-4" />
+            <ChevronDown className="size-4" />
           ) : (
-            <ChevronRight className="h-4 w-4" />
+            <ChevronRight className="size-4" />
           )}
         </Button>
       </div>

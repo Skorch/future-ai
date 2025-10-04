@@ -38,7 +38,7 @@ export function AgentConfigForm({ config, onChange }: AgentConfigFormProps) {
               onChange={(e) =>
                 onChange({ ...config, domain: e.target.value as DomainId })
               }
-              className="h-4 w-4"
+              className="size-4"
             />
             <span>Sales</span>
           </label>
@@ -51,7 +51,7 @@ export function AgentConfigForm({ config, onChange }: AgentConfigFormProps) {
               onChange={(e) =>
                 onChange({ ...config, domain: e.target.value as DomainId })
               }
-              className="h-4 w-4"
+              className="size-4"
             />
             <span>Meeting</span>
           </label>
@@ -71,7 +71,7 @@ export function AgentConfigForm({ config, onChange }: AgentConfigFormProps) {
               onChange={(e) =>
                 onChange({ ...config, mode: e.target.value as ChatMode })
               }
-              className="h-4 w-4"
+              className="size-4"
             />
             <span>Discovery</span>
           </label>
@@ -84,7 +84,7 @@ export function AgentConfigForm({ config, onChange }: AgentConfigFormProps) {
               onChange={(e) =>
                 onChange({ ...config, mode: e.target.value as ChatMode })
               }
-              className="h-4 w-4"
+              className="size-4"
             />
             <span>Build</span>
           </label>
