@@ -19,14 +19,8 @@ CREATE TABLE "PlaybookStep" (
 	CONSTRAINT "PlaybookStep_playbookId_sequence_unique" UNIQUE("playbookId","sequence")
 );
 --> statement-breakpoint
-ALTER TABLE "Document" ADD COLUMN "documentType" text DEFAULT 'text' NOT NULL;--> statement-breakpoint
-ALTER TABLE "Document" ADD COLUMN "isSearchable" boolean DEFAULT true NOT NULL;--> statement-breakpoint
-ALTER TABLE "Document" ADD COLUMN "deletedAt" timestamp;--> statement-breakpoint
 ALTER TABLE "PlaybookStep" ADD CONSTRAINT "PlaybookStep_playbookId_Playbook_id_fk" FOREIGN KEY ("playbookId") REFERENCES "public"."Playbook"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "playbook_steps_idx" ON "PlaybookStep" USING btree ("playbookId","sequence");--> statement-breakpoint
-CREATE INDEX "idx_document_deleted_at" ON "Document" USING btree ("deletedAt");--> statement-breakpoint
-CREATE INDEX "idx_document_searchable" ON "Document" USING btree ("isSearchable");--> statement-breakpoint
-CREATE INDEX "idx_document_workspace_deleted" ON "Document" USING btree ("workspaceId","deletedAt");--> statement-breakpoint
 -- Seed Playbook Data
 -- Insert BANT-C Validation Playbook
 WITH bant_playbook AS (
