@@ -40,10 +40,11 @@ export async function createWorkspace(
   userId: string,
   name: string,
   description?: string,
+  domainId?: string,
 ) {
   const [ws] = await db
     .insert(workspace)
-    .values({ userId, name, description })
+    .values({ userId, name, description, domainId: domainId || 'sales' })
     .returning();
   return ws;
 }

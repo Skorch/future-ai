@@ -20,7 +20,10 @@ import {
   getMessagesByChatId,
   saveChat,
   saveMessages,
+  db,
 } from '@/lib/db/queries';
+import { workspace } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
 import { convertToUIMessages, generateUUID } from '@/lib/utils';
 import { generateTitleFromUserMessage } from '@/app/(chat)/actions';
 import { createDocument } from '@/lib/ai/tools/create-document';
@@ -109,19 +112,26 @@ export async function POST(
       hasFileParts: message.parts?.some((p) => p.type === 'file'),
     });
 
-    const { userId, sessionClaims } = await auth();
+    const { userId } = await auth();
 
     if (!userId) {
       return new ChatSDKError('unauthorized:chat').toResponse();
     }
 
-    // Load agent domain from session claims (set via Clerk publicMetadata)
-    // Falls back to DEFAULT_DOMAIN if not set
-    const domainId =
-      (sessionClaims?.agentDomain as DomainId | undefined) || DEFAULT_DOMAIN;
+    // Load domain from workspace
+    const workspaceData = await db
+      .select({ domainId: workspace.domainId })
+      .from(workspace)
+      .where(eq(workspace.id, workspaceId))
+      .limit(1);
+
+    const domainId = (workspaceData[0]?.domainId as DomainId) || DEFAULT_DOMAIN;
     const domain = getDomain(domainId);
 
-    logger.debug(`Agent domain: ${domainId}`, { domainLabel: domain.label });
+    logger.debug(`Agent domain from workspace: ${domainId}`, {
+      workspaceId,
+      domainLabel: domain.label,
+    });
 
     // Create session object for AI tools
     const session = { user: { id: userId } };

@@ -20,6 +20,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import type { Workspace } from '@/lib/db/schema';
 import useSWR from 'swr';
 import { fetcher } from '@/lib/utils';
@@ -42,6 +49,7 @@ export function CreateWorkspaceDialog({
 }: CreateWorkspaceDialogProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [domainId, setDomainId] = useState<'sales' | 'meeting'>('sales');
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ name?: string; description?: string }>(
     {},
@@ -52,6 +60,7 @@ export function CreateWorkspaceDialog({
     if (!open) {
       setName('');
       setDescription('');
+      setDomainId('sales');
       setErrors({});
     }
   }, [open]);
@@ -79,6 +88,7 @@ export function CreateWorkspaceDialog({
       if (description) {
         formData.append('description', description);
       }
+      formData.append('domainId', domainId);
 
       const response = await fetch('/api/workspace/create', {
         method: 'POST',
@@ -127,6 +137,25 @@ export function CreateWorkspaceDialog({
             {errors.name && (
               <p className="text-sm text-destructive">{errors.name}</p>
             )}
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="domain">Domain</Label>
+            <Select
+              value={domainId}
+              onValueChange={(value) =>
+                setDomainId(value as 'sales' | 'meeting')
+              }
+              disabled={isLoading}
+            >
+              <SelectTrigger id="domain">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="sales">Sales Intelligence</SelectItem>
+                <SelectItem value="meeting">Meeting Intelligence</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="grid gap-2">

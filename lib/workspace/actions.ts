@@ -32,6 +32,7 @@ export async function createWorkspaceAction(formData: FormData) {
 
   const name = formData.get('name') as string;
   const description = formData.get('description');
+  const domainId = formData.get('domainId') as string;
 
   const validated = createWorkspaceSchema.parse({
     name,
@@ -42,6 +43,7 @@ export async function createWorkspaceAction(formData: FormData) {
     userId,
     validated.name,
     validated.description,
+    domainId,
   );
 
   // Set as active workspace

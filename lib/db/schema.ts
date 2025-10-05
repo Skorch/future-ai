@@ -37,6 +37,7 @@ export const workspace = pgTable(
       .notNull(),
     name: varchar('name', { length: 255 }).notNull(),
     description: text('description'),
+    domainId: varchar('domainId', { length: 50 }).notNull().default('sales'),
     createdAt: timestamp('createdAt').defaultNow().notNull(),
     lastAccessedAt: timestamp('lastAccessedAt').defaultNow().notNull(),
     deletedAt: timestamp('deletedAt'), // Soft delete
@@ -44,6 +45,7 @@ export const workspace = pgTable(
   (table) => ({
     // Composite index for efficient workspace queries
     userWorkspaceIdx: index('user_workspace_idx').on(table.userId, table.id),
+    workspaceDomainIdx: index('workspace_domain_idx').on(table.domainId),
   }),
 );
 

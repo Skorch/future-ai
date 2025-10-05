@@ -21,6 +21,7 @@ import {
   CreateWorkspaceDialog,
   DeleteWorkspaceDialog,
 } from './workspace-dialogs';
+import { getDomain } from '@/lib/domains';
 
 interface WorkspaceSwitcherProps {
   currentWorkspaceId: string;
@@ -138,25 +139,33 @@ function WorkspaceSwitcherContent({
           <ChevronDown className="size-4 opacity-50" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-[240px]">
-          {workspaces.map((workspace) => (
-            <DropdownMenuItem
-              key={workspace.id}
-              onClick={() => handleWorkspaceSwitch(workspace.id)}
-              className="flex items-center justify-between"
-            >
-              <div className="flex flex-col">
-                <span>{workspace.name}</span>
-                {workspace.description && (
-                  <span className="text-xs text-muted-foreground">
-                    {workspace.description}
-                  </span>
+          {workspaces.map((workspace) => {
+            const domain = getDomain(workspace.domainId);
+            return (
+              <DropdownMenuItem
+                key={workspace.id}
+                onClick={() => handleWorkspaceSwitch(workspace.id)}
+                className="flex items-center justify-between"
+              >
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-2">
+                    <span>{workspace.name}</span>
+                    <span className="px-1.5 py-0.5 text-[10px] font-medium bg-muted rounded uppercase">
+                      {domain.label}
+                    </span>
+                  </div>
+                  {workspace.description && (
+                    <span className="text-xs text-muted-foreground">
+                      {workspace.description}
+                    </span>
+                  )}
+                </div>
+                {workspace.id === currentWorkspaceId && (
+                  <Check className="size-4" />
                 )}
-              </div>
-              {workspace.id === currentWorkspaceId && (
-                <Check className="size-4" />
-              )}
-            </DropdownMenuItem>
-          ))}
+              </DropdownMenuItem>
+            );
+          })}
 
           <DropdownMenuSeparator />
 
