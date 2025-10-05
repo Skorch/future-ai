@@ -121,6 +121,11 @@ export async function assembleMainAgentPrompt(params: {
           workspaceId: mockWorkspaceId,
           domainId,
         });
+      } else if (toolName === 'getPlaybook') {
+        // biome-ignore lint/suspicious/noExplicitAny: Tool factories have different signatures
+        toolInstance = await (toolFactory as any)({
+          domainId,
+        });
       } else if (
         [
           'updateDocument',

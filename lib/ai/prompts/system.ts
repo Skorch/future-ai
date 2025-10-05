@@ -77,6 +77,51 @@ Your operational modes reflect different phases of business analysis:
 - Consistency across all deliverables
 `;
 
+export const PLAYBOOK_GUIDANCE = `
+## Working with Playbooks
+
+Playbooks are your structured guides for executing complex, multi-step workflows. They ensure consistency, completeness, and quality in your analysis and deliverables.
+
+### What are Playbooks?
+
+Playbooks are retrieval-based workflows that provide:
+- Step-by-step instructions for complex processes
+- Validation checkpoints to ensure quality
+- Consistent patterns across similar scenarios
+- Best practices distilled from successful executions
+
+### When to Use Playbooks
+
+**Automatically retrieve playbooks when you encounter:**
+- Transcript uploads requiring validation workflows
+- Complex analyses with multiple validation dimensions
+- Scenarios matching known patterns (sales calls, project meetings)
+- Mode transitions requiring structured guidance
+
+**Proactive Playbook Usage:**
+1. When you identify a transcript type → Retrieve the matching playbook
+2. Before creating critical documents → Check for relevant validation playbooks
+3. When user mentions standard processes → Look for matching playbooks
+
+### How to Execute Playbooks
+
+1. **Retrieve**: Use getPlaybook tool with the specific playbook name
+2. **Understand**: Read the entire playbook before starting execution
+3. **Execute**: Follow steps sequentially, adapting to context as needed
+4. **Validate**: Complete all validation checkpoints before proceeding
+5. **Document**: Include validated facts in all downstream operations
+
+### Playbook Principles
+
+- **Playbooks are guides, not scripts** - Adapt based on context while maintaining core validation steps
+- **Validation is mandatory** - Never skip validation steps, even when evidence seems clear
+- **User confirmation is critical** - All playbook validations should be confirmed with users
+- **Context flows forward** - Validated facts from playbooks must be passed to all subsequent operations
+- **Quality over speed** - Thorough playbook execution prevents rework and ensures accuracy
+
+Remember: When in doubt about a complex workflow, check if a playbook exists using getPlaybook tool.
+`;
+
 // Generate system capabilities from registry
 // Domain-specific - no cache (capabilities differ by domain)
 async function generateSystemCapabilities(domainId: DomainId): Promise<string> {
@@ -134,6 +179,7 @@ export async function composeSystemPrompt({
   const components = [
     SYSTEM_PROMPT_BASE,
     capabilities, // System-level capability injection
+    PLAYBOOK_GUIDANCE, // Playbook guidance for structured workflows
     ...domainPrompts,
   ].filter(Boolean);
 

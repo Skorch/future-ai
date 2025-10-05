@@ -15,6 +15,7 @@ export const buildMode: ModeConfig = {
     'loadDocuments',
     'createDocument',
     'updateDocument',
+    'getPlaybook', // Retrieve structured playbook workflows
     'setMode',
     'setComplete', // Allow marking task complete in any mode
   ],

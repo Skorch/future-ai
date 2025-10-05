@@ -31,6 +31,7 @@ import { loadDocument } from '@/lib/ai/tools/load-document';
 import { loadDocuments } from '@/lib/ai/tools/load-documents';
 import { setMode } from '@/lib/ai/tools/set-mode';
 import { askUser } from '@/lib/ai/tools/ask-user';
+import { getPlaybook } from '@/lib/ai/tools/get-playbook';
 import { isProductionEnvironment } from '@/lib/constants';
 import { myProvider } from '@/lib/ai/providers';
 import { postRequestBodySchema, type PostRequestBody } from './schema';
@@ -427,6 +428,46 @@ export async function POST(
               };
             }
 
+            // Build tools object (with async tool building)
+            const playbookTool = await getPlaybook({ domainId });
+            const tools = shouldDisableTools
+              ? {}
+              : {
+                  // Mode and completion tools
+                  setMode: setMode({ chatId: id, dataStream }),
+                  setComplete: setComplete({ chatId: id, dataStream }),
+
+                  // Existing tools (domain-filtered)
+                  createDocument: await createDocument({
+                    session,
+                    dataStream,
+                    workspaceId,
+                    domainId,
+                  }),
+                  updateDocument: updateDocument({
+                    session,
+                    dataStream,
+                    workspaceId,
+                  }),
+                  queryRAG: queryRAG({
+                    session,
+                    dataStream,
+                    workspaceId,
+                    domainId,
+                  }),
+                  listDocuments: await listDocuments({
+                    session,
+                    workspaceId,
+                    domainId,
+                  }),
+                  loadDocument: loadDocument({ session, workspaceId }),
+                  loadDocuments: loadDocuments({ session, workspaceId }),
+                  askUser: askUser({ dataStream }),
+
+                  // Playbook tool (conditionally registered if playbooks exist for domain)
+                  ...(playbookTool ? { getPlaybook: playbookTool } : {}),
+                };
+
             const streamOptions: Parameters<typeof streamText>[0] = {
               // Spread safe mode config (excluding stopWhen which is added later)
               ...restModeConfig,
@@ -446,40 +487,7 @@ export async function POST(
               }),
 
               // Tools - define all, experimental_activeTools from mode config filters them
-              tools: shouldDisableTools
-                ? {}
-                : {
-                    // Mode and completion tools
-                    setMode: setMode({ chatId: id, dataStream }),
-                    setComplete: setComplete({ chatId: id, dataStream }),
-
-                    // Existing tools (domain-filtered)
-                    createDocument: await createDocument({
-                      session,
-                      dataStream,
-                      workspaceId,
-                      domainId,
-                    }),
-                    updateDocument: updateDocument({
-                      session,
-                      dataStream,
-                      workspaceId,
-                    }),
-                    queryRAG: queryRAG({
-                      session,
-                      dataStream,
-                      workspaceId,
-                      domainId,
-                    }),
-                    listDocuments: await listDocuments({
-                      session,
-                      workspaceId,
-                      domainId,
-                    }),
-                    loadDocument: loadDocument({ session, workspaceId }),
-                    loadDocuments: loadDocuments({ session, workspaceId }),
-                    askUser: askUser({ dataStream }),
-                  },
+              tools,
 
               // Add prepareStep for dynamic mode and tool management
               prepareStep: prepareStepFn,

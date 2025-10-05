@@ -12,6 +12,7 @@ export const discoveryMode: ModeConfig = {
     'queryRAG',
     'listDocuments',
     'loadDocument',
+    'getPlaybook', // Retrieve structured playbook workflows
     'setMode',
     'setComplete', // Allow marking task complete in any mode
   ],

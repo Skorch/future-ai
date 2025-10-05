@@ -7,6 +7,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { memo, useState, useEffect } from 'react';
 import type { Vote } from '@/lib/db/schema';
 import { DocumentToolResult as DocumentToolResultDisplay } from './elements/document-tool-result';
+import { PlaybookToolResult } from './elements/playbook-tool-result';
 import { PencilEditIcon, SparklesIcon } from './icons';
 import { Response } from './elements/response';
 import { MessageContent } from './elements/message';
@@ -883,6 +884,27 @@ const PurePreviewMessage = ({
                     input={toolPart.input || {}}
                   />
                 );
+              }
+
+              // Handle playbook tool: getPlaybook
+              if ((type as string) === 'tool-getPlaybook') {
+                const toolPart = part as {
+                  toolCallId?: string;
+                  state?: string;
+                  output?: unknown;
+                };
+                const { toolCallId, state } = toolPart;
+
+                if (state === 'output-available' && toolPart.output) {
+                  return (
+                    <PlaybookToolResult
+                      key={toolCallId || `getPlaybook-${index}`}
+                      // biome-ignore lint/suspicious/noExplicitAny: existing code
+                      result={toolPart.output as any}
+                    />
+                  );
+                }
+                return null;
               }
 
               // Handle document tools: listDocuments, loadDocument, loadDocuments
