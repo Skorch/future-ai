@@ -50,8 +50,12 @@ export type CustomUIDataTypes = {
   };
   askUser: {
     question: string;
-    context?: string;
-    options?: string[];
+    purpose: string;
+    usage: string;
+    options?: Array<{
+      label: string;
+      rationale?: string;
+    }>;
   };
 };
 

@@ -5,19 +5,41 @@ import type { ChatMessage } from '@/lib/types';
 import { ASK_USER_PROMPT } from '@/lib/ai/prompts/tools/ask-user';
 
 const askUserSchema = z.object({
-  question: z.string().describe('Clear, specific question for the user'),
-  context: z
+  question: z
     .string()
-    .optional()
     .describe(
-      'Brief context (1-2 sentences) explaining why you need this information',
+      'Clear, specific question for the user (BLUF - Bottom Line Up Front)',
+    ),
+  purpose: z
+    .string()
+    .describe(
+      'Why you are asking this question (1-2 sentences explaining the need)',
+    ),
+  usage: z
+    .string()
+    .describe(
+      'How you will use the answer (1-2 sentences explaining what you will do with the response)',
     ),
   options: z
-    .array(z.string())
+    .array(
+      z.object({
+        label: z
+          .string()
+          .describe(
+            'The quick response text (2-8 words, can be more complete than before)',
+          ),
+        rationale: z
+          .string()
+          .optional()
+          .describe(
+            'Brief rationale for this option (1 sentence explaining why this choice makes sense)',
+          ),
+      }),
+    )
     .max(4)
     .optional()
     .describe(
-      'Up to 4 quick response options. First option should be your recommended/most likely answer. Keep options concise (2-5 words each)',
+      'Up to 4 quick response options. First option should be your recommended/most likely answer.',
     ),
 });
 
@@ -33,7 +55,8 @@ export const askUser = ({ dataStream }: AskUserProps) => {
 
     execute: async ({
       question,
-      context,
+      purpose,
+      usage,
       options,
     }: z.infer<typeof askUserSchema>) => {
       // Send to UI via dataStream
@@ -41,7 +64,8 @@ export const askUser = ({ dataStream }: AskUserProps) => {
         type: 'data-askUser',
         data: {
           question,
-          context,
+          purpose,
+          usage,
           options,
         },
       });

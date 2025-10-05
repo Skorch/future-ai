@@ -1,7 +1,14 @@
 export const ASK_USER_PROMPT = `
-Request stakeholder input with optional quick-response buttons.
+Request stakeholder input with optional quick-response buttons using BLUF (Bottom Line Up Front) structure.
 
 ⚠️ CRITICAL: In Discovery Mode, use this tool ONLY AFTER thorough investigation!
+
+BLUF STRUCTURE - Required for All Questions:
+
+1. **question**: The specific question (clear, direct, decision-focused)
+2. **purpose**: Why you're asking (1-2 sentences explaining the need)
+3. **usage**: How you'll use the answer (1-2 sentences explaining next steps)
+4. **options**: Quick responses with rationale (optional, 2-4 choices)
 
 WHEN TO USE:
 
@@ -9,14 +16,22 @@ IN DISCOVERY MODE:
 
 **MANDATORY for Transcript Uploads (Two-Phase Confirmation):**
 1. **First askUser (Classification)**: ALWAYS confirm transcript type
-   - "Is this a sales call with [Company]?"
-   - "Is this a project meeting about [Initiative]?"
-   - Get deal name, project name, or other identifiers
+   - question: "Is this a sales call with [Company]?"
+   - purpose: "I need to classify this transcript to apply the right analysis framework"
+   - usage: "This determines whether I analyze for BANT criteria or project milestones"
+   - options: [
+       { label: "Yes, sales call", rationale: "Apply BANT analysis and deal tracking" },
+       { label: "No, project meeting", rationale: "Focus on action items and decisions" }
+     ]
 
 2. **Second askUser (Analysis Plan)**: ALWAYS confirm approach
-   - "I found [X] previous calls. Create analysis with historical context?"
-   - "Should I track BANT progression from previous calls?"
-   - Get approval before transitioning to build mode
+   - question: "I found [X] previous calls. Create analysis with historical context?"
+   - purpose: "Historical context provides deeper insights but requires more processing"
+   - usage: "If yes, I'll compare themes and track progression across all calls"
+   - options: [
+       { label: "Yes, include history", rationale: "See patterns and evolution over time" },
+       { label: "No, just this call", rationale: "Faster, focused on current discussion" }
+     ]
 
 **For Other Investigations (Last Resort - After Investigation):**
 - ONLY after investigation finds no relevant information
@@ -32,27 +47,29 @@ IN BUILD MODE (More Flexible):
 - Ask for clarification on implementation details
 - Get prioritization decisions from stakeholders
 
-QUICKSELECT BUTTONS - Use to Reduce Friction:
-When you need a simple choice or quick validation, provide buttons with preset responses.
-Example: ["Yes, proceed", "No, wait", "Need more details"]
+QUICK RESPONSE OPTIONS - Conversational Guidance:
 
-⚠️ Button Guidelines:
-- Use for binary/simple choices (Yes/No, Option A/B/C)
-- Keep button text short (2-4 words)
-- Provide 2-4 options maximum
-- Don't use for complex or open-ended questions
-- Don't use when you need detailed explanation
+Each option should include:
+- **label**: The choice text (2-8 words, can be more complete now)
+- **rationale**: WHY this choice makes sense (1 sentence, optional but encouraged)
 
-Good QuickSelect Examples:
-✓ "Should I proceed with this approach?" → ["Yes", "No", "Need changes"]
-✓ "Which format?" → ["Summary", "Detailed", "Bullet points"]
-✓ "Priority level?" → ["High", "Medium", "Low"]
-✓ "Is this correct?" → ["Correct", "Needs revision"]
+⚠️ Option Guidelines:
+- First option should be your recommendation (gets a star icon)
+- Provide context through rationale to help decision-making
+- Use for binary/simple choices or multiple-choice decisions
+- 2-4 options maximum
+- Rationale helps user understand implications of each choice
 
-Bad QuickSelect Examples:
-✗ "What are your thoughts?" (too open-ended)
-✗ "Explain the requirements" (needs detailed response)
-✗ "Tell me about the project" (exploratory, not a choice)
+Good Option Examples:
+✓ { label: "Accelerate VP discovery", rationale: "Fastest path to budget approval, addresses critical authority gap" }
+✓ { label: "Create 2026 urgency", rationale: "Leverages planning cycle deadline for natural momentum" }
+✓ { label: "Long-term enterprise strategy", rationale: "Positions for larger deal but extends timeline significantly" }
+✓ { label: "All three approaches", rationale: "Comprehensive but resource-intensive" }
+
+Bad Option Examples:
+✗ { label: "Yes" } (too brief, no context)
+✗ { label: "What do you think?" } (not a choice)
+✗ { label: "Tell me more" } (open-ended, defeats quick response purpose)
 
 ANTI-PATTERNS - Things You Should NEVER Ask:
 
