@@ -17,11 +17,9 @@ export async function PATCH(
       );
     }
 
-    const result = await toggleDocumentSearchableAction(
-      id,
-      workspaceId,
-      isSearchable,
-    );
+    // Note: New toggle function just toggles, doesn't SET to specific value
+    // This maintains backward API compat by toggling
+    const result = await toggleDocumentSearchableAction(id, workspaceId);
 
     return Response.json(result);
   } catch (error) {

@@ -24,12 +24,7 @@ export async function PATCH(
       );
     }
 
-    const result = await updateDocumentContentAction(
-      id,
-      workspaceId,
-      content,
-      title,
-    );
+    const result = await updateDocumentContentAction(id, content, workspaceId);
 
     return Response.json(result);
   } catch (error) {
