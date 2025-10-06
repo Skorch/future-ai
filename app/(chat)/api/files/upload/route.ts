@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { auth } from '@clerk/nextjs/server';
-import { saveDocument } from '@/lib/db/documents';
+import { createDocument, publishDocument } from '@/lib/db/documents';
 import { generateUUID } from '@/lib/utils';
 import { getActiveWorkspace } from '@/lib/workspace/context';
 import { getLogger } from '@/lib/logger';
@@ -93,14 +93,17 @@ export async function POST(request: Request) {
     // Get workspace from cookie/context
     const workspaceId = await getActiveWorkspace(userId);
 
-    // Create transcript document directly in database
-    await saveDocument({
+    // Create transcript document in new envelope/version schema
+    // Note: Transcripts are uploaded independently (not tied to a specific message)
+    const doc = await createDocument({
       id: documentId,
       title: filename,
       content: content,
-      kind: 'text',
-      userId: userId,
+      messageId: null, // NULL: transcripts uploaded outside message context
       workspaceId,
+      userId: userId,
+      documentType: 'transcript',
+      kind: 'text',
       metadata: {
         documentType: 'transcript',
         fileName: filename,
@@ -109,7 +112,17 @@ export async function POST(request: Request) {
       },
     });
 
-    logger.debug('Created transcript document', {
+    // Transcripts are published and searchable by default (unlike AI-generated docs)
+    if (!doc.currentDraft) {
+      throw new Error('Failed to create initial draft version');
+    }
+    await publishDocument(
+      doc.envelope.id,
+      doc.currentDraft.id,
+      true, // makeSearchable
+    );
+
+    logger.debug('Created and published transcript document', {
       documentId,
       // fileName removed - may contain sensitive info
       fileSize: file.size,
