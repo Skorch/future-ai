@@ -1,4 +1,5 @@
-import { getDocumentById } from '@/lib/db/documents';
+import 'server-only';
+
 import { PineconeClient } from '@/lib/rag/pinecone-client';
 import { chunkTranscriptItems } from '@/lib/ai/utils/rag-chunker';
 import {
@@ -55,72 +56,59 @@ const pineconeClient = new PineconeClient({
 
 /**
  * Sync a document to RAG (UPSERT pattern)
+ * Accepts document data directly - no DB fetch required
  */
-export async function syncDocumentToRAG(
-  documentId: string,
-  workspaceId?: string,
-): Promise<void> {
-  logger.debug(' Starting document sync', {
-    documentId,
-    workspaceId,
-    hasWorkspaceId: !!workspaceId,
+export async function syncDocumentToRAG(doc: {
+  id: string;
+  workspaceId: string;
+  content: string;
+  title: string;
+  documentType: string;
+  kind?: string;
+  metadata?: Record<string, unknown>;
+  createdByUserId: string;
+  createdAt: Date;
+}): Promise<void> {
+  logger.debug('Starting document sync', {
+    documentId: doc.id,
+    workspaceId: doc.workspaceId,
+    documentType: doc.documentType,
   });
 
   try {
-    // First try with provided workspaceId if available
-    // This is a temporary fix - ideally we should always have workspaceId
-    const doc = workspaceId
-      ? await getDocumentById({ id: documentId, workspaceId })
-      : null;
-
-    // If no workspaceId provided or document not found, we can't proceed safely
-    if (!doc) {
-      logger.error(
-        `[RAG Sync] ERROR: Cannot sync document ${documentId} without workspace context or document not found`,
-        { documentId, workspaceId, documentFound: false },
-      );
-      return;
-    }
-
-    if (!doc?.content || !doc?.workspaceId) {
+    if (!doc.content || !doc.workspaceId) {
       logger.debug(
-        `[RAG Sync] No content or workspaceId for document ${documentId}`,
+        `[RAG Sync] No content or workspaceId for document ${doc.id}`,
       );
       return;
     }
 
-    // Get document type from metadata - REQUIRED for proper processing
-    const documentType = doc.metadata?.documentType;
-
-    if (!documentType) {
+    if (!doc.documentType) {
       logger.error(
-        `ERROR: No documentType in metadata for ${documentId}. Documents must have documentType set.`,
+        `ERROR: No documentType for ${doc.id}. Documents must have documentType set.`,
       );
-      logger.error(`Metadata received:`, doc.metadata);
-      // Skip RAG sync for documents without proper metadata
       return;
     }
 
     logger.debug(
-      `Document ${documentId} type: ${documentType}, workspaceId: ${doc.workspaceId}, metadata:`,
-      doc.metadata,
+      `Document ${doc.id} type: ${doc.documentType}, workspaceId: ${doc.workspaceId}`,
     );
 
     // Delete existing chunks for this document
-    await deleteFromRAG(documentId, doc.workspaceId);
+    await deleteFromRAG(doc.id, doc.workspaceId);
 
     // Chunk based on document type - pass all document info for rich metadata
-    const chunks = await chunkDocument(doc.content, documentId, documentType, {
+    const chunks = await chunkDocument(doc.content, doc.id, doc.documentType, {
       ...doc.metadata,
       userId: doc.createdByUserId,
       workspaceId: doc.workspaceId,
       title: doc.title,
-      kind: doc.kind,
+      kind: doc.kind || 'text',
       createdAt: doc.createdAt,
     });
 
     if (chunks.length === 0) {
-      logger.debug(`No chunks generated for ${documentId}`);
+      logger.debug(`No chunks generated for ${doc.id}`);
       return;
     }
 
@@ -132,17 +120,17 @@ export async function syncDocumentToRAG(
     logger.debug(
       `[RAG Sync] SUCCESS: Stored ${chunks.length} chunks for document`,
       {
-        documentId,
+        documentId: doc.id,
         workspaceId: doc.workspaceId,
-        documentType,
+        documentType: doc.documentType,
         title: doc.title,
         chunkCount: chunks.length,
       },
     );
   } catch (error) {
     logger.error(`ERROR: Failed to sync document`, {
-      documentId,
-      workspaceId,
+      documentId: doc.id,
+      workspaceId: doc.workspaceId,
       error,
       errorMessage: error instanceof Error ? error.message : String(error),
       errorStack: error instanceof Error ? error.stack : undefined,
@@ -156,27 +144,16 @@ export async function syncDocumentToRAG(
  */
 export async function deleteFromRAG(
   documentId: string,
-  namespace?: string,
+  workspaceId: string,
 ): Promise<void> {
   try {
-    // If no namespace provided, we can't safely delete
-    const workspaceId = namespace;
-    if (!workspaceId) {
-      // Cannot get document without workspaceId - this is a limitation
-      // that should be fixed by always passing namespace/workspaceId
-      logger.debug(
-        `[RAG Sync] No workspaceId found for document ${documentId}, skipping delete`,
-      );
-      return;
-    }
-
     // Use MongoDB-style operator for metadata filtering
     await pineconeClient.deleteByMetadata(
       {
         documentId: { $eq: documentId },
       },
       workspaceId,
-    ); // Use workspaceId as namespace
+    );
 
     logger.debug(
       `Deleted all chunks for ${documentId} in namespace ${workspaceId}`,
