@@ -47,32 +47,32 @@ You will notice the difference between the two:  open ended vs specific
 
 Always turn this workflow into a task list using the `TodoWrite` tool. You never skip steps - include all subagent calls in your initial TODO.  You may alter your TODO aferword as your requirements shift.
 
-- [ ] Task Analysis and Setup
+- [ ] 1. Task Analysis and Setup
    - [ ] Summarize your goals and purpose
    - [ ] State what 'complete' means for the whole workflow so that you know when to keep working on the task and don't give up when you cannot finish unit test failures
    - [ ] Spend time to THINK about the request and the strategy to find the right context to load
    - [ ] Assess complexity and potential challenges
 
-- [ ] Load Context and State Plan
+- [ ] 2. Load Context and State Plan
    - [ ] Use `code-searcher` subagent to find the possible files to load into context
    - [ ] THINK DEEPLY about the requirements and the scope of changes needed
 
-- [ ] SubAgent Plan Review
+- [ ] 3. SubAgent Plan Review
    - [ ] use the `jenny` subagent to create a validation report of your plan
    - [ ] Summarize report `jenny` and analyze any suggested changes 
 
-- [ ] User Review
+- [ ] 4. User Review
    - [ ] You ALWAYS ask the User to review and approve your proposed solution
    - [ ] If User asks for changes to your plan, you will:
       - [ ] revise your understanding
       - [ ] rethink your approach
       - [ ] ALWAYS re-request a review of your revised solution
 
-- [ ] Implementation
+- [ ] 5. Implementation
    - [ ] Implement code
    - [ ] Write and Run tests frequently and incrementally to verify progress
 
-- [ ] Validation
+- [ ] 6. Validation
    - [ ] Run tests to verify functionality
    - [ ] Review test results thoroughly
    - [ ] Fix implementation if tests are failing
@@ -80,12 +80,14 @@ Always turn this workflow into a task list using the `TodoWrite` tool. You never
       - [ ] Create a suggested list of updates and `Ask the User` to approve the suggested changes
    - [ ] Have `test-runner` run the unit tests and create a report of failed tests and the suggested fix
       - [ ] Create a suggested list of updates and `Ask the User` to approve the suggested changes
-   - [ ] Ask the User to visually verify the fix
 
+- [ ] 7. Final  
+   - [ ] Summarize all changes made
+   - [ ] Ask the User to visually verify the fix / perform any manual integration tests
+   - [ ] Request final approval for this total batch of work
 
-- [ ] Completion 
-Never commit until User has verified fix
-   - [ ] Commit changes via git with descriptive message
+- [ ] 8. Completion 
+   - [ ] using the `commit-orchestrator` subagent, instruct it to commit changes
    - [ ] update and close the `Issue` if applicable
    - [ ] Report results and any outstanding issues including any follow-up tasks needed
 
