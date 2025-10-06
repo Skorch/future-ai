@@ -1,6 +1,6 @@
 import { tool, type UIMessageStreamWriter } from 'ai';
 import { z } from 'zod';
-import { getDocumentById } from '@/lib/db/documents';
+import { getDocumentWithVersions } from '@/lib/db/documents';
 import { getDocumentTypeDefinition, type DocumentType } from '@/lib/artifacts';
 import type { ChatMessage } from '@/lib/types';
 
@@ -25,11 +25,24 @@ export const updateDocument = ({
         .describe('The description of changes that need to be made'),
     }),
     execute: async ({ id, description }) => {
-      const document = await getDocumentById({ id, workspaceId });
+      const docWithVersions = await getDocumentWithVersions(id);
 
-      if (!document) {
+      if (
+        !docWithVersions ||
+        docWithVersions.envelope.workspaceId !== workspaceId
+      ) {
         return {
-          error: 'Document not found',
+          error: 'Document not found or access denied',
+        };
+      }
+
+      // Get current draft or published version
+      const currentVersion =
+        docWithVersions.currentDraft || docWithVersions.currentPublished;
+
+      if (!currentVersion) {
+        return {
+          error: 'No version found for document',
         };
       }
 
@@ -40,9 +53,10 @@ export const updateDocument = ({
       });
 
       // Load handler from registry based on document's actual type
-      // Extract documentType from metadata, fallback to kind, then to 'text'
-      const documentType = (document.metadata?.documentType ||
-        document.kind ||
+      // Extract documentType from metadata or envelope, fallback to kind, then to 'text'
+      const documentType = (currentVersion.metadata?.documentType ||
+        docWithVersions.envelope.documentType ||
+        currentVersion.kind ||
         'text') as DocumentType;
       const documentDef = await getDocumentTypeDefinition(documentType);
 
@@ -54,8 +68,24 @@ export const updateDocument = ({
         };
       }
 
+      // Convert to old document format for backward compat with handlers
+      const legacyDocument = {
+        id: docWithVersions.envelope.id,
+        title: docWithVersions.envelope.title,
+        content: currentVersion.content,
+        kind: (currentVersion.kind || 'text') as 'text',
+        documentType: docWithVersions.envelope.documentType || 'text',
+        metadata: currentVersion.metadata,
+        createdAt: currentVersion.createdAt,
+        workspaceId: docWithVersions.envelope.workspaceId,
+        createdByUserId: currentVersion.createdByUserId,
+        isSearchable: docWithVersions.envelope.isSearchable,
+        deletedAt: null,
+        sourceDocumentIds: null,
+      };
+
       await documentDef.handler.onUpdateDocument({
-        document,
+        document: legacyDocument,
         description,
         dataStream,
         session,
@@ -66,8 +96,8 @@ export const updateDocument = ({
 
       return {
         id,
-        title: document.title,
-        kind: document.kind,
+        title: docWithVersions.envelope.title,
+        kind: (currentVersion.kind || 'text') as 'text',
         content: 'The document has been updated successfully.',
       };
     },

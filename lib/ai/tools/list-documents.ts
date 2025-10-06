@@ -3,7 +3,7 @@ import { getLogger } from '@/lib/logger';
 const logger = getLogger('ListDocuments');
 import { tool } from 'ai';
 import { z } from 'zod';
-import { getAllUserDocuments } from '@/lib/db/documents';
+import { getAllWorkspaceDocuments } from '@/lib/db/documents';
 import { getAllDocumentTypes } from '@/lib/artifacts';
 import type { DomainId } from '@/lib/domains';
 
@@ -97,10 +97,7 @@ export const listDocuments = async ({
     inputSchema: z.object({}),
     execute: async () => {
       logger.debug('[ListDocuments Tool] Executing list-documents tool call');
-      const documents = await getAllUserDocuments({
-        userId: session.user.id,
-        workspaceId,
-      });
+      const documents = await getAllWorkspaceDocuments(workspaceId);
 
       logger.debug('[ListDocuments Tool] Retrieved documents:', {
         count: documents.length,

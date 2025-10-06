@@ -3,7 +3,7 @@ import { getLogger } from '@/lib/logger';
 const logger = getLogger('LoadDocument');
 import { tool } from 'ai';
 import { z } from 'zod';
-import { getDocumentForUser } from '@/lib/db/documents';
+import { getPublishedDocumentById } from '@/lib/db/documents';
 import type { DocumentType } from '@/lib/artifacts';
 
 // Extended type to include transcript (upload-only, not in registry)
@@ -57,35 +57,37 @@ Reserve space for user messages, your responses, and other tool outputs.`,
         userId: session.user.id,
       });
 
-      const document = await getDocumentForUser({
-        documentId,
-        userId: session.user.id,
-        workspaceId,
-        maxChars,
-      });
+      const document = await getPublishedDocumentById(documentId, workspaceId);
 
       if (!document) {
         logger.debug(
-          '[LoadDocument Tool] Document not found or access denied:',
+          '[LoadDocument Tool] Document not found or not published:',
           documentId,
         );
         return {
           error: 'DOCUMENT_NOT_FOUND',
-          message: 'Document does not exist or you do not have access',
-          suggestion: 'Use list-documents to see available documents',
+          message:
+            'Document does not exist, is not published, or you do not have access',
+          suggestion: 'Use list-documents to see available published documents',
         };
       }
 
-      const percentLoaded = Math.round(
-        (document.loadedChars / document.fullContentLength) * 100,
-      );
+      // Handle truncation if maxChars specified
+      const fullContentLength = document.content.length;
+      const truncated = maxChars && fullContentLength > maxChars;
+      const content = truncated
+        ? document.content.slice(0, maxChars)
+        : document.content;
+      const loadedChars = content.length;
 
-      const loadMessage = document.truncated
-        ? `Loaded first ${document.loadedChars.toLocaleString()} of ${document.fullContentLength.toLocaleString()} characters (${percentLoaded}% - approximately ${Math.ceil(
-            document.loadedChars / 4,
+      const percentLoaded = Math.round((loadedChars / fullContentLength) * 100);
+
+      const loadMessage = truncated
+        ? `Loaded first ${loadedChars.toLocaleString()} of ${fullContentLength.toLocaleString()} characters (${percentLoaded}% - approximately ${Math.ceil(
+            loadedChars / 4,
           ).toLocaleString()} tokens)`
-        : `Loaded complete document (${document.fullContentLength.toLocaleString()} characters - approximately ${Math.ceil(
-            document.fullContentLength / 4,
+        : `Loaded complete document (${fullContentLength.toLocaleString()} characters - approximately ${Math.ceil(
+            fullContentLength / 4,
           ).toLocaleString()} tokens)`;
 
       const metadata = document.metadata as {
@@ -101,12 +103,12 @@ Reserve space for user messages, your responses, and other tool outputs.`,
       logger.debug('[LoadDocument Tool] Document loaded successfully:', {
         id: document.id,
         title: document.title,
-        type: metadata?.documentType || 'document',
-        loadedChars: document.loadedChars,
-        fullLength: document.fullContentLength,
-        truncated: document.truncated,
+        type: document.documentType,
+        loadedChars,
+        fullLength: fullContentLength,
+        truncated,
         percentLoaded,
-        estimatedTokens: Math.ceil(document.loadedChars / 4),
+        estimatedTokens: Math.ceil(loadedChars / 4),
       });
 
       // Clean metadata by removing transcript if it exists
@@ -122,17 +124,16 @@ Reserve space for user messages, your responses, and other tool outputs.`,
       return {
         id: document.id,
         title: document.title,
-        content: document.content,
+        content,
         metadata: cleanedMetadata,
-        sourceDocumentIds: document.sourceDocumentIds,
         createdAt: document.createdAt,
-        documentType: metadata?.documentType || 'text',
+        documentType: document.documentType,
         loadInfo: {
-          truncated: document.truncated,
-          loadedChars: document.loadedChars,
-          fullContentLength: document.fullContentLength,
-          estimatedTokensLoaded: Math.ceil(document.loadedChars / 4),
-          estimatedTokensTotal: Math.ceil(document.fullContentLength / 4),
+          truncated,
+          loadedChars,
+          fullContentLength,
+          estimatedTokensLoaded: Math.ceil(loadedChars / 4),
+          estimatedTokensTotal: Math.ceil(fullContentLength / 4),
           percentLoaded,
         },
         loadMessage,

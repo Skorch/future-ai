@@ -184,7 +184,7 @@ export const createDocument = async ({
 
         // Pass all parameters to handler via metadata
         // Handlers are responsible for their own validation
-        await documentDef.handler.onCreateDocument({
+        const handlerResult = await documentDef.handler.onCreateDocument({
           id,
           title,
           dataStream,
@@ -211,6 +211,7 @@ export const createDocument = async ({
           documentType: documentType || 'text',
           message: responseMessage,
           success: true,
+          versionId: handlerResult?.versionId, // Include versionId for message linking
         };
 
         const totalDuration = Date.now() - startTime;

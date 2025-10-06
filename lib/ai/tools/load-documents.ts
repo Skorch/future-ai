@@ -3,7 +3,7 @@ import { getLogger } from '@/lib/logger';
 const logger = getLogger('LoadDocuments');
 import { tool } from 'ai';
 import { z } from 'zod';
-import { getDocumentsForUser } from '@/lib/db/documents';
+import { getPublishedDocumentsByIds } from '@/lib/db/documents';
 
 interface LoadDocumentsProps {
   session: { user: { id: string } };
@@ -56,21 +56,33 @@ The tool returns an array of loaded documents with their content and metadata.`,
         ),
     }),
     execute: async ({ documentIds, maxCharsPerDoc }) => {
-      const documents = await getDocumentsForUser({
+      const rawDocuments = await getPublishedDocumentsByIds(
         documentIds,
-        userId: session.user.id,
         workspaceId,
-        maxCharsPerDoc,
-      });
+      );
 
-      if (documents.length === 0) {
+      if (rawDocuments.length === 0) {
         return {
           error: 'NO_DOCUMENTS_FOUND',
-          message: 'No documents found or you do not have access',
+          message: 'No published documents found or you do not have access',
           requestedIds: documentIds,
-          suggestion: 'Use list-documents to see available documents',
+          suggestion: 'Use list-documents to see available published documents',
         };
       }
+
+      // Apply maxCharsPerDoc truncation if specified
+      const documents = rawDocuments.map((doc) => {
+        const truncated = maxCharsPerDoc && doc.content.length > maxCharsPerDoc;
+        return {
+          ...doc,
+          content: truncated
+            ? doc.content.slice(0, maxCharsPerDoc)
+            : doc.content,
+          truncated,
+          loadedChars: truncated ? maxCharsPerDoc : doc.content.length,
+          fullContentLength: doc.content.length,
+        };
+      });
 
       // Calculate total tokens loaded
       const totalCharsLoaded = documents.reduce(
@@ -139,7 +151,6 @@ The tool returns an array of loaded documents with their content and metadata.`,
             title: doc.title,
             content: doc.content,
             metadata: cleanedMetadata,
-            sourceDocumentIds: doc.sourceDocumentIds,
             createdAt: doc.createdAt,
             documentType: doc.documentType,
             loadInfo: {
