@@ -11,7 +11,7 @@ import {
 } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 import { useDebounceCallback, useWindowSize } from 'usehooks-ts';
-import type { Document, Vote } from '@/lib/db/schema';
+import type { Document, Vote, DocumentWithVersions } from '@/lib/db/schema';
 import { fetcher } from '@/lib/utils';
 import { MultimodalInput } from './multimodal-input';
 import { Toolbar } from './toolbar';
@@ -23,6 +23,7 @@ import { useSidebar } from './ui/sidebar';
 import { useArtifact } from '@/hooks/use-artifact';
 import { textArtifact } from '@/lib/artifacts/document-types/text/client';
 import equal from 'fast-deep-equal';
+import { SimplePublishBar } from './simple-publish-bar';
 
 const logger = getLogger('Artifact');
 import type { UseChatHelpers } from '@ai-sdk/react';
@@ -116,6 +117,16 @@ function PureArtifact({
     isLoading: isDocumentsFetching,
     mutate: mutateDocuments,
   } = useSWR<Array<Document>>(fetchUrl, fetcher);
+
+  // Fetch document envelope for publish state
+  const envelopeFetchUrl =
+    artifact.documentId !== 'init' && workspaceId
+      ? `/api/workspace/${workspaceId}/document-envelope/${artifact.documentId}`
+      : null;
+  const { data: docWithVersions } = useSWR<DocumentWithVersions | null>(
+    envelopeFetchUrl,
+    fetcher,
+  );
 
   const [mode, setMode] = useState<'edit' | 'diff'>('edit');
   const [document, setDocument] = useState<Document | null>(null);
@@ -527,6 +538,21 @@ function PureArtifact({
                 )}
               </AnimatePresence>
             </div>
+
+            {/* Publish bar - positioned OUTSIDE scrollable content for independent click handling */}
+            {isCurrentVersion &&
+              !isReadonly &&
+              artifact.documentId !== 'init' &&
+              workspaceId &&
+              docWithVersions && (
+                <SimplePublishBar
+                  documentEnvelopeId={artifact.documentId}
+                  versionId={docWithVersions.currentDraft?.id}
+                  isPublished={!!docWithVersions.currentPublished}
+                  isSearchable={docWithVersions.envelope.isSearchable}
+                  workspaceId={workspaceId}
+                />
+              )}
 
             <AnimatePresence>
               {!isCurrentVersion && (

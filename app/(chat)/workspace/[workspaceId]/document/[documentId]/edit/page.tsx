@@ -1,6 +1,6 @@
 import { auth } from '@clerk/nextjs/server';
 import { redirect, notFound } from 'next/navigation';
-import { getDocumentsById } from '@/lib/db/documents';
+import { getDocumentWithVersions } from '@/lib/db/documents';
 import { DocumentEditorWithNav } from './_components/document-editor-with-nav';
 
 export default async function DocumentEditPage({
@@ -15,21 +15,29 @@ export default async function DocumentEditPage({
     redirect('/login');
   }
 
-  const documents = await getDocumentsById({ id: documentId, workspaceId });
+  const docWithVersions = await getDocumentWithVersions(documentId);
 
-  if (!documents || documents.length === 0) {
+  if (
+    !docWithVersions ||
+    docWithVersions.envelope.workspaceId !== workspaceId
+  ) {
     notFound();
   }
 
-  // Get the most recent version
-  const document = documents[documents.length - 1];
+  // Edit the current draft version (or published if no draft exists)
+  const versionToEdit =
+    docWithVersions.currentDraft || docWithVersions.currentPublished;
+
+  if (!versionToEdit) {
+    notFound();
+  }
 
   return (
     <DocumentEditorWithNav
       workspaceId={workspaceId}
       documentId={documentId}
-      initialContent={document.content || ''}
-      initialTitle={document.title}
+      initialContent={versionToEdit.content || ''}
+      initialTitle={docWithVersions.envelope.title}
     />
   );
 }

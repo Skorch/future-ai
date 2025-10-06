@@ -18,6 +18,7 @@ import { Editor } from './text-editor';
 import { DocumentToolCall, DocumentToolResult } from './document';
 import { useArtifact } from '@/hooks/use-artifact';
 import equal from 'fast-deep-equal';
+import { QuickPublishButton } from './quick-publish-button';
 
 interface DocumentPreviewProps {
   isReadonly: boolean;
@@ -128,6 +129,12 @@ export function DocumentPreview({
         workspaceId={workspaceId}
       />
       <DocumentContent document={document} />
+      {result && workspaceId && !isReadonly && (
+        <QuickPublishButton
+          documentEnvelopeId={result.id}
+          workspaceId={workspaceId}
+        />
+      )}
     </div>
   );
 }

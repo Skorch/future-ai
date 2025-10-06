@@ -1,6 +1,6 @@
 import { auth } from '@clerk/nextjs/server';
 import { redirect, notFound } from 'next/navigation';
-import { getDocumentsById } from '@/lib/db/documents';
+import { getDocumentWithVersions } from '@/lib/db/documents';
 import { DocumentDetailClient } from '@/components/document-detail-client';
 
 export default async function DocumentDetailPage({
@@ -15,29 +15,37 @@ export default async function DocumentDetailPage({
     redirect('/login');
   }
 
-  const documents = await getDocumentsById({ id: documentId, workspaceId });
+  const docWithVersions = await getDocumentWithVersions(documentId);
 
-  if (!documents || documents.length === 0) {
+  if (
+    !docWithVersions ||
+    docWithVersions.envelope.workspaceId !== workspaceId
+  ) {
     notFound();
   }
 
-  // Get the most recent version
-  const document = documents[documents.length - 1];
+  // Show published version by default, or draft if no published exists
+  const versionToShow =
+    docWithVersions.currentPublished || docWithVersions.currentDraft;
+
+  if (!versionToShow) {
+    notFound();
+  }
 
   // Calculate contentLength for the document
-  const contentLength = document.content?.length || 0;
+  const contentLength = versionToShow.content?.length || 0;
 
   return (
     <DocumentDetailClient
       workspaceId={workspaceId}
       document={{
-        id: document.id,
-        title: document.title,
-        metadata: document.metadata as { documentType?: string },
-        createdAt: document.createdAt,
+        id: docWithVersions.envelope.id,
+        title: docWithVersions.envelope.title,
+        metadata: versionToShow.metadata as { documentType?: string },
+        createdAt: versionToShow.createdAt,
         contentLength,
-        isSearchable: document.isSearchable,
-        content: document.content || '',
+        isSearchable: docWithVersions.envelope.isSearchable,
+        content: versionToShow.content || '',
       }}
     />
   );
