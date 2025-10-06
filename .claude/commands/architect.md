@@ -48,6 +48,7 @@ Execute this workflow when you need to plan, design, or strategize before implem
 **Include ALL of the following:**
 
 - [ ] **Affected Files:** Detailed file tree showing created, modified, and referenced files
+  - CRITICAL:  ALWAYS start with a full file tree and ALWAYS maintain / update file tree.  the list of file edits should be your source of truth
 - [ ] **Type Definitions:** Define all necessary TypeScript types/interfaces, ensuring all data fields mentioned in the UI spec are included
 - [ ] **Data Mapping Tables:** Include explicit tables mapping Database Column Name → TypeScript Property Name for key data types, using verified column names from migrations
 - [ ] **Data Access Layer (DAL) Design:**
@@ -96,7 +97,7 @@ When creating architecture specifications, use the following template structure:
 # Architecture Specification: [Feature Name]
 
 ## 1. Affected Files
-[Detailed file tree with annotations]
+[Detailed ascii file tree with annotations]
 
 ## 2. Type Definitions
 [TypeScript interfaces and types]
@@ -113,8 +114,13 @@ When creating architecture specifications, use the following template structure:
 ## 6. User Action Flow Diagrams
 [Sequence diagrams for user interactions]
 
-## 7. Unit Testing Plan
-[Testing strategy and assertions]
+## 7. Unit Testing Table
+[Table listing all core unit test assertions and edge cases]
+
+## 7. Phase Plan
+[List of big milestones and the scope of each in a checklist format]
+[Be clear about scope including testing - each milestone is responsible for its own tests]
+
 
 ## 8. Framework Notes
 [Next.js 15+ specific considerations]

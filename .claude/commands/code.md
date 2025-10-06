@@ -44,21 +44,24 @@ You will notice the difference between the two:  open ended vs specific
 
 ## Workflow
 
-Always turn this workflow into a task list using the `TodoWrite` tool. You never skip steps.
+
+Always turn this workflow into a task list using the `TodoWrite` tool. You never skip steps - include all subagent calls in your initial TODO.  You may alter your TODO aferword as your requirements shift.
 
 - [ ] Task Analysis and Setup
    - [ ] Summarize your goals and purpose
    - [ ] State what 'complete' means for the whole workflow so that you know when to keep working on the task and don't give up when you cannot finish unit test failures
    - [ ] Spend time to THINK about the request and the strategy to find the right context to load
    - [ ] Assess complexity and potential challenges
+
+- [ ] Load Context and State Plan
    - [ ] Use `code-searcher` subagent to find the possible files to load into context
    - [ ] THINK DEEPLY about the requirements and the scope of changes needed
-   - [ ] Have `jenny` validate your thoughts
-   - [ ] Generate a CUSTOM CHECKLIST based on the task
 
-- [ ] If `jenny` had suggested changes then summarize and Review - IMPORTANT: Never start implementation until you have asked the user and they have explicitly asked you to proceed
-   - [ ] Restate the problem
-   - [ ] You will think and report on your proposed solution
+- [ ] SubAgent Plan Review
+   - [ ] use the `jenny` subagent to create a validation report of your plan
+   - [ ] Summarize report `jenny` and analyze any suggested changes 
+
+- [ ] User Review
    - [ ] You ALWAYS ask the User to review and approve your proposed solution
    - [ ] If User asks for changes to your plan, you will:
       - [ ] revise your understanding

@@ -26,6 +26,12 @@ This is a Next.js AI chatbot application built with the AI SDK, featuring modern
 - `pnpm db:pull` - Pull schema from database
 - `pnpm db:check` - Check migration consistency
 
+#### DB Schema Best Practices
+- always use `pnpm db:generate` to create your migration rather than manually creating it
+- always have an expectation of what the auto-generated migration SHOULD contain
+- always compare the auto-generated migration with your expectations then analyze when they don't match
+- always consider how drizzle is aware or manages migrations when making manual edits or removing via the drizzle `meta` folder
+
 ### Testing
 - `pnpm test` - Run Playwright end-to-end tests
 
@@ -56,11 +62,29 @@ This is a Next.js AI chatbot application built with the AI SDK, featuring modern
 - Key entities:
   - `User` - User accounts with email/password
   - `Chat` - Chat conversations with visibility settings
-  - `Message_v2` - Messages with parts and attachments (replaces deprecated Message)
-  - `Vote_v2` - Message voting system
-  - `Document` - File storage with types (text, code, image, sheet)
+  - `Message` - Messages with parts and attachments
+  - `Vote` - Message voting system
+  - **`DocumentEnvelope`** - Document metadata (title, type, searchability)
+  - **`DocumentVersion`** - Versioned document content with draft/publish flags
+  - `Document` (deprecated) - Old single-table document storage
   - `Suggestion` - Document editing suggestions
   - `Stream` - Chat streaming metadata
+  - `Workspace` - Multi-tenant isolation with domain support
+  - `Playbook` / `PlaybookStep` - Workflow guidance system
+
+### Document Lifecycle (Phase 1 Complete)
+**Draft/Publish Workflow** - Documents use version control with explicit publish:
+- **Flag-Based Active Tracking**: `isActiveDraft` and `isActivePublished` flags on versions
+- **No Circular FKs**: Simplified schema using boolean flags instead of pointer columns
+- **Partial Unique Indexes**: Database-level enforcement (only one active draft/published per envelope)
+- **Defensive Cascade**: Message deletion sets `messageId = NULL` (preserves versions)
+- **Orphan Cleanup**: Explicit `cleanOrphanedVersions()` method (Phase 3)
+- **Clear-Then-Set Pattern**: Moving active flags uses transaction-safe two-step update
+
+**Key Schema Points:**
+- `DocumentEnvelope`: Header/metadata without version pointers
+- `DocumentVersion`: Stores content, has `workspaceId` for cleanup, no `chatId` (redundant)
+- Query active versions: `WHERE isActiveDraft = true` or `WHERE isActivePublished = true`
 
 ### File Storage
 - **Vercel Blob** for file uploads and attachments
