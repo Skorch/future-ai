@@ -36,7 +36,9 @@ export interface UpdateDocumentCallbackProps {
 export interface DocumentHandler<T = ArtifactKind> {
   kind: T;
   metadata?: ArtifactMetadata;
-  onCreateDocument: (args: CreateDocumentCallbackProps) => Promise<void>;
+  onCreateDocument: (
+    args: CreateDocumentCallbackProps,
+  ) => Promise<{ versionId: string } | undefined>;
   onUpdateDocument: (args: UpdateDocumentCallbackProps) => Promise<void>;
 }
 

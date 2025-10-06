@@ -58,7 +58,7 @@ ${title !== meetingTitle ? `Additional context: ${title}` : ''}`;
     const content = await processStream(streamConfig, dataStream);
 
     // Save the generated document
-    await saveGeneratedDocument(content, {
+    const result = await saveGeneratedDocument(content, {
       id,
       title: meetingTitle,
       kind: 'text',
@@ -70,7 +70,7 @@ ${title !== meetingTitle ? `Additional context: ${title}` : ''}`;
       },
     });
 
-    return;
+    return result ? { versionId: result.versionId } : undefined;
   },
   onUpdateDocument: async ({
     document,

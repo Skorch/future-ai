@@ -36,7 +36,7 @@ export const textDocumentHandler: DocumentHandler<'text'> = {
     const content = await processStream(streamConfig, dataStream);
 
     // Save the generated document
-    await saveGeneratedDocument(content, {
+    const result = await saveGeneratedDocument(content, {
       id,
       title,
       kind: 'text',
@@ -48,7 +48,7 @@ export const textDocumentHandler: DocumentHandler<'text'> = {
       },
     });
 
-    return;
+    return result ? { versionId: result.versionId } : undefined;
   },
   onUpdateDocument: async ({
     document,

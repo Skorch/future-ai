@@ -5,7 +5,7 @@
  */
 
 import { streamText, smoothStream } from 'ai';
-import { getDocumentById, saveDocument } from '@/lib/db/documents';
+import { createDocument, getPublishedDocumentById } from '@/lib/db/documents';
 import type { LanguageModel, UIMessageStreamWriter } from 'ai';
 import type { ChatMessage } from '@/lib/types';
 import type { ArtifactKind } from '@/components/artifact';
@@ -93,22 +93,37 @@ export async function processStream(
 
 /**
  * Save generated document content to the database
+ * Returns the created document with version ID for message linking
  */
 export async function saveGeneratedDocument(
   content: string,
   props: SaveDocumentProps,
-): Promise<void> {
+): Promise<{ envelopeId: string; versionId: string } | null> {
   if (props.session?.user?.id) {
-    await saveDocument({
-      id: props.id,
+    // Use new envelope/version schema
+    const doc = await createDocument({
+      id: props.id, // Use pre-generated ID from tool
       title: props.title,
       content,
-      kind: props.kind,
-      userId: props.session.user.id,
+      messageId: null, // NULL: Will be linked to assistant message in onFinish callback
       workspaceId: props.workspaceId,
+      userId: props.session.user.id,
+      documentType: props.metadata?.documentType as string | undefined,
+      kind: props.kind,
       metadata: props.metadata,
     });
+
+    // createDocument always creates initial draft, so currentDraft should never be null
+    if (!doc.currentDraft) {
+      throw new Error('Failed to create initial draft version');
+    }
+
+    return {
+      envelopeId: doc.envelope.id,
+      versionId: doc.currentDraft.id,
+    };
   }
+  return null;
 }
 
 /**
@@ -152,15 +167,15 @@ export async function fetchSourceDocuments(
     return '';
   }
 
-  // Fetch all source documents in parallel
+  // Fetch all source documents in parallel (only published versions)
   const sourceDocuments = await Promise.all(
-    docIdsToFetch.map((docId) => getDocumentById({ id: docId, workspaceId })),
+    docIdsToFetch.map((docId) => getPublishedDocumentById(docId, workspaceId)),
   );
 
   // Filter out null/undefined documents
   const validDocuments = sourceDocuments.filter(
     (doc): doc is NonNullable<typeof doc> =>
-      doc?.content !== null && doc?.content !== undefined,
+      doc !== null && doc?.content !== null && doc?.content !== undefined,
   );
 
   if (validDocuments.length === 0) {

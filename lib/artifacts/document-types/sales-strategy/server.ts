@@ -114,7 +114,7 @@ ${analyses}
     // Process stream and save
     const content = await processStream(streamConfig, dataStream);
 
-    await saveGeneratedDocument(content, {
+    const result = await saveGeneratedDocument(content, {
       id,
       title,
       kind: 'text',
@@ -126,6 +126,8 @@ ${analyses}
         sourceDocumentIds: typedMetadata?.sourceDocumentIds || [],
       },
     });
+
+    return result ? { versionId: result.versionId } : undefined;
   },
 
   onUpdateDocument: async ({

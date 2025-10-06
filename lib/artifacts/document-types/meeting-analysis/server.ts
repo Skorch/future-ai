@@ -133,7 +133,7 @@ Participants: ${participants.join(', ')}`;
     const content = await processStream(streamConfig, dataStream);
 
     // Save the generated document
-    await saveGeneratedDocument(content, {
+    const result = await saveGeneratedDocument(content, {
       id,
       title,
       kind: 'text',
@@ -146,7 +146,7 @@ Participants: ${participants.join(', ')}`;
       },
     });
 
-    return;
+    return result ? { versionId: result.versionId } : undefined;
   },
   onUpdateDocument: async ({
     document,
