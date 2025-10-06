@@ -35,6 +35,7 @@ import { loadDocuments } from '@/lib/ai/tools/load-documents';
 import { setMode } from '@/lib/ai/tools/set-mode';
 import { askUser } from '@/lib/ai/tools/ask-user';
 import { getPlaybook } from '@/lib/ai/tools/get-playbook';
+import { updateDocumentVersionsMessageId } from '@/lib/db/documents';
 import { isProductionEnvironment } from '@/lib/constants';
 import { myProvider } from '@/lib/ai/providers';
 import { postRequestBodySchema, type PostRequestBody } from './schema';
@@ -877,6 +878,7 @@ export async function POST(
           messages.push(errorMessage);
         }
 
+        // 1. Save messages FIRST (FK target must exist)
         await saveMessages({
           messages: messages.map((message) => {
             // Ensure assistant messages always have at least a text part
@@ -901,6 +903,46 @@ export async function POST(
             };
           }),
         });
+
+        // 2. THEN link document versions to assistant messages
+        const assistantMessages = messages.filter(
+          (m) => m.role === 'assistant',
+        );
+        const documentVersionUpdates = assistantMessages.flatMap((message) => {
+          // Type guard for tool parts with document output
+          type ToolPart = {
+            type: string;
+            output?: { versionId?: string };
+          };
+          const parts = (message.parts || []) as ToolPart[];
+          return parts
+            .filter(
+              (part): part is ToolPart & { output: { versionId: string } } =>
+                part.type === 'tool-createDocument' &&
+                typeof part.output?.versionId === 'string',
+            )
+            .map((part) => ({
+              versionId: part.output.versionId,
+              messageId: message.id,
+            }));
+        });
+
+        if (documentVersionUpdates.length > 0) {
+          try {
+            await updateDocumentVersionsMessageId(documentVersionUpdates);
+            logger.debug('Linked document versions to messages', {
+              count: documentVersionUpdates.length,
+              updates: documentVersionUpdates,
+            });
+          } catch (error) {
+            logger.error('Failed to link document versions to messages', {
+              error,
+              updates: documentVersionUpdates,
+            });
+            // Don't fail the entire request - versions will remain unlinked
+            // but documents are still created and functional
+          }
+        }
       },
       onError: (error: unknown) => {
         const errorDetails =
