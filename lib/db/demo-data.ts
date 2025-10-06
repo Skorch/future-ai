@@ -2,7 +2,6 @@ import { chat, message, document, workspace } from '@/lib/db/schema';
 import { eq, and, isNull } from 'drizzle-orm';
 import { db } from '@/lib/db/queries';
 import { createWorkspace } from '@/lib/workspace/queries';
-import { syncDocumentToRAG } from '@/lib/rag/sync';
 import { logger } from '@/lib/logger';
 
 interface CloneResult {
@@ -396,16 +395,27 @@ async function indexClonedDocuments(context: CloneContext): Promise<void> {
     });
 
     // Index each document
-    for (const doc of documents) {
-      try {
-        await syncDocumentToRAG(doc.id, context.targetWorkspaceId);
-      } catch (error) {
-        logger.error('Failed to index document in RAG', {
-          documentId: doc.id,
-          error: error instanceof Error ? error.message : 'Unknown error',
-        });
-      }
-    }
+    // TODO: Update for new envelope/version schema - currently uses deprecated document table
+    // for (const doc of documents) {
+    //   try {
+    //     await syncDocumentToRAG({
+    //       id: doc.id,
+    //       workspaceId: context.targetWorkspaceId,
+    //       content: doc.content,
+    //       title: doc.title,
+    //       documentType: doc.metadata?.documentType || 'text',
+    //       kind: doc.kind,
+    //       metadata: doc.metadata,
+    //       createdByUserId: doc.createdByUserId,
+    //       createdAt: doc.createdAt,
+    //     });
+    //   } catch (error) {
+    //     logger.error('Failed to index document in RAG', {
+    //       documentId: doc.id,
+    //       error: error instanceof Error ? error.message : 'Unknown error',
+    //     });
+    //   }
+    // }
 
     logger.info('Completed RAG indexing for cloned documents', {
       workspaceId: context.targetWorkspaceId,

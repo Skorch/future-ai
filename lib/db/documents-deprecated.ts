@@ -18,7 +18,7 @@ import {
 
 import { document } from './schema';
 import { db } from './queries';
-import { syncDocumentToRAG, deleteFromRAG } from '@/lib/rag/sync';
+import { deleteFromRAG } from '@/lib/rag/sync';
 import type { ArtifactKind } from '@/components/artifact';
 import { generateUUID } from '../utils';
 import { ChatSDKError } from '../errors';
@@ -62,31 +62,11 @@ export async function saveDocument({
       })
       .returning();
 
-    // Automatically sync to RAG (async, don't await)
-    logger.debug('[saveDocument] Starting RAG sync', {
+    // RAG sync disabled for deprecated schema - use new document lifecycle instead
+    logger.debug('[saveDocument] Skipping RAG sync for deprecated schema', {
       documentId,
       workspaceId,
-      title,
-      kind,
     });
-    syncDocumentToRAG(documentId, workspaceId)
-      .then(() => {
-        logger.debug('[saveDocument] RAG sync completed successfully', {
-          documentId,
-          workspaceId,
-        });
-      })
-      .catch((err) => {
-        logger.error('[saveDocument] RAG sync failed', {
-          documentId,
-          workspaceId,
-          title,
-          kind,
-          error: err,
-          errorMessage: err instanceof Error ? err.message : String(err),
-          errorStack: err instanceof Error ? err.stack : undefined,
-        });
-      });
 
     return result;
   } catch (error) {
@@ -108,11 +88,7 @@ export async function updateDocument(
       .where(eq(document.id, id))
       .returning();
 
-    // Automatically sync to RAG (async, don't await)
-    syncDocumentToRAG(id).catch((err) =>
-      logger.error('[updateDocument] RAG sync failed:', err),
-    );
-
+    // RAG sync disabled for deprecated schema
     return result[0];
   } catch (error) {
     throw new ChatSDKError('bad_request:database', 'Failed to update document');
@@ -692,22 +668,14 @@ export async function toggleDocumentSearchable(
       );
     }
 
-    // Sync with RAG based on new state (SYNCHRONOUS)
-    if (isSearchable) {
-      logger.debug('[toggleDocumentSearchable] Adding to RAG', { documentId });
-      await syncDocumentToRAG(documentId, workspaceId);
-      logger.info('[toggleDocumentSearchable] Document added to RAG', {
+    // RAG sync disabled for deprecated schema - use new document lifecycle instead
+    logger.debug(
+      '[toggleDocumentSearchable] Skipping RAG sync for deprecated schema',
+      {
         documentId,
-      });
-    } else {
-      logger.debug('[toggleDocumentSearchable] Removing from RAG', {
-        documentId,
-      });
-      await deleteFromRAG(documentId, workspaceId);
-      logger.info('[toggleDocumentSearchable] Document removed from RAG', {
-        documentId,
-      });
-    }
+        isSearchable,
+      },
+    );
 
     return updated;
   } catch (error) {
