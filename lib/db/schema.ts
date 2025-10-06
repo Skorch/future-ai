@@ -13,6 +13,7 @@ import {
   integer,
   unique,
 } from 'drizzle-orm/pg-core';
+import { relations } from 'drizzle-orm';
 
 export const user = pgTable('User', {
   id: varchar('id', { length: 255 }).primaryKey(), // Clerk user ID directly
@@ -187,6 +188,96 @@ export interface DocumentWithMetadata extends Document {
     title: string;
   };
 }
+
+// NEW: Document Lifecycle tables (draft/publish workflow)
+// Using flags on versions instead of circular FKs for simpler schema
+export const documentVersion = pgTable(
+  'DocumentVersion',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    documentEnvelopeId: uuid('documentEnvelopeId')
+      .notNull()
+      .references(() => documentEnvelope.id, { onDelete: 'cascade' }),
+    workspaceId: uuid('workspaceId')
+      .notNull()
+      .references(() => workspace.id, { onDelete: 'cascade' }),
+    messageId: uuid('messageId').references(() => message.id, {
+      onDelete: 'set null',
+    }),
+    content: text('content').notNull(),
+    metadata: json('metadata').$type<Record<string, unknown>>(),
+    kind: text('kind').notNull().default('text'),
+    versionNumber: integer('versionNumber').notNull(),
+    isActiveDraft: boolean('isActiveDraft').notNull().default(false),
+    isActivePublished: boolean('isActivePublished').notNull().default(false),
+    createdAt: timestamp('createdAt').notNull().defaultNow(),
+    createdByUserId: varchar('createdByUserId', { length: 255 })
+      .references(() => user.id, { onDelete: 'cascade' })
+      .notNull(),
+  },
+  (table) => ({
+    envelopeIdx: index('idx_document_version_envelope').on(
+      table.documentEnvelopeId,
+    ),
+    messageIdx: index('idx_document_version_message').on(table.messageId),
+    workspaceIdx: index('idx_document_version_workspace').on(table.workspaceId),
+  }),
+);
+
+export const documentEnvelope = pgTable(
+  'DocumentEnvelope',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    title: text('title').notNull(),
+    documentType: text('documentType'),
+    workspaceId: uuid('workspaceId')
+      .references(() => workspace.id, { onDelete: 'cascade' })
+      .notNull(),
+    createdByUserId: varchar('createdByUserId', { length: 255 })
+      .references(() => user.id, { onDelete: 'cascade' })
+      .notNull(),
+    isSearchable: boolean('isSearchable').notNull().default(false),
+    createdAt: timestamp('createdAt').notNull().defaultNow(),
+    updatedAt: timestamp('updatedAt').notNull().defaultNow(),
+  },
+  (table) => ({
+    workspaceIdx: index('idx_document_envelope_workspace').on(
+      table.workspaceId,
+    ),
+    searchableIdx: index('idx_document_envelope_searchable').on(
+      table.isSearchable,
+    ),
+  }),
+);
+
+export type DocumentEnvelope = InferSelectModel<typeof documentEnvelope>;
+export type DocumentVersion = InferSelectModel<typeof documentVersion>;
+
+// Combined type for queries that need both envelope and versions
+export interface DocumentWithVersions {
+  envelope: DocumentEnvelope;
+  currentDraft: DocumentVersion | null; // version with isActiveDraft = true
+  currentPublished: DocumentVersion | null; // version with isActivePublished = true
+  allVersions: DocumentVersion[];
+}
+
+// Relations for query builder
+export const documentEnvelopeRelations = relations(
+  documentEnvelope,
+  ({ many }) => ({
+    versions: many(documentVersion),
+  }),
+);
+
+export const documentVersionRelations = relations(
+  documentVersion,
+  ({ one }) => ({
+    envelope: one(documentEnvelope, {
+      fields: [documentVersion.documentEnvelopeId],
+      references: [documentEnvelope.id],
+    }),
+  }),
+);
 
 // Mode-Based Agent System
 export type ChatMode = 'discovery' | 'build';

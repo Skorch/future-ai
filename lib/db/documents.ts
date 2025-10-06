@@ -1,780 +1,533 @@
-import { getLogger } from '@/lib/logger';
+/**
+ * Document Lifecycle DAL
+ *
+ * Implements draft/publish workflow for documents with version control.
+ * Uses flag-based active version tracking (no circular FKs).
+ */
 
-const logger = getLogger('documents');
-import 'server-only';
-
+import { db } from '@/lib/db/queries';
 import {
-  and,
-  asc,
-  desc,
-  eq,
-  gt,
-  inArray,
-  isNull,
-  lt,
-  or,
-  sql,
-} from 'drizzle-orm';
+  documentEnvelope,
+  documentVersion,
+  type DocumentVersion,
+  type DocumentWithVersions,
+} from '@/lib/db/schema';
+import { eq, and, isNull, desc, max } from 'drizzle-orm';
 
-import { document } from './schema';
-import { db } from './queries';
-import { syncDocumentToRAG, deleteFromRAG } from '@/lib/rag/sync';
-import type { ArtifactKind } from '@/components/artifact';
-import { generateUUID } from '../utils';
-import { ChatSDKError } from '../errors';
+// Import RAG sync functions (to be called when publishing)
+// import { syncDocumentToRAG, removeDocumentFromRAG } from '@/lib/rag/sync';
 
-export async function saveDocument({
-  id,
-  title,
-  kind,
-  content,
-  userId,
-  workspaceId,
-  metadata,
-  sourceDocumentIds,
-}: {
-  id?: string;
-  title: string;
-  kind: ArtifactKind;
-  content: string;
-  userId: string;
-  workspaceId: string;
-  metadata?: Record<string, unknown>;
-  sourceDocumentIds?: string[];
-}) {
-  try {
-    const documentId = id || generateUUID();
-
-    const result = await db
-      .insert(document)
-      .values({
-        id: documentId,
-        title,
-        kind,
-        content,
-        workspaceId,
-        createdByUserId: userId,
-        createdAt: new Date(),
-        documentType: (metadata?.documentType as string) || 'text',
-        isSearchable: true,
-        metadata: (metadata || {}) as Record<string, unknown>,
-        sourceDocumentIds: sourceDocumentIds || [],
-      })
-      .returning();
-
-    // Automatically sync to RAG (async, don't await)
-    logger.debug('[saveDocument] Starting RAG sync', {
-      documentId,
-      workspaceId,
-      title,
-      kind,
-    });
-    syncDocumentToRAG(documentId, workspaceId)
-      .then(() => {
-        logger.debug('[saveDocument] RAG sync completed successfully', {
-          documentId,
-          workspaceId,
-        });
-      })
-      .catch((err) => {
-        logger.error('[saveDocument] RAG sync failed', {
-          documentId,
-          workspaceId,
-          title,
-          kind,
-          error: err,
-          errorMessage: err instanceof Error ? err.message : String(err),
-          errorStack: err instanceof Error ? err.stack : undefined,
-        });
-      });
-
-    return result;
-  } catch (error) {
-    logger.error('[saveDocument] Database error:', error);
-    throw new ChatSDKError('bad_request:database', 'Failed to save document');
-  }
-}
-
-export async function updateDocument(
-  id: string,
-  updates: Partial<
-    Omit<typeof document.$inferSelect, 'id' | 'createdAt' | 'userId'>
-  >,
+/**
+ * Helper: Move active flag from one version to another using clear-then-set pattern
+ * Prevents unique constraint violations
+ */
+async function moveActiveFlag(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  envelopeId: string,
+  newVersionId: string,
+  flagName: 'isActiveDraft' | 'isActivePublished',
 ) {
-  try {
-    const result = await db
-      .update(document)
-      .set(updates)
-      .where(eq(document.id, id))
-      .returning();
-
-    // Automatically sync to RAG (async, don't await)
-    syncDocumentToRAG(id).catch((err) =>
-      logger.error('[updateDocument] RAG sync failed:', err),
+  // Step 1: Clear all active flags for this envelope
+  await tx
+    .update(documentVersion)
+    .set({ [flagName]: false })
+    .where(
+      and(
+        eq(documentVersion.documentEnvelopeId, envelopeId),
+        eq(documentVersion[flagName], true),
+      ),
     );
 
-    return result[0];
-  } catch (error) {
-    throw new ChatSDKError('bad_request:database', 'Failed to update document');
-  }
+  // Step 2: Set the new active flag
+  await tx
+    .update(documentVersion)
+    .set({ [flagName]: true })
+    .where(eq(documentVersion.id, newVersionId));
 }
 
-// Keep old function name for backward compatibility (hard delete)
-export async function deleteDocument(id: string, workspaceId: string) {
-  try {
-    // First verify the document belongs to this workspace
-    const [doc] = await db
-      .select()
-      .from(document)
-      .where(and(eq(document.id, id), eq(document.workspaceId, workspaceId)))
-      .limit(1);
-
-    if (!doc) {
-      return null; // Document doesn't exist or doesn't belong to workspace
-    }
-
-    // Delete from RAG first (before document is gone)
-    await deleteFromRAG(id, workspaceId);
-
-    // Delete the document
-    const result = await db
-      .delete(document)
-      .where(and(eq(document.id, id), eq(document.workspaceId, workspaceId)))
-      .returning();
-
-    return result[0];
-  } catch (error) {
-    throw new ChatSDKError('bad_request:database', 'Failed to delete document');
-  }
-}
-
-// Soft delete with synchronous RAG cleanup
-export async function softDeleteDocument(
-  documentId: string,
-  workspaceId: string,
-) {
-  try {
-    // Remove from RAG first (SYNCHRONOUS - errors will rollback transaction)
-    logger.debug('[softDeleteDocument] Starting RAG deletion', {
-      documentId,
-      workspaceId,
-    });
-    await deleteFromRAG(documentId, workspaceId);
-    logger.debug('[softDeleteDocument] RAG deletion completed', {
-      documentId,
-      workspaceId,
-    });
-
-    // Soft delete by setting deletedAt timestamp
-    const [deleted] = await db
-      .update(document)
-      .set({
-        deletedAt: new Date(),
-        isSearchable: false, // Ensure it's not searchable
-      })
-      .where(
-        and(
-          eq(document.id, documentId),
-          eq(document.workspaceId, workspaceId),
-          isNull(document.deletedAt), // Prevent double-delete (idempotent)
-        ),
-      )
-      .returning();
-
-    if (!deleted) {
-      throw new ChatSDKError(
-        'bad_request:database',
-        'Document not found or already deleted',
-      );
-    }
-
-    logger.info('[softDeleteDocument] Document soft deleted successfully', {
-      documentId,
-      workspaceId,
-    });
-    return deleted;
-  } catch (error) {
-    logger.error('[softDeleteDocument] Failed to soft delete document', {
-      documentId,
-      workspaceId,
-      error,
-      errorMessage: error instanceof Error ? error.message : String(error),
-    });
-    throw error instanceof ChatSDKError
-      ? error
-      : new ChatSDKError('bad_request:database', 'Failed to delete document');
-  }
-}
-
-export async function getDocumentsById({
-  id,
-  workspaceId,
-}: { id: string; workspaceId: string }) {
-  try {
-    const documents = await db
-      .select()
-      .from(document)
-      .where(
-        and(
-          eq(document.id, id),
-          eq(document.workspaceId, workspaceId),
-          isNull(document.deletedAt),
-        ),
-      )
-      .orderBy(asc(document.createdAt));
-
-    return documents;
-  } catch (error) {
-    throw new ChatSDKError(
-      'bad_request:database',
-      'Failed to get documents by id',
-    );
-  }
-}
-
-export async function getDocumentById({
-  id,
-  workspaceId,
-}: { id: string; workspaceId: string }) {
-  try {
-    const [selectedDocument] = await db
-      .select()
-      .from(document)
-      .where(
-        and(
-          eq(document.id, id),
-          eq(document.workspaceId, workspaceId),
-          isNull(document.deletedAt),
-        ),
-      )
-      .orderBy(desc(document.createdAt));
-
-    return selectedDocument;
-  } catch (error) {
-    throw new ChatSDKError(
-      'bad_request:database',
-      'Failed to get document by id',
-    );
-  }
-}
-
-export async function deleteDocumentsByIdAfterTimestamp({
-  id,
-  timestamp,
-}: {
-  id: string;
-  timestamp: Date;
-}) {
-  try {
-    return await db
-      .delete(document)
-      .where(and(eq(document.id, id), gt(document.createdAt, timestamp)))
-      .returning();
-  } catch (error) {
-    throw new ChatSDKError(
-      'bad_request:database',
-      'Failed to delete documents by id after timestamp',
-    );
-  }
-}
-
-// Keep old function name for backward compatibility
-export async function getAllUserDocuments({
-  userId,
-  workspaceId,
-}: { userId: string; workspaceId: string }) {
-  return getWorkspaceDocuments(workspaceId);
-}
-
-// Paginated version with search/filter/sort
-export async function getWorkspaceDocumentsPaginated({
-  workspaceId,
-  limit = 50,
-  cursor,
-  search,
-  type,
-  sortBy = 'created',
-  sortOrder = 'desc',
-}: {
-  workspaceId: string;
-  limit?: number;
-  cursor?: string; // Format: "timestamp_id"
-  search?: string;
-  type?: string;
-  sortBy?: 'created' | 'title';
-  sortOrder?: 'asc' | 'desc';
-}) {
-  try {
-    // Parse cursor if provided
-    let cursorDate: Date | null = null;
-    let cursorId: string | null = null;
-    if (cursor) {
-      const [timestamp, id] = cursor.split('_');
-      cursorDate = new Date(timestamp);
-      cursorId = id;
-    }
-
-    // Build where conditions
-    const conditions = [
-      eq(document.workspaceId, workspaceId),
-      isNull(document.deletedAt),
-    ];
-
-    // Add cursor conditions for pagination
-    if (cursorDate && cursorId) {
-      if (sortOrder === 'desc') {
-        const cursorCondition = or(
-          lt(document.createdAt, cursorDate),
-          and(eq(document.createdAt, cursorDate), lt(document.id, cursorId)),
-        );
-        if (cursorCondition) conditions.push(cursorCondition);
-      } else {
-        const cursorCondition = or(
-          gt(document.createdAt, cursorDate),
-          and(eq(document.createdAt, cursorDate), gt(document.id, cursorId)),
-        );
-        if (cursorCondition) conditions.push(cursorCondition);
-      }
-    }
-
-    // Add search filter (title search)
-    if (search) {
-      conditions.push(
-        sql`LOWER(${document.title}) LIKE ${`%${search.toLowerCase()}%`}`,
-      );
-    }
-
-    // Get documents with DISTINCT ON for latest version
-    const documentsQuery = await db
-      .selectDistinctOn([document.id], {
-        id: document.id,
-        title: document.title,
-        createdAt: document.createdAt,
-        metadata: document.metadata,
-        sourceDocumentIds: document.sourceDocumentIds,
-        isSearchable: document.isSearchable,
-        contentLength: sql<number>`LENGTH(${document.content})`,
-        contentPreview: sql<string>`SUBSTRING(${document.content}, 1, 500)`,
-      })
-      .from(document)
-      .where(and(...conditions))
-      .orderBy(
-        document.id,
-        sortOrder === 'desc'
-          ? desc(document.createdAt)
-          : asc(document.createdAt),
-      )
-      .limit(limit + 1); // Fetch one extra to check if more exist
-
-    // Filter by type if specified (post-query since it's in metadata)
-    let documents = documentsQuery.map((doc) => {
-      const metadata = doc.metadata as {
-        documentType?: string;
-        fileName?: string;
-        fileSize?: number;
-        uploadedAt?: string;
-        meetingDate?: string;
-        participants?: string[];
-        [key: string]: unknown;
-      } | null;
-
-      return {
-        ...doc,
-        estimatedTokens: Math.ceil(doc.contentLength / 4),
-        humanReadableSize: formatBytes(doc.contentLength),
-        documentType: metadata?.documentType || 'document',
-        sourceDocumentIds: (doc.sourceDocumentIds || []) as string[],
-        metadata,
-      };
-    });
-
-    // Filter by type if specified
-    if (type) {
-      documents = documents.filter((doc) => doc.documentType === type);
-    }
-
-    // Sort by title if requested (post-query)
-    if (sortBy === 'title') {
-      documents.sort((a, b) =>
-        sortOrder === 'desc'
-          ? b.title.localeCompare(a.title)
-          : a.title.localeCompare(b.title),
-      );
-    } else {
-      // Sort by createdAt
-      documents.sort((a, b) =>
-        sortOrder === 'desc'
-          ? b.createdAt.getTime() - a.createdAt.getTime()
-          : a.createdAt.getTime() - b.createdAt.getTime(),
-      );
-    }
-
-    // Check if there are more results
-    const hasMore = documents.length > limit;
-    const results = hasMore ? documents.slice(0, limit) : documents;
-
-    // Generate next cursor from last item
-    const nextCursor =
-      hasMore && results.length > 0
-        ? `${results[results.length - 1].createdAt.toISOString()}_${results[results.length - 1].id}`
-        : null;
-
-    // Get total count for the current filters
-    const countConditions = [
-      eq(document.workspaceId, workspaceId),
-      isNull(document.deletedAt),
-    ];
-    if (search) {
-      countConditions.push(
-        sql`LOWER(${document.title}) LIKE ${`%${search.toLowerCase()}%`}`,
-      );
-    }
-
-    const countResult = await db
-      .select({ count: sql<number>`COUNT(DISTINCT ${document.id})` })
-      .from(document)
-      .where(and(...countConditions));
-
-    let totalCount = countResult[0]?.count || 0;
-
-    // Adjust count if type filter is applied (since it's post-query)
-    if (type) {
-      const allDocs = await db
-        .selectDistinctOn([document.id], {
-          id: document.id,
-          metadata: document.metadata,
+export class DocumentsDAL {
+  /**
+   * Create new document with initial draft version
+   */
+  async createDocument(data: {
+    title: string;
+    content: string;
+    messageId: string;
+    workspaceId: string;
+    userId: string;
+    documentType?: string;
+    kind?: 'text' | 'code' | 'table';
+    metadata?: Record<string, unknown>;
+  }): Promise<DocumentWithVersions> {
+    return await db.transaction(async (tx) => {
+      // 1. Create envelope
+      const [envelope] = await tx
+        .insert(documentEnvelope)
+        .values({
+          title: data.title,
+          documentType: data.documentType,
+          workspaceId: data.workspaceId,
+          createdByUserId: data.userId,
         })
-        .from(document)
-        .where(and(...countConditions))
-        .orderBy(document.id);
+        .returning();
 
-      totalCount = allDocs.filter((doc) => {
-        const meta = doc.metadata as { documentType?: string } | null;
-        return meta?.documentType === type;
-      }).length;
-    }
-
-    return {
-      documents: results,
-      totalCount,
-      hasMore,
-      nextCursor,
-    };
-  } catch (error) {
-    logger.error('[getWorkspaceDocumentsPaginated] Error:', error);
-    throw new ChatSDKError(
-      'bad_request:database',
-      'Failed to get workspace documents',
-    );
-  }
-}
-
-// New workspace-centric function name (non-paginated, for backwards compatibility)
-export async function getWorkspaceDocuments(workspaceId: string) {
-  try {
-    // Get the latest version of each document by using DISTINCT ON with document.id
-    // This ensures we only get one row per document ID (the most recent one)
-    // We need to order by id first for DISTINCT ON, then by createdAt DESC to get the latest version
-    const documentsQuery = await db
-      .selectDistinctOn([document.id], {
-        id: document.id,
-        title: document.title,
-        createdAt: document.createdAt,
-        metadata: document.metadata,
-        sourceDocumentIds: document.sourceDocumentIds,
-        contentLength: sql<number>`LENGTH(${document.content})`,
-        contentPreview: sql<string>`SUBSTRING(${document.content}, 1, 500)`,
-      })
-      .from(document)
-      .where(
-        and(eq(document.workspaceId, workspaceId), isNull(document.deletedAt)),
-      )
-      .orderBy(document.id, desc(document.createdAt));
-
-    // Sort the final results by createdAt descending to show newest documents first
-    const documents = documentsQuery.sort(
-      (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
-    );
-
-    return documents.map((doc) => {
-      const metadata = doc.metadata as {
-        documentType?: string; // Generic string to match schema
-        fileName?: string;
-        fileSize?: number;
-        uploadedAt?: string;
-        meetingDate?: string;
-        participants?: string[];
-        [key: string]: unknown;
-      } | null;
+      // 2. Create first version with isActiveDraft = true
+      const [version] = await tx
+        .insert(documentVersion)
+        .values({
+          documentEnvelopeId: envelope.id,
+          workspaceId: data.workspaceId,
+          messageId: data.messageId,
+          content: data.content,
+          metadata: data.metadata,
+          kind: data.kind || 'text',
+          versionNumber: 1,
+          isActiveDraft: true,
+          isActivePublished: false,
+          createdByUserId: data.userId,
+        })
+        .returning();
 
       return {
-        ...doc,
-        estimatedTokens: Math.ceil(doc.contentLength / 4),
-        humanReadableSize: formatBytes(doc.contentLength),
-        documentType: metadata?.documentType || 'document',
-        sourceDocumentIds: (doc.sourceDocumentIds || []) as string[],
+        envelope,
+        currentDraft: version,
+        currentPublished: null,
+        allVersions: [version],
       };
     });
-  } catch (error) {
-    throw new ChatSDKError(
-      'bad_request:database',
-      'Failed to get user documents',
-    );
   }
-}
 
-export async function getDocumentForUser({
-  documentId,
-  userId,
-  workspaceId,
-  maxChars,
-}: {
-  documentId: string;
-  userId: string;
-  workspaceId: string;
-  maxChars?: number;
-}) {
-  try {
-    const query = db
-      .select({
-        id: document.id,
-        title: document.title,
-        content: maxChars
-          ? sql<string>`SUBSTRING(${document.content}, 1, ${maxChars})`
-          : document.content,
-        metadata: document.metadata,
-        sourceDocumentIds: document.sourceDocumentIds,
-        createdAt: document.createdAt,
-        fullContentLength: sql<number>`LENGTH(${document.content})`,
-      })
-      .from(document)
-      .where(
-        and(
-          eq(document.id, documentId),
-          eq(document.workspaceId, workspaceId),
-          isNull(document.deletedAt),
+  /**
+   * Update existing draft OR create new draft version
+   */
+  async saveDocumentDraft(data: {
+    documentEnvelopeId: string;
+    content: string;
+    messageId: string;
+    workspaceId: string;
+    userId: string;
+    metadata?: Record<string, unknown>;
+  }): Promise<DocumentVersion> {
+    return await db.transaction(async (tx) => {
+      // Get current active draft
+      const currentDraft = await tx.query.documentVersion.findFirst({
+        where: and(
+          eq(documentVersion.documentEnvelopeId, data.documentEnvelopeId),
+          eq(documentVersion.isActiveDraft, true),
         ),
+      });
+
+      // If editing existing draft from same message context, UPDATE in place
+      if (currentDraft && currentDraft.messageId === data.messageId) {
+        const [updated] = await tx
+          .update(documentVersion)
+          .set({
+            content: data.content,
+            metadata: data.metadata,
+          })
+          .where(eq(documentVersion.id, currentDraft.id))
+          .returning();
+
+        return updated;
+      }
+
+      // Otherwise create new version
+      const maxVersion = await tx
+        .select({ max: max(documentVersion.versionNumber) })
+        .from(documentVersion)
+        .where(eq(documentVersion.documentEnvelopeId, data.documentEnvelopeId));
+
+      const nextVersion = (maxVersion[0].max || 0) + 1;
+
+      const [version] = await tx
+        .insert(documentVersion)
+        .values({
+          documentEnvelopeId: data.documentEnvelopeId,
+          workspaceId: data.workspaceId,
+          messageId: data.messageId,
+          content: data.content,
+          metadata: data.metadata,
+          versionNumber: nextVersion,
+          isActiveDraft: false, // Will be set to true below
+          isActivePublished: false,
+          createdByUserId: data.userId,
+        })
+        .returning();
+
+      // Move active draft flag to new version
+      await moveActiveFlag(
+        tx,
+        data.documentEnvelopeId,
+        version.id,
+        'isActiveDraft',
       );
 
-    const [doc] = await query;
-
-    if (!doc) {
-      return null;
-    }
-
-    return {
-      ...doc,
-      truncated: maxChars ? doc.fullContentLength > maxChars : false,
-      loadedChars: maxChars
-        ? Math.min(maxChars, doc.fullContentLength)
-        : doc.fullContentLength,
-    };
-  } catch (error) {
-    throw new ChatSDKError(
-      'bad_request:database',
-      'Failed to get document for user',
-    );
+      return version;
+    });
   }
-}
 
-export async function getDocumentsForUser({
-  documentIds,
-  userId,
-  workspaceId,
-  maxCharsPerDoc,
-}: {
-  documentIds: string[];
-  userId: string;
-  workspaceId: string;
-  maxCharsPerDoc?: number;
-}) {
-  try {
-    if (documentIds.length === 0) {
-      return [];
-    }
-
-    const documents = await db
-      .select({
-        id: document.id,
-        title: document.title,
-        content: maxCharsPerDoc
-          ? sql<string>`SUBSTRING(${document.content}, 1, ${maxCharsPerDoc})`
-          : document.content,
-        metadata: document.metadata,
-        sourceDocumentIds: document.sourceDocumentIds,
-        createdAt: document.createdAt,
-        fullContentLength: sql<number>`LENGTH(${document.content})`,
-      })
-      .from(document)
-      .where(
-        and(
-          inArray(document.id, documentIds),
-          eq(document.workspaceId, workspaceId),
-          isNull(document.deletedAt),
-        ),
+  /**
+   * Publish a draft version
+   */
+  async publishDocument(
+    documentEnvelopeId: string,
+    versionId: string,
+    makeSearchable: boolean,
+  ): Promise<void> {
+    await db.transaction(async (tx) => {
+      // Move active published flag to this version
+      await moveActiveFlag(
+        tx,
+        documentEnvelopeId,
+        versionId,
+        'isActivePublished',
       );
 
-    return documents.map((doc) => {
-      const metadata = doc.metadata as {
-        documentType?: string; // Generic string to match schema
-        fileName?: string;
-        fileSize?: number;
-        uploadedAt?: string;
-        meetingDate?: string;
-        participants?: string[];
-        [key: string]: unknown;
-      } | null;
+      // Update envelope searchable flag
+      const [updated] = await tx
+        .update(documentEnvelope)
+        .set({
+          isSearchable: makeSearchable,
+          updatedAt: new Date(),
+        })
+        .where(eq(documentEnvelope.id, documentEnvelopeId))
+        .returning();
 
-      return {
-        ...doc,
-        documentType: metadata?.documentType || 'document',
-        truncated: maxCharsPerDoc
-          ? doc.fullContentLength > maxCharsPerDoc
-          : false,
-        loadedChars: maxCharsPerDoc
-          ? Math.min(maxCharsPerDoc, doc.fullContentLength)
-          : doc.fullContentLength,
-      };
+      // TODO: Trigger RAG indexing if searchable
+      if (makeSearchable) {
+        const version = await tx.query.documentVersion.findFirst({
+          where: eq(documentVersion.id, versionId),
+        });
+
+        if (version) {
+          // await syncDocumentToRAG({
+          //   id: documentEnvelopeId,
+          //   title: updated.title,
+          //   content: version.content,
+          //   documentType: updated.documentType,
+          //   workspaceId: updated.workspaceId,
+          //   metadata: version.metadata
+          // });
+        }
+      }
     });
-  } catch (error) {
-    throw new ChatSDKError(
-      'bad_request:database',
-      'Failed to get documents for user',
-    );
   }
-}
 
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 Bytes';
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${Number.parseFloat((bytes / k ** i).toFixed(2))} ${sizes[i]}`;
-}
-
-// ============================================================================
-// NEW FUNCTIONS FOR MILESTONE 1: Knowledge Management MVP
-// ============================================================================
-
-/**
- * Toggle document searchability and sync with RAG
- * Synchronous operation - errors will be thrown to caller
- */
-export async function toggleDocumentSearchable(
-  documentId: string,
-  workspaceId: string,
-  isSearchable: boolean,
-) {
-  try {
-    logger.debug('[toggleDocumentSearchable] Starting', {
-      documentId,
-      workspaceId,
-      isSearchable,
-    });
-
-    // Update database
-    const [updated] = await db
-      .update(document)
-      .set({ isSearchable })
-      .where(
-        and(
-          eq(document.id, documentId),
-          eq(document.workspaceId, workspaceId),
-          isNull(document.deletedAt),
-        ),
-      )
-      .returning();
-
-    if (!updated) {
-      throw new ChatSDKError(
-        'bad_request:database',
-        'Document not found or already deleted',
-      );
-    }
-
-    // Sync with RAG based on new state (SYNCHRONOUS)
-    if (isSearchable) {
-      logger.debug('[toggleDocumentSearchable] Adding to RAG', { documentId });
-      await syncDocumentToRAG(documentId, workspaceId);
-      logger.info('[toggleDocumentSearchable] Document added to RAG', {
-        documentId,
+  /**
+   * Unpublish a document
+   */
+  async unpublishDocument(documentEnvelopeId: string): Promise<void> {
+    await db.transaction(async (tx) => {
+      const envelope = await tx.query.documentEnvelope.findFirst({
+        where: eq(documentEnvelope.id, documentEnvelopeId),
       });
-    } else {
-      logger.debug('[toggleDocumentSearchable] Removing from RAG', {
-        documentId,
-      });
-      await deleteFromRAG(documentId, workspaceId);
-      logger.info('[toggleDocumentSearchable] Document removed from RAG', {
-        documentId,
-      });
-    }
 
-    return updated;
-  } catch (error) {
-    logger.error('[toggleDocumentSearchable] Failed', {
-      documentId,
-      workspaceId,
-      isSearchable,
-      error,
-      errorMessage: error instanceof Error ? error.message : String(error),
-    });
-    throw error instanceof ChatSDKError
-      ? error
-      : new ChatSDKError(
-          'bad_request:database',
-          'Failed to toggle document searchable',
+      if (!envelope) throw new Error('Document not found');
+
+      // Remove from RAG if it was searchable
+      if (envelope.isSearchable) {
+        // await removeDocumentFromRAG(documentEnvelopeId);
+      }
+
+      // Clear published flag on all versions
+      await tx
+        .update(documentVersion)
+        .set({ isActivePublished: false })
+        .where(
+          and(
+            eq(documentVersion.documentEnvelopeId, documentEnvelopeId),
+            eq(documentVersion.isActivePublished, true),
+          ),
         );
+
+      // Clear searchable flag on envelope
+      await tx
+        .update(documentEnvelope)
+        .set({
+          isSearchable: false,
+          updatedAt: new Date(),
+        })
+        .where(eq(documentEnvelope.id, documentEnvelopeId));
+    });
+  }
+
+  /**
+   * Get only published documents for workspace
+   */
+  async getPublishedDocuments(
+    workspaceId: string,
+  ): Promise<DocumentWithVersions[]> {
+    const envelopes = await db.query.documentEnvelope.findMany({
+      where: eq(documentEnvelope.workspaceId, workspaceId),
+      with: {
+        versions: {
+          where: eq(documentVersion.isActivePublished, true),
+          limit: 1,
+        },
+      },
+    });
+
+    return envelopes
+      .filter((e) => e.versions.length > 0) // Only include if published version exists
+      .map((e) => ({
+        envelope: e,
+        currentPublished: e.versions[0],
+        currentDraft: null,
+        allVersions: [],
+      }));
+  }
+
+  /**
+   * Get document with all versions
+   */
+  async getDocumentWithVersions(
+    documentEnvelopeId: string,
+  ): Promise<DocumentWithVersions | null> {
+    const envelope = await db.query.documentEnvelope.findFirst({
+      where: eq(documentEnvelope.id, documentEnvelopeId),
+      with: {
+        versions: {
+          orderBy: desc(documentVersion.versionNumber),
+        },
+      },
+    });
+
+    if (!envelope) return null;
+
+    const currentDraft =
+      envelope.versions?.find((v) => v.isActiveDraft) || null;
+    const currentPublished =
+      envelope.versions?.find((v) => v.isActivePublished) || null;
+
+    return {
+      envelope,
+      currentDraft,
+      currentPublished,
+      allVersions: envelope.versions || [],
+    };
+  }
+
+  /**
+   * Count draft documents per workspace (unpublished only)
+   */
+  async getDraftCountByWorkspace(workspaceId: string): Promise<number> {
+    const results = await db
+      .select({
+        envelopeId: documentVersion.documentEnvelopeId,
+      })
+      .from(documentVersion)
+      .where(
+        and(
+          eq(documentVersion.workspaceId, workspaceId),
+          eq(documentVersion.isActiveDraft, true),
+          eq(documentVersion.isActivePublished, false),
+        ),
+      )
+      .groupBy(documentVersion.documentEnvelopeId);
+
+    return results.length;
+  }
+
+  /**
+   * Toggle document searchability
+   */
+  async toggleDocumentSearchable(documentEnvelopeId: string): Promise<boolean> {
+    return await db.transaction(async (tx) => {
+      const envelope = await tx.query.documentEnvelope.findFirst({
+        where: eq(documentEnvelope.id, documentEnvelopeId),
+      });
+
+      if (!envelope) {
+        throw new Error('Document not found');
+      }
+
+      // Check if there's a published version
+      const publishedVersion = await tx.query.documentVersion.findFirst({
+        where: and(
+          eq(documentVersion.documentEnvelopeId, documentEnvelopeId),
+          eq(documentVersion.isActivePublished, true),
+        ),
+      });
+
+      if (!publishedVersion) {
+        throw new Error('Document not published');
+      }
+
+      const newSearchableState = !envelope.isSearchable;
+
+      // Update the flag
+      await tx
+        .update(documentEnvelope)
+        .set({
+          isSearchable: newSearchableState,
+          updatedAt: new Date(),
+        })
+        .where(eq(documentEnvelope.id, documentEnvelopeId));
+
+      // Sync with RAG
+      if (newSearchableState) {
+        // await syncDocumentToRAG({
+        //   id: documentEnvelopeId,
+        //   title: envelope.title,
+        //   content: publishedVersion.content,
+        //   documentType: envelope.documentType,
+        //   workspaceId: envelope.workspaceId,
+        //   metadata: publishedVersion.metadata
+        // });
+      } else {
+        // await removeDocumentFromRAG(documentEnvelopeId);
+      }
+
+      return newSearchableState;
+    });
+  }
+
+  /**
+   * Create or get standalone draft (no message context)
+   */
+  async getOrCreateStandaloneDraft(
+    documentEnvelopeId: string,
+    workspaceId: string,
+    userId: string,
+  ): Promise<DocumentVersion> {
+    return await db.transaction(async (tx) => {
+      // Check for existing standalone draft (messageId = null, isActiveDraft = true)
+      const existingDraft = await tx.query.documentVersion.findFirst({
+        where: and(
+          eq(documentVersion.documentEnvelopeId, documentEnvelopeId),
+          eq(documentVersion.isActiveDraft, true),
+          isNull(documentVersion.messageId),
+        ),
+      });
+
+      if (existingDraft) {
+        return existingDraft; // Reuse existing standalone draft
+      }
+
+      // Get published content to copy
+      const published = await tx.query.documentVersion.findFirst({
+        where: and(
+          eq(documentVersion.documentEnvelopeId, documentEnvelopeId),
+          eq(documentVersion.isActivePublished, true),
+        ),
+      });
+
+      if (!published) {
+        throw new Error('Cannot create draft - no published version exists');
+      }
+
+      // Get next version number
+      const maxVersion = await tx
+        .select({ max: max(documentVersion.versionNumber) })
+        .from(documentVersion)
+        .where(eq(documentVersion.documentEnvelopeId, documentEnvelopeId));
+
+      // Create new standalone draft
+      const [draft] = await tx
+        .insert(documentVersion)
+        .values({
+          documentEnvelopeId,
+          workspaceId,
+          messageId: null, // No message context - marks as standalone
+          content: published.content,
+          metadata: published.metadata,
+          kind: published.kind,
+          versionNumber: (maxVersion[0].max || 0) + 1,
+          isActiveDraft: false, // Will be set to true below
+          isActivePublished: false,
+          createdByUserId: userId,
+        })
+        .returning();
+
+      // Move active draft flag to new version
+      await moveActiveFlag(tx, documentEnvelopeId, draft.id, 'isActiveDraft');
+
+      return draft;
+    });
+  }
+
+  /**
+   * Check if document has unpublished changes
+   */
+  async hasUnpublishedDraft(documentEnvelopeId: string): Promise<boolean> {
+    const draft = await db.query.documentVersion.findFirst({
+      where: and(
+        eq(documentVersion.documentEnvelopeId, documentEnvelopeId),
+        eq(documentVersion.isActiveDraft, true),
+      ),
+    });
+
+    const published = await db.query.documentVersion.findFirst({
+      where: and(
+        eq(documentVersion.documentEnvelopeId, documentEnvelopeId),
+        eq(documentVersion.isActivePublished, true),
+      ),
+    });
+
+    // Has draft and either no published or draft differs from published
+    return !!(draft && (!published || draft.id !== published.id));
+  }
+
+  /**
+   * Discard standalone draft
+   */
+  async discardStandaloneDraft(documentEnvelopeId: string): Promise<void> {
+    await db.transaction(async (tx) => {
+      // Find standalone draft (messageId = null, isActiveDraft = true)
+      const draft = await tx.query.documentVersion.findFirst({
+        where: and(
+          eq(documentVersion.documentEnvelopeId, documentEnvelopeId),
+          eq(documentVersion.isActiveDraft, true),
+          isNull(documentVersion.messageId),
+        ),
+      });
+
+      if (!draft) return; // Not a standalone draft
+
+      // Delete the draft version
+      await tx.delete(documentVersion).where(eq(documentVersion.id, draft.id));
+    });
+  }
+
+  /**
+   * Clean orphaned versions from workspace (Phase 3)
+   * Orphaned = messageId IS NULL AND isActivePublished = false
+   */
+  async cleanOrphanedVersions(workspaceId: string): Promise<number> {
+    const result = await db
+      .delete(documentVersion)
+      .where(
+        and(
+          eq(documentVersion.workspaceId, workspaceId),
+          isNull(documentVersion.messageId),
+          eq(documentVersion.isActivePublished, false),
+        ),
+      )
+      .returning({ id: documentVersion.id });
+
+    return result.length;
   }
 }
 
-/**
- * Group documents by date for UI display
- * Matches chat grouping logic for consistency
- */
-export function groupDocumentsByDate<T extends { createdAt: Date }>(
-  documents: T[],
-): {
-  today: T[];
-  yesterday: T[];
-  lastWeek: T[];
-  lastMonth: T[];
-  older: T[];
-} {
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const lastWeek = new Date(today);
-  lastWeek.setDate(lastWeek.getDate() - 7);
-  const lastMonth = new Date(today);
-  lastMonth.setDate(lastMonth.getDate() - 30);
+// ============================================================================
+// DEPRECATED: Backward compatibility exports for Phase 1
+// These re-export the old DAL functions to prevent breaking changes
+// TODO Phase 2: Remove these and update all consumers to use DocumentsDAL
+// ============================================================================
 
-  return {
-    today: documents.filter((d) => d.createdAt >= today),
-    yesterday: documents.filter(
-      (d) => d.createdAt >= yesterday && d.createdAt < today,
-    ),
-    lastWeek: documents.filter(
-      (d) => d.createdAt >= lastWeek && d.createdAt < yesterday,
-    ),
-    lastMonth: documents.filter(
-      (d) => d.createdAt >= lastMonth && d.createdAt < lastWeek,
-    ),
-    older: documents.filter((d) => d.createdAt < lastMonth),
-  };
-}
-
-/**
- * Extract source chat metadata from document metadata
- * Returns undefined if no source chat info present
- */
-function extractSourceChat(
-  metadata: Record<string, unknown> | null,
-): { id: string; title: string } | undefined {
-  if (!metadata?.sourceChatId) return undefined;
-
-  return {
-    id: metadata.sourceChatId as string,
-    title: (metadata.sourceChatTitle as string) || 'Untitled Chat',
-  };
-}
+export {
+  saveDocument,
+  updateDocument,
+  deleteDocument,
+  softDeleteDocument,
+  getDocumentsById,
+  getDocumentById,
+  deleteDocumentsByIdAfterTimestamp,
+  getAllUserDocuments,
+  getWorkspaceDocumentsPaginated,
+  getWorkspaceDocuments,
+  getDocumentForUser,
+  getDocumentsForUser,
+  toggleDocumentSearchable,
+  groupDocumentsByDate,
+} from './documents-deprecated';

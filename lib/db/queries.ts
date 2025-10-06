@@ -27,6 +27,14 @@ import {
   type Chat,
   type ChatMode,
   stream,
+  document,
+  documentEnvelope,
+  documentVersion,
+  documentEnvelopeRelations,
+  documentVersionRelations,
+  workspace,
+  playbook,
+  playbookStep,
 } from './schema';
 import type { VisibilityType } from '@/components/visibility-selector';
 import { ChatSDKError } from '../errors';
@@ -36,7 +44,23 @@ import { ChatSDKError } from '../errors';
 // https://authjs.dev/reference/adapter/drizzle
 
 // Using @vercel/postgres for better serverless support
-const db = drizzle(vercelSql);
+const db = drizzle(vercelSql, {
+  schema: {
+    user,
+    chat,
+    message,
+    vote,
+    stream,
+    document,
+    documentEnvelope,
+    documentVersion,
+    documentEnvelopeRelations,
+    documentVersionRelations,
+    workspace,
+    playbook,
+    playbookStep,
+  },
+});
 
 // Export db instance for use in other files
 export { db };
