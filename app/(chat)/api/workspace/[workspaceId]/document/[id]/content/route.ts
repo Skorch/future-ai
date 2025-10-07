@@ -1,4 +1,4 @@
-import { updateDocumentContentAction } from '@/lib/workspace/document-actions';
+import { updatePublishedDocumentAction } from '@/lib/workspace/document-actions';
 
 export async function PATCH(
   request: Request,
@@ -8,7 +8,7 @@ export async function PATCH(
 
   try {
     const body = await request.json();
-    const { content, title } = body;
+    const { content } = body;
 
     if (!content || typeof content !== 'string') {
       return Response.json(
@@ -17,14 +17,14 @@ export async function PATCH(
       );
     }
 
-    if (title !== undefined && typeof title !== 'string') {
-      return Response.json(
-        { error: 'Title must be a string' },
-        { status: 400 },
-      );
-    }
-
-    const result = await updateDocumentContentAction(id, content, workspaceId);
+    // Use updatePublishedDocumentAction for /document/[id]/edit route
+    // This creates a new version and immediately publishes it
+    // (Different from artifact editor which creates drafts)
+    const result = await updatePublishedDocumentAction(
+      id, // documentEnvelopeId
+      content,
+      workspaceId,
+    );
 
     return Response.json(result);
   } catch (error) {
