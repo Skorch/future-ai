@@ -11,7 +11,7 @@ import {
   saveDocumentDraft,
 } from '@/lib/db/documents';
 import { getLogger } from '@/lib/logger';
-import { revalidatePath } from 'next/cache';
+import { revalidateDocumentPaths } from '@/lib/cache/document-cache.server';
 
 const logger = getLogger('DocumentActions');
 
@@ -47,7 +47,7 @@ export async function publishDocumentAction(
       userId,
     });
 
-    revalidatePath(`/workspace/${workspaceId}/document`);
+    revalidateDocumentPaths(workspaceId, documentEnvelopeId);
     return { success: true };
   } catch (error) {
     logger.error('Failed to publish document', {
@@ -88,7 +88,7 @@ export async function unpublishDocumentAction(
       userId,
     });
 
-    revalidatePath(`/workspace/${workspaceId}/document`);
+    revalidateDocumentPaths(workspaceId, documentEnvelopeId);
     return { success: true };
   } catch (error) {
     logger.error('Failed to unpublish document', {
@@ -129,7 +129,7 @@ export async function toggleDocumentSearchableAction(
       userId,
     });
 
-    revalidatePath(`/workspace/${workspaceId}/document`);
+    revalidateDocumentPaths(workspaceId, documentEnvelopeId);
     return { success: true, isSearchable };
   } catch (error) {
     logger.error('Failed to toggle document searchable', {
@@ -183,6 +183,9 @@ export async function autoSaveDocumentDraftAction(
       userId,
       hasMessageId: !!effectiveMessageId,
     });
+
+    // Revalidate Next.js cache so server-rendered pages show updates
+    revalidateDocumentPaths(workspaceId, documentEnvelopeId);
 
     return { success: true, versionId: version.id };
   } catch (error) {
@@ -267,7 +270,7 @@ export async function discardStandaloneDraftAction(
       userId,
     });
 
-    revalidatePath(`/workspace/${workspaceId}/document/${documentEnvelopeId}`);
+    revalidateDocumentPaths(workspaceId, documentEnvelopeId);
     return { success: true };
   } catch (error) {
     logger.error('Failed to discard standalone draft', {
@@ -313,6 +316,71 @@ export async function deleteDocumentAction(
 }
 
 /**
+ * Update published document - creates and immediately publishes a new version
+ * Used by document edit page (/workspace/.../document/.../edit)
+ * This is different from auto-save which creates drafts
+ */
+export async function updatePublishedDocumentAction(
+  documentEnvelopeId: string,
+  content: string,
+  workspaceId: string,
+) {
+  const { userId } = await auth();
+
+  if (!userId) {
+    throw new Error('Unauthorized');
+  }
+
+  try {
+    // Security: Verify user has access to this document's workspace
+    const doc = await getDocumentWithVersions(documentEnvelopeId);
+    if (!doc || doc.envelope.workspaceId !== workspaceId) {
+      throw new Error('Access denied');
+    }
+
+    // Verify there's a published version (this route only edits published docs)
+    if (!doc.currentPublished) {
+      throw new Error('No published version to edit');
+    }
+
+    // Create a new draft version
+    const newVersion = await saveDocumentDraft({
+      documentEnvelopeId,
+      content,
+      messageId: null, // Standalone edit, no message
+      workspaceId,
+      userId,
+    });
+
+    // Immediately publish it (keeping searchable state)
+    await publishDocument(
+      documentEnvelopeId,
+      newVersion.id,
+      doc.envelope.isSearchable,
+    );
+
+    logger.info('Published document updated', {
+      documentEnvelopeId,
+      versionId: newVersion.id,
+      workspaceId,
+      userId,
+    });
+
+    // Revalidate Next.js cache so server-rendered pages show updates
+    revalidateDocumentPaths(workspaceId, documentEnvelopeId);
+
+    return { success: true, versionId: newVersion.id };
+  } catch (error) {
+    logger.error('Failed to update published document', {
+      documentEnvelopeId,
+      workspaceId,
+      error,
+    });
+    throw error;
+  }
+}
+
+/**
  * Quick publish - publishes active draft with default settings (searchable=true)
  * Used by QuickPublishButton in document preview
  */
@@ -355,7 +423,7 @@ export async function quickPublishDocumentAction(
       userId,
     });
 
-    revalidatePath(`/workspace/${workspaceId}/document`);
+    revalidateDocumentPaths(workspaceId, documentEnvelopeId);
     return { success: true };
   } catch (error) {
     logger.error('Failed to quick-publish document', {
