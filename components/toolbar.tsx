@@ -29,6 +29,12 @@ import { artifactDefinitions, type ArtifactKind } from './artifact';
 import type { ArtifactToolbarItem } from './create-artifact';
 import type { UseChatHelpers } from '@ai-sdk/react';
 import type { ChatMessage } from '@/lib/types';
+import { CheckCircle2Icon, UploadIcon } from 'lucide-react';
+import {
+  publishDocumentAction,
+  unpublishDocumentAction,
+} from '@/lib/workspace/document-actions';
+import { toast } from 'sonner';
 
 type ToolProps = {
   description: string;
@@ -243,6 +249,112 @@ const ReadingLevelSelector = ({
   );
 };
 
+const PublishButton = ({
+  isPublished,
+  isAnimating,
+  documentEnvelopeId,
+  workspaceId,
+  versionId,
+  mutateDocuments,
+  mutateEnvelope,
+}: {
+  isPublished: boolean;
+  isAnimating: boolean;
+  documentEnvelopeId: string;
+  workspaceId: string | undefined;
+  versionId: string | undefined;
+  mutateDocuments: () => void;
+  mutateEnvelope: () => void;
+}) => {
+  const [isHovered, setIsHovered] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+
+  const handleClick = async () => {
+    if (publishing || !workspaceId) return;
+
+    setPublishing(true);
+    try {
+      if (isPublished) {
+        // Unpublish
+        await unpublishDocumentAction(documentEnvelopeId, workspaceId);
+        toast.success('Document unpublished');
+      } else {
+        // Publish
+        if (!versionId) {
+          toast.error('No draft version to publish');
+          return;
+        }
+        await publishDocumentAction(
+          documentEnvelopeId,
+          versionId,
+          true, // Always make searchable
+          workspaceId,
+        );
+        toast.success('Document published successfully');
+      }
+      // Refresh both document and envelope data
+      mutateDocuments();
+      mutateEnvelope();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to update document',
+      );
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  return (
+    <Tooltip open={isHovered && !isAnimating}>
+      <TooltipTrigger asChild>
+        <motion.div
+          className={cx('p-3 rounded-full', {
+            'bg-green-600 text-white': isPublished,
+          })}
+          onHoverStart={() => setIsHovered(true)}
+          onHoverEnd={() => setIsHovered(false)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              handleClick();
+            }
+          }}
+          initial={{ scale: 1, opacity: 0 }}
+          animate={{ opacity: 1, transition: { delay: 0.1 } }}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.95 }}
+          exit={{
+            scale: 0.9,
+            opacity: 0,
+            transition: { duration: 0.1 },
+          }}
+          onClick={handleClick}
+        >
+          {publishing ? (
+            <div className="animate-spin">
+              <UploadIcon className="size-4" />
+            </div>
+          ) : isPublished ? (
+            <CheckCircle2Icon className="size-4" />
+          ) : (
+            <UploadIcon className="size-4" />
+          )}
+        </motion.div>
+      </TooltipTrigger>
+      <TooltipContent
+        side="left"
+        sideOffset={16}
+        className="bg-foreground text-background rounded-2xl p-3 px-4"
+      >
+        {publishing
+          ? 'Publishing...'
+          : isPublished
+            ? 'Click to unpublish'
+            : 'Publish to workspace'}
+      </TooltipContent>
+    </Tooltip>
+  );
+};
+
 export const Tools = ({
   isToolbarVisible,
   selectedTool,
@@ -251,6 +363,13 @@ export const Tools = ({
   isAnimating,
   setIsToolbarVisible,
   tools,
+  documentEnvelopeId,
+  isPublished,
+  workspaceId,
+  versionId,
+  mutateDocuments,
+  mutateEnvelope,
+  isReadonly,
 }: {
   isToolbarVisible: boolean;
   selectedTool: string | null;
@@ -259,6 +378,13 @@ export const Tools = ({
   isAnimating: boolean;
   setIsToolbarVisible: Dispatch<SetStateAction<boolean>>;
   tools: Array<ArtifactToolbarItem>;
+  documentEnvelopeId: string;
+  isPublished: boolean;
+  workspaceId: string | undefined;
+  versionId: string | undefined;
+  mutateDocuments: () => void;
+  mutateEnvelope: () => void;
+  isReadonly: boolean;
 }) => {
   const [primaryTool, ...secondaryTools] = tools;
 
@@ -296,6 +422,19 @@ export const Tools = ({
         isAnimating={isAnimating}
         onClick={primaryTool.onClick}
       />
+
+      {/* Publish/Unpublish button - always visible alongside primary tool */}
+      {!isReadonly && workspaceId && documentEnvelopeId !== 'init' && (
+        <PublishButton
+          isPublished={isPublished}
+          isAnimating={isAnimating}
+          documentEnvelopeId={documentEnvelopeId}
+          workspaceId={workspaceId}
+          versionId={versionId}
+          mutateDocuments={mutateDocuments}
+          mutateEnvelope={mutateEnvelope}
+        />
+      )}
     </motion.div>
   );
 };
@@ -308,6 +447,13 @@ const PureToolbar = ({
   stop,
   setMessages,
   artifactKind,
+  documentEnvelopeId,
+  isPublished,
+  workspaceId,
+  isReadonly,
+  versionId,
+  mutateDocuments,
+  mutateEnvelope,
 }: {
   isToolbarVisible: boolean;
   setIsToolbarVisible: Dispatch<SetStateAction<boolean>>;
@@ -316,6 +462,13 @@ const PureToolbar = ({
   stop: UseChatHelpers<ChatMessage>['stop'];
   setMessages: UseChatHelpers<ChatMessage>['setMessages'];
   artifactKind: ArtifactKind;
+  documentEnvelopeId: string;
+  isPublished: boolean;
+  workspaceId: string | undefined;
+  isReadonly: boolean;
+  versionId: string | undefined;
+  mutateDocuments: () => void;
+  mutateEnvelope: () => void;
 }) => {
   const toolbarRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
@@ -449,6 +602,13 @@ const PureToolbar = ({
             setIsToolbarVisible={setIsToolbarVisible}
             setSelectedTool={setSelectedTool}
             tools={toolsByArtifactKind}
+            documentEnvelopeId={documentEnvelopeId}
+            isPublished={isPublished}
+            workspaceId={workspaceId}
+            versionId={versionId}
+            mutateDocuments={mutateDocuments}
+            mutateEnvelope={mutateEnvelope}
+            isReadonly={isReadonly}
           />
         )}
       </motion.div>
@@ -460,6 +620,9 @@ export const Toolbar = memo(PureToolbar, (prevProps, nextProps) => {
   if (prevProps.status !== nextProps.status) return false;
   if (prevProps.isToolbarVisible !== nextProps.isToolbarVisible) return false;
   if (prevProps.artifactKind !== nextProps.artifactKind) return false;
+  if (prevProps.isPublished !== nextProps.isPublished) return false;
+  if (prevProps.documentEnvelopeId !== nextProps.documentEnvelopeId)
+    return false;
 
   return true;
 });

@@ -8,6 +8,7 @@ import {
   useCallback,
   useEffect,
   useState,
+  useMemo,
 } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 import { useDebounceCallback, useWindowSize } from 'usehooks-ts';
@@ -23,8 +24,8 @@ import { useSidebar } from './ui/sidebar';
 import { useArtifact } from '@/hooks/use-artifact';
 import { textArtifact } from '@/lib/artifacts/document-types/text/client';
 import equal from 'fast-deep-equal';
-import { SimplePublishBar } from './simple-publish-bar';
 import { autoSaveDocumentDraftAction } from '@/lib/workspace/document-actions';
+import { createDocumentCacheMutator } from '@/lib/cache/document-cache';
 
 const logger = getLogger('Artifact');
 import type { UseChatHelpers } from '@ai-sdk/react';
@@ -124,10 +125,8 @@ function PureArtifact({
     artifact.documentId !== 'init' && workspaceId
       ? `/api/workspace/${workspaceId}/document-envelope/${artifact.documentId}`
       : null;
-  const { data: docWithVersions } = useSWR<DocumentWithVersions | null>(
-    envelopeFetchUrl,
-    fetcher,
-  );
+  const { data: docWithVersions, mutate: mutateEnvelope } =
+    useSWR<DocumentWithVersions | null>(envelopeFetchUrl, fetcher);
 
   const [mode, setMode] = useState<'edit' | 'diff'>('edit');
   const [document, setDocument] = useState<Document | null>(null);
@@ -171,53 +170,76 @@ function PureArtifact({
     mutateDocuments();
   }, [artifact.status, mutateDocuments]);
 
-  const { mutate } = useSWRConfig();
   const [isContentDirty, setIsContentDirty] = useState(false);
+
+  // Centralized cache mutator
+  const { mutate: globalMutate } = useSWRConfig();
+  const cacheMutator = useMemo(() => {
+    if (!workspaceId || artifact.documentId === 'init') {
+      return null;
+    }
+    return createDocumentCacheMutator(
+      globalMutate,
+      workspaceId,
+      artifact.documentId,
+    );
+  }, [globalMutate, workspaceId, artifact.documentId]);
 
   const handleContentChange = useCallback(
     async (updatedContent: string) => {
-      if (!artifact || !workspaceId) return;
+      if (!artifact || !workspaceId || !cacheMutator) {
+        logger.debug(
+          'Cannot save: missing artifact, workspaceId, or cache mutator',
+        );
+        setIsContentDirty(false);
+        return;
+      }
 
-      mutate<Array<Document>>(
-        `/api/document?id=${artifact.documentId}`,
-        async (currentDocuments) => {
-          if (!currentDocuments) return undefined;
+      logger.debug('Starting auto-save for document:', artifact.documentId);
 
-          const currentDocument = currentDocuments.at(-1);
+      try {
+        // Get current document for comparison
+        const currentDocument = documents?.at(-1);
 
-          if (!currentDocument || !currentDocument.content) {
-            setIsContentDirty(false);
-            return currentDocuments;
-          }
+        if (!currentDocument) {
+          logger.debug('No current document found, skipping save');
+          setIsContentDirty(false);
+          return;
+        }
 
-          if (currentDocument.content !== updatedContent) {
-            // Get messageId from current draft (Option C: hybrid approach)
-            const messageId = docWithVersions?.currentDraft?.messageId || null;
+        if (currentDocument.content === updatedContent) {
+          logger.debug('Content unchanged, skipping save');
+          setIsContentDirty(false);
+          return;
+        }
 
-            // Use new server action for auto-save
-            await autoSaveDocumentDraftAction(
-              artifact.documentId,
-              updatedContent,
-              workspaceId,
-              messageId,
-            );
+        logger.debug('Content changed, saving...');
 
-            setIsContentDirty(false);
+        // Get messageId from current draft
+        const messageId = docWithVersions?.currentDraft?.messageId || null;
 
-            const newDocument = {
-              ...currentDocument,
-              content: updatedContent,
-              createdAt: new Date(),
-            };
+        // Save to server (this also revalidates Next.js pages)
+        const result = await autoSaveDocumentDraftAction(
+          artifact.documentId,
+          updatedContent,
+          workspaceId,
+          messageId,
+        );
 
-            return [...currentDocuments, newDocument];
-          }
-          return currentDocuments;
-        },
-        { revalidate: false },
-      );
+        logger.debug('Save result:', result);
+
+        // Refresh ALL caches (SWR client-side caches)
+        await cacheMutator.invalidateAll();
+
+        logger.debug('All caches refreshed after save');
+      } catch (error) {
+        logger.error('Auto-save failed:', error);
+      } finally {
+        // Always clear dirty state after save attempt
+        setIsContentDirty(false);
+      }
     },
-    [artifact, mutate, workspaceId, docWithVersions],
+    [artifact, workspaceId, documents, docWithVersions, cacheMutator],
   );
 
   const debouncedHandleContentChange = useDebounceCallback(
@@ -227,7 +249,15 @@ function PureArtifact({
 
   const saveContent = useCallback(
     (updatedContent: string, debounce: boolean) => {
+      logger.debug('saveContent called', {
+        hasDocument: !!document,
+        contentLength: updatedContent?.length,
+        currentContentLength: document?.content?.length,
+        debounce,
+      });
+
       if (document && updatedContent !== document.content) {
+        logger.debug('Content differs, triggering save');
         setIsContentDirty(true);
 
         if (debounce) {
@@ -235,6 +265,8 @@ function PureArtifact({
         } else {
           handleContentChange(updatedContent);
         }
+      } else {
+        logger.debug('Content unchanged or no document, skipping save');
       }
     },
     [document, debouncedHandleContentChange, handleContentChange],
@@ -304,6 +336,25 @@ function PureArtifact({
       }
     }
   }, [artifact.documentId, artifactDefinition, setMetadata]);
+
+  // Save on page close/navigation
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      // Cancel debounced save and save immediately if dirty
+      if (isContentDirty && artifact.content) {
+        debouncedHandleContentChange.cancel();
+        handleContentChange(artifact.content);
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [
+    isContentDirty,
+    artifact.content,
+    debouncedHandleContentChange,
+    handleContentChange,
+  ]);
 
   return (
     <AnimatePresence>
@@ -532,25 +583,21 @@ function PureArtifact({
                     stop={stop}
                     setMessages={setMessages}
                     artifactKind={artifact.kind}
+                    documentEnvelopeId={artifact.documentId}
+                    isPublished={
+                      docWithVersions
+                        ? !!docWithVersions.currentPublished
+                        : false
+                    }
+                    workspaceId={workspaceId}
+                    isReadonly={isReadonly}
+                    versionId={docWithVersions?.currentDraft?.id}
+                    mutateDocuments={mutateDocuments}
+                    mutateEnvelope={mutateEnvelope}
                   />
                 )}
               </AnimatePresence>
             </div>
-
-            {/* Publish bar - positioned OUTSIDE scrollable content for independent click handling */}
-            {isCurrentVersion &&
-              !isReadonly &&
-              artifact.documentId !== 'init' &&
-              workspaceId &&
-              docWithVersions && (
-                <SimplePublishBar
-                  documentEnvelopeId={artifact.documentId}
-                  versionId={docWithVersions.currentDraft?.id}
-                  isPublished={!!docWithVersions.currentPublished}
-                  isSearchable={docWithVersions.envelope.isSearchable}
-                  workspaceId={workspaceId}
-                />
-              )}
 
             <AnimatePresence>
               {!isCurrentVersion && (
