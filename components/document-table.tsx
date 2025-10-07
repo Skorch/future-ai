@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import DataGrid, { type Column } from 'react-data-grid';
 import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
@@ -8,7 +8,20 @@ import { useWindowSize } from 'usehooks-ts';
 import { toast } from 'sonner';
 import { DocumentTypeBadge } from './document-type-badge';
 import { DocumentByteSize } from './document-byte-size';
-import { MoreHorizontalIcon, Edit, Trash, Check, X } from 'lucide-react';
+import {
+  MoreHorizontalIcon,
+  Edit,
+  Trash,
+  Check,
+  X,
+  Search,
+  SearchX,
+  FileX,
+} from 'lucide-react';
+import {
+  toggleDocumentSearchableAction,
+  unpublishDocumentAction,
+} from '@/lib/workspace/document-actions';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -80,6 +93,44 @@ export function DocumentTable({
 
     setDeleteDialogDoc(null);
   };
+
+  // Toggle searchable handler
+  const handleToggleSearchable = useCallback(
+    async (doc: { id: string; title: string; isSearchable: boolean }) => {
+      const promise = toggleDocumentSearchableAction(doc.id, workspaceId);
+
+      toast.promise(promise, {
+        loading: doc.isSearchable
+          ? 'Removing from Knowledge Base...'
+          : 'Adding to Knowledge Base...',
+        success: () => {
+          onDocumentDeleted?.(); // Revalidate list
+          return doc.isSearchable
+            ? `"${doc.title}" removed from Knowledge Base`
+            : `"${doc.title}" added to Knowledge Base`;
+        },
+        error: 'Failed to update document',
+      });
+    },
+    [workspaceId, onDocumentDeleted],
+  );
+
+  // Unpublish handler
+  const handleUnpublish = useCallback(
+    async (doc: { id: string; title: string }) => {
+      const promise = unpublishDocumentAction(doc.id, workspaceId);
+
+      toast.promise(promise, {
+        loading: 'Unpublishing document...',
+        success: () => {
+          onDocumentDeleted?.(); // Revalidate - will remove from published list
+          return `"${doc.title}" unpublished`;
+        },
+        error: 'Failed to unpublish document',
+      });
+    },
+    [workspaceId, onDocumentDeleted],
+  );
 
   const columns = useMemo<Column<DocumentRow>[]>(() => {
     const allColumns: Column<DocumentRow>[] = [
@@ -160,7 +211,7 @@ export function DocumentTable({
                 <span className="sr-only">Open menu</span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuItem
                 onClick={() =>
                   router.push(`/workspace/${workspaceId}/document/${row.id}`)
@@ -177,7 +228,37 @@ export function DocumentTable({
                 }
               >
                 <Edit className="mr-2 size-4" />
-                <span>Edit Document</span>
+                <span>Edit Draft</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() =>
+                  handleToggleSearchable({
+                    id: row.id,
+                    title: row.title,
+                    isSearchable: row.isSearchable,
+                  })
+                }
+              >
+                {row.isSearchable ? (
+                  <>
+                    <SearchX className="mr-2 size-4" />
+                    <span>Remove from KB</span>
+                  </>
+                ) : (
+                  <>
+                    <Search className="mr-2 size-4" />
+                    <span>Add to KB</span>
+                  </>
+                )}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() =>
+                  handleUnpublish({ id: row.id, title: row.title })
+                }
+              >
+                <FileX className="mr-2 size-4" />
+                <span>Unpublish</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
@@ -207,7 +288,14 @@ export function DocumentTable({
       );
     }
     return allColumns; // Desktop shows all
-  }, [isMobile, isTablet, workspaceId, router]);
+  }, [
+    isMobile,
+    isTablet,
+    workspaceId,
+    router,
+    handleToggleSearchable,
+    handleUnpublish,
+  ]);
 
   return (
     <>

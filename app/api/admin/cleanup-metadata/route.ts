@@ -1,41 +1,49 @@
 import { getLogger } from '@/lib/logger';
-
-const logger = getLogger('AdminCleanup');
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { cleanupTranscriptsFromMetadata } from '@/lib/db/cleanup-metadata';
+
+const logger = getLogger('AdminCleanup');
+
+/**
+ * DEPRECATED ENDPOINT
+ * This endpoint used cleanup-metadata which relied on the old Document table.
+ * The Document table has been removed in favor of DocumentEnvelope/DocumentVersion schema.
+ * This endpoint is kept for API compatibility but returns an error.
+ */
 
 export async function POST() {
   try {
-    // Check authentication
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    logger.info('[API] Starting metadata cleanup for user:', userId);
+    logger.error('[API] Deprecated endpoint called:', { userId });
 
-    // Run the cleanup
-    const result = await cleanupTranscriptsFromMetadata();
-
-    return NextResponse.json({
-      success: true,
-      ...result,
-      message: `Successfully cleaned ${result.cleanedDocuments} documents`,
-    });
-  } catch (error) {
-    logger.error('[API] Cleanup failed:', error);
     return NextResponse.json(
-      { error: 'Cleanup failed', details: String(error) },
-      { status: 500 },
+      {
+        error: 'DEPRECATED',
+        message:
+          'This endpoint is deprecated. The old Document table has been removed. See lib/db/cleanup-metadata-deprecated.ts for historical reference.',
+      },
+      { status: 410 },
+    ); // 410 Gone
+  } catch (error) {
+    logger.error('[API] Error in deprecated endpoint:', error);
+    return NextResponse.json(
+      { error: 'Endpoint deprecated', details: String(error) },
+      { status: 410 },
     );
   }
 }
 
 export async function GET() {
-  return NextResponse.json({
-    message:
-      'POST to this endpoint to clean transcripts from document metadata',
-    warning: 'This will modify your database. Make sure you have a backup.',
-  });
+  return NextResponse.json(
+    {
+      error: 'DEPRECATED',
+      message:
+        'This endpoint is deprecated. The old Document table has been removed.',
+    },
+    { status: 410 },
+  );
 }

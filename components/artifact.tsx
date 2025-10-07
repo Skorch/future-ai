@@ -24,6 +24,7 @@ import { useArtifact } from '@/hooks/use-artifact';
 import { textArtifact } from '@/lib/artifacts/document-types/text/client';
 import equal from 'fast-deep-equal';
 import { SimplePublishBar } from './simple-publish-bar';
+import { autoSaveDocumentDraftAction } from '@/lib/workspace/document-actions';
 
 const logger = getLogger('Artifact');
 import type { UseChatHelpers } from '@ai-sdk/react';
@@ -174,8 +175,8 @@ function PureArtifact({
   const [isContentDirty, setIsContentDirty] = useState(false);
 
   const handleContentChange = useCallback(
-    (updatedContent: string) => {
-      if (!artifact) return;
+    async (updatedContent: string) => {
+      if (!artifact || !workspaceId) return;
 
       mutate<Array<Document>>(
         `/api/document?id=${artifact.documentId}`,
@@ -190,18 +191,15 @@ function PureArtifact({
           }
 
           if (currentDocument.content !== updatedContent) {
-            await fetch(
-              workspaceId
-                ? `/api/workspace/${workspaceId}/document/${artifact.documentId}`
-                : `/api/document?id=${artifact.documentId}`,
-              {
-                method: 'POST',
-                body: JSON.stringify({
-                  title: artifact.title,
-                  content: updatedContent,
-                  kind: artifact.kind,
-                }),
-              },
+            // Get messageId from current draft (Option C: hybrid approach)
+            const messageId = docWithVersions?.currentDraft?.messageId || null;
+
+            // Use new server action for auto-save
+            await autoSaveDocumentDraftAction(
+              artifact.documentId,
+              updatedContent,
+              workspaceId,
+              messageId,
             );
 
             setIsContentDirty(false);
@@ -219,7 +217,7 @@ function PureArtifact({
         { revalidate: false },
       );
     },
-    [artifact, mutate, workspaceId],
+    [artifact, mutate, workspaceId, docWithVersions],
   );
 
   const debouncedHandleContentChange = useDebounceCallback(

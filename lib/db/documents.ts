@@ -125,7 +125,7 @@ export async function updateDocumentVersionsMessageId(
 export async function saveDocumentDraft(data: {
   documentEnvelopeId: string;
   content: string;
-  messageId: string;
+  messageId: string | null;
   workspaceId: string;
   userId: string;
   metadata?: Record<string, unknown>;

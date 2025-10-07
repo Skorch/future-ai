@@ -27,7 +27,6 @@ import {
   type Chat,
   type ChatMode,
   stream,
-  document,
   documentEnvelope,
   documentVersion,
   documentEnvelopeRelations,
@@ -38,6 +37,7 @@ import {
 } from './schema';
 import type { VisibilityType } from '@/components/visibility-selector';
 import { ChatSDKError } from '../errors';
+import { cleanOrphanedVersions } from './documents';
 
 // Optionally, if not using email/pass login, you can
 // use the Drizzle adapter for Auth.js / NextAuth
@@ -51,7 +51,6 @@ const db = drizzle(vercelSql, {
     message,
     vote,
     stream,
-    document,
     documentEnvelope,
     documentVersion,
     documentEnvelopeRelations,
@@ -167,6 +166,12 @@ export async function deleteChatById({
       .delete(chat)
       .where(and(eq(chat.id, id), eq(chat.workspaceId, workspaceId)))
       .returning();
+
+    // Clean up orphaned document versions after chat deletion
+    if (chatsDeleted) {
+      await cleanOrphanedVersions(workspaceId);
+    }
+
     return chatsDeleted;
   } catch (error) {
     throw new ChatSDKError(

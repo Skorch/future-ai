@@ -127,67 +127,29 @@ export const vote = pgTable(
 
 export type Vote = InferSelectModel<typeof vote>;
 
-export const document = pgTable(
-  'Document',
-  {
-    id: uuid('id').notNull().defaultRandom(),
-    createdAt: timestamp('createdAt').notNull(),
-    title: text('title').notNull(),
-    content: text('content'),
-    kind: varchar('kind', { enum: ['text'] }) // Only 'text' is implemented
-      .notNull()
-      .default('text'),
-    // NEW: Document type as first-class column (flexible string for dynamic types)
-    documentType: text('documentType').notNull().default('text'),
-    // NEW: Control whether document appears in RAG search results
-    isSearchable: boolean('isSearchable').notNull().default(true),
-    // NEW: Soft delete support (null = active, timestamp = deleted)
-    deletedAt: timestamp('deletedAt'),
-    workspaceId: uuid('workspaceId')
-      .references(() => workspace.id, { onDelete: 'cascade' })
-      .notNull(),
-    createdByUserId: varchar('createdByUserId', { length: 255 }).references(
-      () => user.id,
-      {
-        onDelete: 'set null',
-      },
-    ),
-    metadata: json('metadata')
-      .$type<{
-        documentType?: string; // Keep for backward compatibility during migration
-        fileName?: string;
-        fileSize?: number;
-        uploadedAt?: string;
-        meetingDate?: string;
-        participants?: string[];
-        [key: string]: unknown;
-      }>()
-      .default({}),
-    sourceDocumentIds: json('sourceDocumentIds').$type<string[]>().default([]),
-  },
-  (table) => ({
-    pk: primaryKey({ columns: [table.id, table.createdAt] }),
-    workspaceIdx: index('workspace_idx').on(table.workspaceId),
-    deletedAtIdx: index('idx_document_deleted_at').on(table.deletedAt),
-    searchableIdx: index('idx_document_searchable').on(table.isSearchable),
-    workspaceDeletedIdx: index('idx_document_workspace_deleted').on(
-      table.workspaceId,
-      table.deletedAt,
-    ),
-  }),
-);
+// REMOVED: Old Document table schema (migrated to DocumentEnvelope/DocumentVersion in Phase 1)
+// See migration 0004_shocking_steve_rogers.sql for new schema
+// Historical reference preserved in git history
 
-export type Document = InferSelectModel<typeof document>;
-
-// Extended document type with computed fields for UI
-export interface DocumentWithMetadata extends Document {
-  documentType: string;
-  characterCount: number;
-  sourceChat?: {
-    id: string;
-    title: string;
-  };
+/**
+ * API Response type for document version data
+ * This combines envelope metadata + version content for backward-compatible API responses
+ * Used by: /api/workspace/[workspaceId]/document/[id] GET endpoint
+ */
+export interface DocumentVersionResponse {
+  id: string; // envelope ID
+  versionId: string; // version ID
+  title: string; // from envelope
+  content: string; // from version
+  kind: string; // from version
+  createdAt: Date; // from version
+  metadata?: Record<string, unknown> | null; // from version
+  workspaceId: string; // from envelope
 }
+
+// Legacy Document type for backward compatibility during migration
+// Components using this should be updated to use DocumentVersionResponse
+export type Document = DocumentVersionResponse;
 
 // NEW: Document Lifecycle tables (draft/publish workflow)
 // Using flags on versions instead of circular FKs for simpler schema

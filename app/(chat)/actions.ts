@@ -5,10 +5,14 @@ import {
   deleteMessagesByChatIdAfterTimestamp,
   getMessageById,
   updateChatVisiblityById,
+  db,
 } from '@/lib/db/queries';
+import { chat } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
 import type { VisibilityType } from '@/components/visibility-selector';
 import { myProvider } from '@/lib/ai/providers';
 import { getLogger } from '@/lib/logger';
+import { cleanOrphanedVersions } from '@/lib/db/documents';
 
 const logger = getLogger('ChatActions');
 
@@ -42,6 +46,16 @@ export async function deleteTrailingMessages({ id }: { id: string }) {
     chatId: message.chatId,
     timestamp: message.createdAt,
   });
+
+  // Clean up orphaned document versions after message deletion
+  const [chatRecord] = await db
+    .select()
+    .from(chat)
+    .where(eq(chat.id, message.chatId));
+
+  if (chatRecord) {
+    await cleanOrphanedVersions(chatRecord.workspaceId);
+  }
 }
 
 export async function updateChatVisibility({

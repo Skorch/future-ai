@@ -8,6 +8,7 @@ import {
   discardStandaloneDraft,
   getDocumentWithVersions,
   getOrCreateStandaloneDraft,
+  saveDocumentDraft,
 } from '@/lib/db/documents';
 import { getLogger } from '@/lib/logger';
 import { revalidatePath } from 'next/cache';
@@ -141,6 +142,60 @@ export async function toggleDocumentSearchableAction(
 }
 
 /**
+ * Auto-save document draft changes
+ * Hybrid approach: uses messageId if available from document context, null for standalone edits
+ */
+export async function autoSaveDocumentDraftAction(
+  documentEnvelopeId: string,
+  content: string,
+  workspaceId: string,
+  messageId?: string | null,
+) {
+  const { userId } = await auth();
+
+  if (!userId) {
+    throw new Error('Unauthorized');
+  }
+
+  try {
+    // Security: Verify user has access to this document's workspace
+    const doc = await getDocumentWithVersions(documentEnvelopeId);
+    if (!doc || doc.envelope.workspaceId !== workspaceId) {
+      throw new Error('Access denied');
+    }
+
+    // Use provided messageId if available, otherwise null (standalone edit)
+    const effectiveMessageId = messageId !== undefined ? messageId : null;
+
+    const version = await saveDocumentDraft({
+      documentEnvelopeId,
+      content,
+      messageId: effectiveMessageId,
+      workspaceId,
+      userId,
+    });
+
+    logger.debug('Document draft auto-saved', {
+      documentEnvelopeId,
+      versionId: version.id,
+      versionNumber: version.versionNumber,
+      workspaceId,
+      userId,
+      hasMessageId: !!effectiveMessageId,
+    });
+
+    return { success: true, versionId: version.id };
+  } catch (error) {
+    logger.error('Failed to auto-save document draft', {
+      documentEnvelopeId,
+      workspaceId,
+      error,
+    });
+    throw error;
+  }
+}
+
+/**
  * Create standalone draft from published document (for editing)
  */
 export async function editPublishedDocumentAction(
@@ -232,29 +287,29 @@ export async function updateDocumentContentAction(
   content: string,
   workspaceId: string,
 ) {
-  const { updateDocument } = await import('@/lib/db/documents-deprecated');
   const { userId } = await auth();
   if (!userId) throw new Error('Unauthorized');
 
-  await updateDocument(documentId, { content });
-  revalidatePath(`/workspace/${workspaceId}/document`);
-  return { success: true };
+  // DEPRECATED: Use autoSaveDocumentDraftAction instead
+  throw new Error(
+    'updateDocumentContentAction is deprecated. Use autoSaveDocumentDraftAction with envelope/version schema.',
+  );
 }
 
 /**
  * Delete document (deprecated - for backward compat)
+ * DEPRECATED: Document deletion should now delete the envelope and all versions via cascade
  */
 export async function deleteDocumentAction(
   documentId: string,
   workspaceId: string,
 ) {
-  const { softDeleteDocument } = await import('@/lib/db/documents-deprecated');
   const { userId } = await auth();
   if (!userId) throw new Error('Unauthorized');
 
-  await softDeleteDocument(documentId, workspaceId);
-  revalidatePath(`/workspace/${workspaceId}/document`);
-  return { success: true };
+  throw new Error(
+    'deleteDocumentAction is deprecated. Implement envelope deletion if needed.',
+  );
 }
 
 /**

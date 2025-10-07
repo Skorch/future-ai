@@ -10,17 +10,19 @@ import { DocumentSearchBar } from '@/components/document-search-bar';
 import { DocumentFilterBar } from '@/components/document-filter-bar';
 import { Button } from '@/components/ui/button';
 import { LoaderIcon } from '@/components/icons';
-import type { Document } from '@/lib/db/schema';
+// Document type removed - using envelope/version schema
 import { SidebarToggle } from '@/components/sidebar-toggle';
 import { useSidebar } from '@/components/ui/sidebar';
 
 interface PaginatedResponse {
-  documents: Array<
-    Document & {
-      contentLength: number;
-      metadata: { documentType?: string } | null;
-    }
-  >;
+  documents: Array<{
+    id: string;
+    title: string;
+    contentLength: number;
+    metadata: { documentType?: string } | Record<string, unknown> | null;
+    createdAt: Date;
+    isSearchable: boolean;
+  }>;
   totalCount: number;
   hasMore: boolean;
   nextCursor: string | null;
@@ -85,7 +87,12 @@ export default function DocumentListPage({
   const documentTypes = useMemo(() => {
     const types = new Set<string>();
     documents.forEach((doc) => {
-      const type = doc.metadata?.documentType || 'text';
+      const type =
+        (doc.metadata &&
+        typeof doc.metadata === 'object' &&
+        'documentType' in doc.metadata
+          ? (doc.metadata as { documentType?: string }).documentType
+          : undefined) || 'text';
       types.add(type);
     });
     return Array.from(types).sort();

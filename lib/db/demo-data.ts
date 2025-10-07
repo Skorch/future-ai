@@ -1,4 +1,4 @@
-import { chat, message, document, workspace } from '@/lib/db/schema';
+import { chat, message, workspace } from '@/lib/db/schema';
 import { eq, and, isNull } from 'drizzle-orm';
 import { db } from '@/lib/db/queries';
 import { createWorkspace } from '@/lib/workspace/queries';
@@ -203,47 +203,12 @@ async function cloneDemoWorkspace(userId: string): Promise<CloneResult> {
 
 /**
  * Clone all documents from source to target workspace
+ * DISABLED: Document cloning temporarily disabled during migration to DocumentEnvelope/DocumentVersion schema
+ * TODO Phase 4+: Re-implement using new schema with auto-publish
  */
 async function cloneDocuments(context: CloneContext): Promise<number> {
-  try {
-    // Fetch source documents and insert with transformed values
-    // INSERT-SELECT with DEFAULT not working reliably, using fetch-then-insert
-    const sourceDocuments = await db
-      .select()
-      .from(document)
-      .where(eq(document.workspaceId, context.sourceWorkspaceId));
-
-    if (sourceDocuments.length === 0) {
-      logger.debug('No documents to clone', { context });
-      return 0;
-    }
-
-    // Transform and batch insert - omit id to let DB auto-generate
-    const documentsToInsert = sourceDocuments.map((doc) => ({
-      createdAt: new Date(),
-      title: doc.title,
-      content: doc.content,
-      kind: doc.kind,
-      workspaceId: context.targetWorkspaceId,
-      createdByUserId: context.targetUserId,
-      metadata: doc.metadata,
-      sourceDocumentIds: doc.sourceDocumentIds,
-    }));
-
-    await db.insert(document).values(documentsToInsert);
-
-    logger.debug('Cloned documents', {
-      count: documentsToInsert.length,
-      context,
-    });
-    return documentsToInsert.length;
-  } catch (error) {
-    logger.error('Failed to clone documents', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-      context,
-    });
-    return 0;
-  }
+  logger.info('Document cloning disabled during schema migration', { context });
+  return 0;
 }
 
 /**
@@ -380,50 +345,10 @@ async function cloneVotes(context: CloneContext): Promise<number> {
 
 /**
  * Index cloned documents in RAG system
+ * DISABLED: RAG indexing disabled during document schema migration
  */
 async function indexClonedDocuments(context: CloneContext): Promise<void> {
-  try {
-    // Fetch all cloned documents
-    const documents = await db
-      .select()
-      .from(document)
-      .where(eq(document.workspaceId, context.targetWorkspaceId));
-
-    logger.info('Indexing cloned documents in RAG', {
-      count: documents.length,
-      workspaceId: context.targetWorkspaceId,
-    });
-
-    // Index each document
-    // TODO: Update for new envelope/version schema - currently uses deprecated document table
-    // for (const doc of documents) {
-    //   try {
-    //     await syncDocumentToRAG({
-    //       id: doc.id,
-    //       workspaceId: context.targetWorkspaceId,
-    //       content: doc.content,
-    //       title: doc.title,
-    //       documentType: doc.metadata?.documentType || 'text',
-    //       kind: doc.kind,
-    //       metadata: doc.metadata,
-    //       createdByUserId: doc.createdByUserId,
-    //       createdAt: doc.createdAt,
-    //     });
-    //   } catch (error) {
-    //     logger.error('Failed to index document in RAG', {
-    //       documentId: doc.id,
-    //       error: error instanceof Error ? error.message : 'Unknown error',
-    //     });
-    //   }
-    // }
-
-    logger.info('Completed RAG indexing for cloned documents', {
-      workspaceId: context.targetWorkspaceId,
-    });
-  } catch (error) {
-    logger.error('Failed to index cloned documents', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-      context,
-    });
-  }
+  logger.info('Document RAG indexing disabled during schema migration', {
+    context,
+  });
 }

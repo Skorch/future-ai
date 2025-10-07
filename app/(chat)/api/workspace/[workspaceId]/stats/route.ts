@@ -1,8 +1,7 @@
 import { auth } from '@clerk/nextjs/server';
 import { getWorkspaceById } from '@/lib/workspace/queries';
-import { getChatsByWorkspaceAndUser, db } from '@/lib/db/queries';
-import { document } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { getChatsByWorkspaceAndUser } from '@/lib/db/queries';
+import { getPublishedDocuments } from '@/lib/db/documents';
 import { getLogger } from '@/lib/logger';
 
 const logger = getLogger('WorkspaceStatsAPI');
@@ -34,11 +33,8 @@ export async function GET(
       endingBefore: null,
     });
 
-    // Get document count
-    const documents = await db
-      .select()
-      .from(document)
-      .where(eq(document.workspaceId, workspaceId));
+    // Get published document count (using new envelope/version schema)
+    const documents = await getPublishedDocuments(workspaceId);
 
     return Response.json({
       chatCount: chats.length,

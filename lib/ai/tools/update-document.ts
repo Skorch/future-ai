@@ -71,6 +71,7 @@ export const updateDocument = ({
       // Convert to old document format for backward compat with handlers
       const legacyDocument = {
         id: docWithVersions.envelope.id,
+        versionId: currentVersion.id,
         title: docWithVersions.envelope.title,
         content: currentVersion.content,
         kind: (currentVersion.kind || 'text') as 'text',

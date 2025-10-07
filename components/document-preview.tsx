@@ -99,14 +99,10 @@ export function DocumentPreview({
           kind: artifact.kind,
           content: artifact.content,
           id: artifact.documentId,
+          versionId: 'streaming',
           createdAt: new Date(),
           workspaceId: 'noop',
-          createdByUserId: 'noop',
-          documentType: 'text',
-          isSearchable: true,
-          deletedAt: null,
-          metadata: {},
-          sourceDocumentIds: [],
+          metadata: null,
         }
       : null;
 
@@ -123,7 +119,7 @@ export function DocumentPreview({
       )}
       <DocumentHeader
         title={document.title}
-        kind={document.kind}
+        kind={document.kind as 'text'}
         isStreaming={artifact.status === 'streaming'}
         documentId={document.id}
         workspaceId={workspaceId}
