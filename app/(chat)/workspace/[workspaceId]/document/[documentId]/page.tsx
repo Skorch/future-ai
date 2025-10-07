@@ -24,11 +24,12 @@ export default async function DocumentDetailPage({
     notFound();
   }
 
-  // Show published version by default, or draft if no published exists
-  const versionToShow =
-    docWithVersions.currentPublished || docWithVersions.currentDraft;
+  // ONLY show published version on this route
+  // Drafts are only viewable/editable in the artifact/chat interface
+  const versionToShow = docWithVersions.currentPublished;
 
   if (!versionToShow) {
+    // No published version exists - document hasn't been published yet
     notFound();
   }
 

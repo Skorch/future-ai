@@ -24,11 +24,14 @@ export default async function DocumentEditPage({
     notFound();
   }
 
-  // Edit the current draft version (or published if no draft exists)
-  const versionToEdit =
-    docWithVersions.currentDraft || docWithVersions.currentPublished;
+  // ONLY edit published version on this route
+  // Drafts are only editable in the artifact/chat interface
+  // When you save here, it creates a NEW published version
+  const versionToEdit = docWithVersions.currentPublished;
 
   if (!versionToEdit) {
+    // No published version exists - document hasn't been published yet
+    // Can't edit an unpublished document on this route
     notFound();
   }
 
