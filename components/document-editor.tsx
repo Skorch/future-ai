@@ -15,6 +15,9 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Card, CardContent, CardHeader } from './ui/card';
 import { debounce } from '@/lib/utils/debounce';
+import { useSWRConfig } from 'swr';
+import { createDocumentCacheMutator } from '@/lib/cache/document-cache';
+import { useMemo } from 'react';
 
 interface DocumentEditorProps {
   documentId: string;
@@ -37,6 +40,13 @@ export const DocumentEditor = forwardRef<
   const [title, setTitle] = useState(initialTitle);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const { mutate } = useSWRConfig();
+
+  // Centralized cache mutator
+  const cacheMutator = useMemo(
+    () => createDocumentCacheMutator(mutate, workspaceId, documentId),
+    [mutate, workspaceId, documentId],
+  );
 
   const editor = useEditor({
     extensions: [
@@ -82,13 +92,16 @@ export const DocumentEditor = forwardRef<
 
         setLastSaved(new Date());
         toast.success('Document saved', { duration: 1000 });
+
+        // Invalidate all document-related caches (both SWR and Next.js)
+        await cacheMutator.invalidateAll();
       } catch (error) {
         toast.error('Failed to save document');
       } finally {
         setIsSaving(false);
       }
     },
-    [documentId, workspaceId],
+    [documentId, workspaceId, cacheMutator],
   );
 
   // Debounced auto-save (2 second delay)
