@@ -6,6 +6,7 @@ import { createDocument, publishDocument } from '@/lib/db/documents';
 import { generateUUID } from '@/lib/utils';
 import { getActiveWorkspace } from '@/lib/workspace/context';
 import { getLogger } from '@/lib/logger';
+import { revalidateDocumentPaths } from '@/lib/cache/document-cache.server';
 
 const logger = getLogger('FileUploadAPI');
 
@@ -122,11 +123,16 @@ export async function POST(request: Request) {
       true, // makeSearchable
     );
 
+    // Revalidate Next.js cache so document pages show the published version
+    revalidateDocumentPaths(workspaceId, doc.envelope.id);
+
     logger.debug('Created and published transcript document', {
       documentId,
       // fileName removed - may contain sensitive info
       fileSize: file.size,
       userId: userId,
+      isPublished: true,
+      isSearchable: true,
     });
 
     // Return document ID with explicit transcript marker for chat
