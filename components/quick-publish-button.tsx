@@ -3,8 +3,20 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from './ui/button';
-import { UploadIcon } from 'lucide-react';
-import { quickPublishDocumentAction } from '@/lib/workspace/document-actions';
+import { CheckCircle2Icon, UploadIcon } from 'lucide-react';
+import {
+  quickPublishDocumentAction,
+  unpublishDocumentAction,
+} from '@/lib/workspace/document-actions';
+import useSWR from 'swr';
+import { fetcher } from '@/lib/utils';
+import type { DocumentWithVersions } from '@/lib/db/schema';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface QuickPublishButtonProps {
   documentEnvelopeId: string;
@@ -16,29 +28,39 @@ export function QuickPublishButton({
   workspaceId,
 }: QuickPublishButtonProps) {
   const [publishing, setPublishing] = useState(false);
-  const [published, setPublished] = useState(false);
 
-  if (published) {
-    return null; // Hide button after publishing
-  }
+  // Fetch document envelope to check publish state
+  const { data: docWithVersions, mutate } = useSWR<DocumentWithVersions | null>(
+    `/api/workspace/${workspaceId}/document-envelope/${documentEnvelopeId}`,
+    fetcher,
+  );
 
-  const handlePublish = async (e: React.MouseEvent) => {
+  const isPublished = !!docWithVersions?.currentPublished;
+
+  const handleClick = async (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent click from bubbling to parent elements
     setPublishing(true);
     try {
-      const result = await quickPublishDocumentAction(
-        documentEnvelopeId,
-        workspaceId,
-      );
-      if (result.success) {
-        toast.success('Document published to workspace');
-        setPublished(true);
+      if (isPublished) {
+        // Unpublish
+        await unpublishDocumentAction(documentEnvelopeId, workspaceId);
+        toast.success('Document unpublished');
       } else {
-        toast.error(result.error || 'Failed to publish document');
+        // Publish
+        const result = await quickPublishDocumentAction(
+          documentEnvelopeId,
+          workspaceId,
+        );
+        if (result.success) {
+          toast.success('Document published to workspace');
+        } else {
+          toast.error(result.error || 'Failed to publish document');
+        }
       }
+      mutate(); // Refresh document data
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : 'Failed to publish document',
+        error instanceof Error ? error.message : 'Failed to update document',
       );
     } finally {
       setPublishing(false);
@@ -53,7 +75,7 @@ export function QuickPublishButton({
     <div
       role="button"
       tabIndex={0}
-      className="relative z-20 flex items-center justify-end px-4 py-2 border-t dark:border-zinc-700 bg-muted/30 rounded-b-2xl"
+      className="relative z-20 flex items-center justify-end px-4 py-2 border-t dark:border-zinc-700 rounded-b-2xl"
       onClick={handleContainerClick}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -61,15 +83,44 @@ export function QuickPublishButton({
         }
       }}
     >
-      <Button
-        size="sm"
-        onClick={handlePublish}
-        disabled={publishing}
-        className="gap-2"
-      >
-        <UploadIcon className="w-3.5 h-3.5" />
-        {publishing ? 'Publishing...' : 'Publish'}
-      </Button>
+      <TooltipProvider delayDuration={0}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              size="sm"
+              onClick={handleClick}
+              disabled={publishing}
+              className={
+                isPublished ? 'gap-2 bg-green-600 hover:bg-green-700' : 'gap-2'
+              }
+            >
+              {publishing ? (
+                <div className="animate-spin">
+                  <UploadIcon className="size-3.5" />
+                </div>
+              ) : isPublished ? (
+                <>
+                  <CheckCircle2Icon className="size-3.5" />
+                  Published
+                </>
+              ) : (
+                <>
+                  <UploadIcon className="size-3.5" />
+                  Publish
+                </>
+              )}
+            </Button>
+          </TooltipTrigger>
+          {isPublished && (
+            <TooltipContent
+              side="top"
+              className="bg-foreground text-background rounded-md p-2 px-3"
+            >
+              Click to unpublish
+            </TooltipContent>
+          )}
+        </Tooltip>
+      </TooltipProvider>
     </div>
   );
 }
