@@ -44,7 +44,11 @@ export function DocumentPreview({
     fetcher,
   );
 
-  const previewDocument = useMemo(() => documents?.[0], [documents]);
+  // Use the most recent document (last in array) to match artifact behavior
+  const previewDocument = useMemo(
+    () => (documents ? documents[documents.length - 1] : undefined),
+    [documents],
+  );
   const hitboxRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
