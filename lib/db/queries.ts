@@ -3,7 +3,7 @@ import { getLogger } from '@/lib/logger';
 const logger = getLogger('queries');
 import 'server-only';
 
-import { and, asc, count, eq, gte, inArray } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gte, inArray } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/vercel-postgres';
 import { sql as vercelSql } from '@vercel/postgres';
 
@@ -200,14 +200,23 @@ export async function getChatsByWorkspaceAndUser({
     }
 
     const chats = await db
-      .select({ chat })
+      .select({
+        chat,
+        objective: {
+          id: objective.id,
+          workspaceId: objective.workspaceId,
+        },
+      })
       .from(chat)
       .innerJoin(objective, eq(chat.objectiveId, objective.id))
       .where(and(...conditions))
       .limit(limit)
       .orderBy(asc(chat.createdAt));
 
-    return chats.map((row) => row.chat);
+    return chats.map((row) => ({
+      ...row.chat,
+      objective: row.objective,
+    }));
   } catch (error) {
     throw new ChatSDKError(
       'bad_request:database',
@@ -253,6 +262,54 @@ export async function getChatById({
     return selectedChat;
   } catch (error) {
     throw new ChatSDKError('bad_request:database', 'Failed to get chat by id');
+  }
+}
+
+export async function getChatByIdWithWorkspace({
+  id,
+  workspaceId,
+  userId,
+}: { id: string; workspaceId: string; userId: string }) {
+  try {
+    const result = await db
+      .select({ chat })
+      .from(chat)
+      .innerJoin(objective, eq(chat.objectiveId, objective.id))
+      .where(
+        and(
+          eq(chat.id, id),
+          eq(objective.workspaceId, workspaceId),
+          eq(chat.userId, userId),
+        ),
+      )
+      .limit(1);
+
+    return result[0]?.chat || null;
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get chat by id with workspace',
+    );
+  }
+}
+
+export async function getChatsByObjectiveId(
+  objectiveId: string,
+  userId: string,
+) {
+  try {
+    const chats = await db
+      .select()
+      .from(chat)
+      .where(and(eq(chat.objectiveId, objectiveId), eq(chat.userId, userId)))
+      .orderBy(desc(chat.createdAt));
+
+    return chats;
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get chats by objective',
+    );
   }
 }
 

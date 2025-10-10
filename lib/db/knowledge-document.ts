@@ -91,6 +91,72 @@ export async function getKnowledgeByWorkspaceId(
   }
 }
 
+export async function getKnowledgeDocumentById(
+  id: string,
+  userId: string,
+): Promise<KnowledgeDocument | null> {
+  try {
+    // Verify ownership via workspace
+    const [doc] = await db
+      .select({ knowledgeDocument })
+      .from(knowledgeDocument)
+      .innerJoin(workspace, eq(knowledgeDocument.workspaceId, workspace.id))
+      .where(
+        and(
+          eq(knowledgeDocument.id, id),
+          eq(workspace.userId, userId),
+          isNull(workspace.deletedAt),
+        ),
+      )
+      .limit(1);
+
+    return doc?.knowledgeDocument || null;
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get knowledge document by id',
+    );
+  }
+}
+
+export async function updateKnowledgeDocument(
+  id: string,
+  userId: string,
+  data: {
+    title?: string;
+    content?: string;
+    metadata?: Record<string, unknown>;
+    isSearchable?: boolean;
+  },
+): Promise<KnowledgeDocument> {
+  try {
+    // Verify ownership first
+    const existing = await getKnowledgeDocumentById(id, userId);
+    if (!existing) {
+      throw new ChatSDKError(
+        'not_found:database',
+        'Knowledge document not found or access denied',
+      );
+    }
+
+    const [updated] = await db
+      .update(knowledgeDocument)
+      .set(data)
+      .where(eq(knowledgeDocument.id, id))
+      .returning();
+
+    return updated;
+  } catch (error) {
+    if (error instanceof ChatSDKError) {
+      throw error;
+    }
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to update knowledge document',
+    );
+  }
+}
+
 export async function deleteKnowledgeDocument(
   knowledgeId: string,
   userId: string,

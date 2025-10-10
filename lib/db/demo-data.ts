@@ -1,4 +1,4 @@
-import { chat, message, workspace } from '@/lib/db/schema';
+import { workspace } from '@/lib/db/schema';
 import { eq, and, isNull } from 'drizzle-orm';
 import { db } from '@/lib/db/queries';
 import { createWorkspace } from '@/lib/workspace/queries';
@@ -213,115 +213,22 @@ async function cloneDocuments(context: CloneContext): Promise<number> {
 
 /**
  * Clone all chats from source to target workspace
+ * DISABLED: Chat cloning temporarily disabled during migration to Objective schema
+ * TODO Phase 4+: Re-implement using new schema where Chats belong to Objectives
  */
 async function cloneChats(context: CloneContext): Promise<number> {
-  try {
-    // Fetch source chats and insert with transformed values
-    // INSERT-SELECT with DEFAULT not working reliably, using fetch-then-insert
-    const sourceChats = await db
-      .select()
-      .from(chat)
-      .where(eq(chat.workspaceId, context.sourceWorkspaceId));
-
-    if (sourceChats.length === 0) {
-      logger.debug('No chats to clone', { context });
-      return 0;
-    }
-
-    // Transform and batch insert - omit id to let DB auto-generate
-    const chatsToInsert = sourceChats.map((sourceChat) => ({
-      createdAt: new Date(),
-      title: sourceChat.title,
-      userId: context.targetUserId,
-      workspaceId: context.targetWorkspaceId,
-      visibility: sourceChat.visibility,
-      mode: sourceChat.mode,
-      modeSetAt: sourceChat.modeSetAt,
-      goal: sourceChat.goal,
-      goalSetAt: sourceChat.goalSetAt,
-      todoList: sourceChat.todoList,
-      todoListUpdatedAt: sourceChat.todoListUpdatedAt,
-      complete: sourceChat.complete,
-      completedAt: sourceChat.completedAt,
-      firstCompletedAt: sourceChat.firstCompletedAt,
-    }));
-
-    await db.insert(chat).values(chatsToInsert);
-
-    logger.debug('Cloned chats', { count: chatsToInsert.length, context });
-    return chatsToInsert.length;
-  } catch (error) {
-    logger.error('Failed to clone chats', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-      context,
-    });
-    return 0;
-  }
+  logger.info('Chat cloning disabled during schema migration', { context });
+  return 0;
 }
 
 /**
  * Clone all messages for cloned chats
+ * DISABLED: Message cloning temporarily disabled during migration to Objective schema
+ * TODO Phase 4+: Re-implement using new schema where Chats belong to Objectives
  */
 async function cloneMessages(context: CloneContext): Promise<number> {
-  try {
-    // Get source and target chats to map IDs
-    const [sourceChats, targetChats] = await Promise.all([
-      db
-        .select()
-        .from(chat)
-        .where(eq(chat.workspaceId, context.sourceWorkspaceId)),
-      db
-        .select()
-        .from(chat)
-        .where(eq(chat.workspaceId, context.targetWorkspaceId)),
-    ]);
-
-    if (sourceChats.length === 0 || targetChats.length === 0) {
-      logger.debug('No chats to clone messages for', { context });
-      return 0;
-    }
-
-    // Create mapping based on title and createdAt order
-    const chatMapping = new Map<string, string>();
-    sourceChats.forEach((sourceChat) => {
-      // Find matching target chat by title
-      const targetChat = targetChats.find((t) => t.title === sourceChat.title);
-      if (targetChat) {
-        chatMapping.set(sourceChat.id, targetChat.id);
-      }
-    });
-
-    // Clone messages for each mapped chat
-    let totalMessages = 0;
-    for (const [sourceChatId, targetChatId] of chatMapping) {
-      const sourceMessages = await db
-        .select()
-        .from(message)
-        .where(eq(message.chatId, sourceChatId));
-
-      if (sourceMessages.length > 0) {
-        const messagesToInsert = sourceMessages.map((msg) => ({
-          chatId: targetChatId,
-          role: msg.role,
-          parts: msg.parts,
-          attachments: msg.attachments,
-          createdAt: msg.createdAt,
-        }));
-
-        await db.insert(message).values(messagesToInsert);
-        totalMessages += messagesToInsert.length;
-      }
-    }
-
-    logger.debug('Cloned messages', { count: totalMessages, context });
-    return totalMessages;
-  } catch (error) {
-    logger.error('Failed to clone messages', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-      context,
-    });
-    return 0;
-  }
+  logger.info('Message cloning disabled during schema migration', { context });
+  return 0;
 }
 
 /**

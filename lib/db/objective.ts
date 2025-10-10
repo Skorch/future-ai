@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, desc, eq, isNull } from 'drizzle-orm';
 import { db } from './queries';
 import { objective, workspace } from './schema';
 import type { Objective } from './schema';
@@ -115,6 +115,39 @@ export async function getObjectiveById(
   }
 }
 
+export async function updateObjective(
+  objectiveId: string,
+  userId: string,
+  data: { title?: string; description?: string },
+): Promise<Objective> {
+  try {
+    // Verify ownership via workspace
+    const existing = await getObjectiveById(objectiveId, userId);
+    if (!existing) {
+      throw new ChatSDKError(
+        'not_found:database',
+        'Objective not found or access denied',
+      );
+    }
+
+    const [updated] = await db
+      .update(objective)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(objective.id, objectiveId))
+      .returning();
+
+    return updated;
+  } catch (error) {
+    if (error instanceof ChatSDKError) {
+      throw error;
+    }
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to update objective',
+    );
+  }
+}
+
 export async function publishObjective(
   objectiveId: string,
   userId: string,
@@ -205,5 +238,41 @@ export async function deleteObjective(
       'bad_request:database',
       'Failed to delete objective',
     );
+  }
+}
+
+export async function getOrCreateActiveObjective(
+  workspaceId: string,
+  userId: string,
+): Promise<string> {
+  try {
+    // Find existing 'open' objective for this user/workspace
+    const [existing] = await db
+      .select({ id: objective.id })
+      .from(objective)
+      .where(
+        and(
+          eq(objective.workspaceId, workspaceId),
+          eq(objective.status, 'open'),
+          eq(objective.createdByUserId, userId),
+        ),
+      )
+      .orderBy(desc(objective.createdAt))
+      .limit(1);
+
+    if (existing) return existing.id;
+
+    // Create default objective
+    const newObj = await createObjective(workspaceId, userId, {
+      title: 'Active Objective',
+      description: 'Auto-created for chat',
+    });
+
+    return newObj.id;
+  } catch (error) {
+    if (error instanceof ChatSDKError) {
+      throw error;
+    }
+    throw new Error('Failed to get or create active objective');
   }
 }
