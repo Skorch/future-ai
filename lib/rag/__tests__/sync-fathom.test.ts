@@ -1,29 +1,33 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+// Create mock Pinecone client instance using vi.hoisted
+const { mockPineconeClient } = vi.hoisted(() => {
+  return {
+    mockPineconeClient: {
+      writeDocuments: vi.fn().mockResolvedValue({ success: true }),
+      deleteByMetadata: vi.fn().mockResolvedValue({ success: true }),
+    },
+  };
+});
+
+// Mock dependencies BEFORE importing modules that use them
+vi.mock('../pinecone-client', () => ({
+  PineconeClient: vi.fn(() => mockPineconeClient),
+}));
+vi.mock('@/lib/ai/utils/rag-chunker');
+vi.mock('@/lib/artifacts', () => ({
+  getDocumentTypeDefinition: vi.fn(),
+  artifactRegistry: {},
+}));
+
+// Now import after mocks
 import { syncDocumentToRAG } from '../sync';
-import { getDocumentById } from '@/lib/db/documents';
-import { PineconeClient } from '../pinecone-client';
 import { chunkTranscriptItems } from '@/lib/ai/utils/rag-chunker';
 import { parseTranscript } from '@/lib/ai/utils/transcript-parser';
 
-// Mock dependencies
-vi.mock('@/lib/db/documents');
-vi.mock('../pinecone-client');
-vi.mock('@/lib/ai/utils/rag-chunker');
-
 describe('Fathom Transcript RAG Sync', () => {
-  let mockPineconeClient: any;
-
   beforeEach(() => {
     vi.clearAllMocks();
-
-    mockPineconeClient = {
-      writeDocuments: vi.fn().mockResolvedValue({ success: true }),
-      deleteByMetadata: vi.fn().mockResolvedValue({ success: true }),
-    };
-
-    vi.mocked(PineconeClient).mockImplementation(
-      () => mockPineconeClient as any,
-    );
   });
 
   it('should successfully parse and chunk a Fathom transcript', async () => {
@@ -37,21 +41,19 @@ describe('Fathom Transcript RAG Sync', () => {
 
     const mockDocument = {
       id: 'doc-123',
+      workspaceId: 'workspace-123',
       title: 'Neil and Andrew Beaupre - September 11.txt',
       content: fathomContent,
-      userId: 'user-456',
+      documentType: 'transcript',
+      kind: 'text',
       metadata: {
-        documentType: 'transcript',
         fileName: 'Neil and Andrew Beaupre - September 11.txt',
         fileSize: fathomContent.length,
         uploadedAt: '2025-09-15T21:21:58.274Z',
       },
-      kind: 'text',
+      createdByUserId: 'user-456',
       createdAt: new Date(),
-      sourceDocumentIds: [],
     };
-
-    vi.mocked(getDocumentById).mockResolvedValue(mockDocument);
 
     // Mock chunking to return some chunks
     vi.mocked(chunkTranscriptItems).mockResolvedValue([
@@ -81,10 +83,7 @@ describe('Fathom Transcript RAG Sync', () => {
       },
     ]);
 
-    await syncDocumentToRAG('doc-123');
-
-    // Verify document was fetched
-    expect(getDocumentById).toHaveBeenCalledWith({ id: 'doc-123' });
+    await syncDocumentToRAG(mockDocument);
 
     // Verify chunking was called
     expect(chunkTranscriptItems).toHaveBeenCalled();
@@ -101,7 +100,7 @@ describe('Fathom Transcript RAG Sync', () => {
           content: expect.stringContaining('quarterly results'),
         }),
       ]),
-      { namespace: 'user-456' },
+      { namespace: 'workspace-123' },
     );
   });
 
@@ -110,26 +109,24 @@ describe('Fathom Transcript RAG Sync', () => {
 
     const mockDocument = {
       id: 'doc-456',
+      workspaceId: 'workspace-123',
       title: 'Short transcript.txt',
       content: fathomContent,
-      userId: 'user-789',
+      documentType: 'transcript',
+      kind: 'text',
       metadata: {
-        documentType: 'transcript',
         fileName: 'Short transcript.txt',
         fileSize: fathomContent.length,
         uploadedAt: '2025-09-15T21:21:58.274Z',
       },
-      kind: 'text',
+      createdByUserId: 'user-789',
       createdAt: new Date(),
-      sourceDocumentIds: [],
     };
-
-    vi.mocked(getDocumentById).mockResolvedValue(mockDocument);
 
     // Mock chunking to return empty array (simulating the issue)
     vi.mocked(chunkTranscriptItems).mockResolvedValue([]);
 
-    await syncDocumentToRAG('doc-456');
+    await syncDocumentToRAG(mockDocument);
 
     // Should not call writeDocuments when no chunks
     expect(mockPineconeClient.writeDocuments).not.toHaveBeenCalled();

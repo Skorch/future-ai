@@ -1,7 +1,8 @@
 #!/usr/bin/env tsx
 
 import { config } from 'dotenv';
-import { saveDocument } from '@/lib/db/documents';
+// TODO: Rewire to new DAL - saveDocument removed
+// import { saveDocument } from '@/lib/db/documents';
 import { generateUUID } from '@/lib/utils';
 
 config();
@@ -23,35 +24,43 @@ async function testRAGIndexing() {
   try {
     console.log('Creating test document with proper metadata...');
 
-    const result = await saveDocument({
-      id: testDocumentId,
-      title: 'Test Document for RAG Indexing',
-      content: `This is a test document created to verify RAG indexing.
+    // TODO: Rewire to use createKnowledgeDocument or createObjectiveDocument
+    console.error('❌ Script not yet updated for Phase 3 schema');
+    console.log('This script needs to be rewritten to use:');
+    console.log('  - createKnowledgeDocument() for immutable, searchable docs');
+    console.log(
+      '  - createObjectiveDocument() for mutable, version-controlled docs',
+    );
 
-Meeting Notes:
-- Testing the automatic RAG synchronization
-- Verifying that workspaceId is passed correctly
-- Ensuring proper error logging
+    // const result = await saveDocument({
+    //   id: testDocumentId,
+    //   title: 'Test Document for RAG Indexing',
+    //   content: `This is a test document created to verify RAG indexing.
+    //
+    // Meeting Notes:
+    // - Testing the automatic RAG synchronization
+    // - Verifying that workspaceId is passed correctly
+    // - Ensuring proper error logging
+    //
+    // Action Items:
+    // - Verify document appears in Pinecone
+    // - Check namespace matches workspaceId
+    // - Confirm chunks are created
+    //
+    // Summary:
+    // This test verifies that documents are automatically indexed in the RAG system when created through the saveDocument function.`,
+    //   kind: 'text',
+    //   userId: testUserId,
+    //   workspaceId: testWorkspaceId,
+    //   metadata: {
+    //     documentType: 'document',
+    //     testRun: true,
+    //     timestamp: new Date().toISOString(),
+    //   },
+    // });
 
-Action Items:
-- Verify document appears in Pinecone
-- Check namespace matches workspaceId
-- Confirm chunks are created
-
-Summary:
-This test verifies that documents are automatically indexed in the RAG system when created through the saveDocument function.`,
-      kind: 'text',
-      userId: testUserId,
-      workspaceId: testWorkspaceId,
-      metadata: {
-        documentType: 'document',
-        testRun: true,
-        timestamp: new Date().toISOString(),
-      },
-    });
-
-    console.log('\nDocument saved successfully!');
-    console.log('Result:', result);
+    // console.log('\nDocument saved successfully!');
+    // console.log('Result:', result);
     console.log('\n');
     console.log('✅ Test completed! Check the logs above for:');
     console.log('   - [saveDocument] Starting RAG sync');
