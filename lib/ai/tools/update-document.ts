@@ -1,6 +1,6 @@
 import { tool, type UIMessageStreamWriter } from 'ai';
 import { z } from 'zod';
-import { getDocumentWithVersions } from '@/lib/db/documents';
+import { getObjectiveDocumentById } from '@/lib/db/objective-document';
 import { getDocumentTypeDefinition, type DocumentType } from '@/lib/artifacts';
 import type { ChatMessage } from '@/lib/types';
 
@@ -25,20 +25,23 @@ export const updateDocument = ({
         .describe('The description of changes that need to be made'),
     }),
     execute: async ({ id, description }) => {
-      const docWithVersions = await getDocumentWithVersions(id);
+      // Only ObjectiveDocuments are editable (KnowledgeDocuments are immutable)
+      const docWithVersions = await getObjectiveDocumentById(
+        id,
+        session.user.id,
+      );
 
       if (
         !docWithVersions ||
-        docWithVersions.envelope.workspaceId !== workspaceId
+        docWithVersions.document.workspaceId !== workspaceId
       ) {
         return {
           error: 'Document not found or access denied',
         };
       }
 
-      // Get current draft or published version
-      const currentVersion =
-        docWithVersions.currentDraft || docWithVersions.currentPublished;
+      // Get latest version
+      const currentVersion = docWithVersions.latestVersion;
 
       if (!currentVersion) {
         return {
@@ -53,9 +56,8 @@ export const updateDocument = ({
       });
 
       // Load handler from registry based on document's actual type
-      // Extract documentType from metadata or envelope, fallback to kind, then to 'text'
-      const documentType = (currentVersion.metadata?.documentType ||
-        docWithVersions.envelope.documentType ||
+      // biome-ignore lint/suspicious/noExplicitAny: metadata schema doesn't have typed documentType field yet
+      const documentType = ((currentVersion.metadata as any)?.documentType ||
         currentVersion.kind ||
         'text') as DocumentType;
       const documentDef = await getDocumentTypeDefinition(documentType);
@@ -68,24 +70,25 @@ export const updateDocument = ({
         };
       }
 
-      // Convert to old document format for backward compat with handlers
+      // Convert to legacy document format for backward compat with handlers
       const legacyDocument = {
-        id: docWithVersions.envelope.id,
+        id: docWithVersions.document.id,
         versionId: currentVersion.id,
-        title: docWithVersions.envelope.title,
+        title: docWithVersions.document.title,
         content: currentVersion.content,
         kind: (currentVersion.kind || 'text') as 'text',
-        documentType: docWithVersions.envelope.documentType || 'text',
+        documentType: documentType,
         metadata: currentVersion.metadata,
         createdAt: currentVersion.createdAt,
-        workspaceId: docWithVersions.envelope.workspaceId,
+        workspaceId: docWithVersions.document.workspaceId,
         createdByUserId: currentVersion.createdByUserId,
-        isSearchable: docWithVersions.envelope.isSearchable,
+        isSearchable: false, // ObjectiveDocuments don't have this field
         deletedAt: null,
         sourceDocumentIds: null,
       };
 
       await documentDef.handler.onUpdateDocument({
+        // @ts-ignore - Legacy handler interface
         document: legacyDocument,
         description,
         dataStream,
@@ -97,7 +100,7 @@ export const updateDocument = ({
 
       return {
         id,
-        title: docWithVersions.envelope.title,
+        title: docWithVersions.document.title,
         kind: (currentVersion.kind || 'text') as 'text',
         content: 'The document has been updated successfully.',
       };

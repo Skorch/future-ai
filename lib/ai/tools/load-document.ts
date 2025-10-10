@@ -3,7 +3,8 @@ import { getLogger } from '@/lib/logger';
 const logger = getLogger('LoadDocument');
 import { tool } from 'ai';
 import { z } from 'zod';
-import { getPublishedDocumentById } from '@/lib/db/documents';
+import { getKnowledgeDocumentById } from '@/lib/db/knowledge-document';
+import { getObjectiveDocumentById } from '@/lib/db/objective-document';
 import type { DocumentType } from '@/lib/artifacts';
 
 // Extended type to include transcript (upload-only, not in registry)
@@ -57,27 +58,65 @@ Reserve space for user messages, your responses, and other tool outputs.`,
         userId: session.user.id,
       });
 
-      const document = await getPublishedDocumentById(documentId, workspaceId);
+      // Try to load as KnowledgeDocument first, then ObjectiveDocument
+      let document: {
+        id: string;
+        title: string;
+        content: string;
+        documentType: string;
+        createdAt: Date;
+        metadata?: Record<string, unknown> | null;
+      } | null = null;
+
+      // Try KnowledgeDocument
+      const knowledgeDoc = await getKnowledgeDocumentById(
+        documentId,
+        session.user.id,
+      );
+      if (knowledgeDoc) {
+        document = {
+          id: knowledgeDoc.id,
+          title: knowledgeDoc.title,
+          content: knowledgeDoc.content,
+          documentType: knowledgeDoc.documentType,
+          createdAt: knowledgeDoc.createdAt,
+          metadata: knowledgeDoc.metadata,
+        };
+      } else {
+        // Try ObjectiveDocument
+        const objectiveDoc = await getObjectiveDocumentById(
+          documentId,
+          session.user.id,
+        );
+        if (objectiveDoc?.latestVersion) {
+          document = {
+            id: objectiveDoc.document.id,
+            title: objectiveDoc.document.title,
+            content: objectiveDoc.latestVersion.content,
+            // biome-ignore lint/suspicious/noExplicitAny: metadata schema doesn't have typed documentType field yet
+            documentType:
+              (objectiveDoc.latestVersion.metadata as any)?.documentType ||
+              'text',
+            createdAt: objectiveDoc.latestVersion.createdAt,
+            metadata: objectiveDoc.latestVersion.metadata,
+          };
+        }
+      }
 
       if (!document) {
-        logger.debug(
-          '[LoadDocument Tool] Document not found or not published:',
-          documentId,
-        );
+        logger.debug('[LoadDocument Tool] Document not found:', documentId);
         return {
           error: 'DOCUMENT_NOT_FOUND',
-          message:
-            'Document does not exist, is not published, or you do not have access',
-          suggestion: 'Use list-documents to see available published documents',
+          message: 'Document does not exist or you do not have access',
+          suggestion: 'Use list-documents to see available documents',
         };
       }
 
-      // Handle truncation if maxChars specified
-      const fullContentLength = document.content.length;
+      const fullContentLength = document.content?.length || 0;
       const truncated = maxChars && fullContentLength > maxChars;
       const content = truncated
-        ? document.content.slice(0, maxChars)
-        : document.content;
+        ? document.content?.slice(0, maxChars) || ''
+        : document.content || '';
       const loadedChars = content.length;
 
       const percentLoaded = Math.round((loadedChars / fullContentLength) * 100);

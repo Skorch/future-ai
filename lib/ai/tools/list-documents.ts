@@ -3,7 +3,8 @@ import { getLogger } from '@/lib/logger';
 const logger = getLogger('ListDocuments');
 import { tool } from 'ai';
 import { z } from 'zod';
-import { getAllWorkspaceDocuments } from '@/lib/db/documents';
+import { getAllObjectiveDocumentsByWorkspaceId } from '@/lib/db/objective-document';
+import { getKnowledgeByWorkspaceId } from '@/lib/db/knowledge-document';
 import { getAllDocumentTypes } from '@/lib/artifacts';
 import type { DomainId } from '@/lib/domains';
 
@@ -97,39 +98,63 @@ export const listDocuments = async ({
     inputSchema: z.object({}),
     execute: async () => {
       logger.debug('[ListDocuments Tool] Executing list-documents tool call');
-      const documents = await getAllWorkspaceDocuments(workspaceId);
+
+      // Query both ObjectiveDocuments and KnowledgeDocuments
+      const [objectiveDocs, knowledgeDocs] = await Promise.all([
+        getAllObjectiveDocumentsByWorkspaceId(workspaceId, session.user.id),
+        getKnowledgeByWorkspaceId(workspaceId),
+      ]);
+
+      // Transform ObjectiveDocuments to common format
+      const objectiveDocsTransformed = objectiveDocs.map((item) => ({
+        id: item.document.id,
+        title: item.document.title,
+        documentType:
+          (item.latestVersion?.metadata?.documentType as string) || 'text',
+        createdAt: item.document.createdAt,
+        metadata: (item.latestVersion?.metadata || {}) as Record<
+          string,
+          unknown
+        >,
+        contentLength: item.latestVersion?.content?.length || 0,
+        source: 'objective' as const,
+      }));
+
+      // Transform KnowledgeDocuments to common format
+      const knowledgeDocsTransformed = knowledgeDocs.map((doc) => ({
+        id: doc.id,
+        title: doc.title,
+        documentType: doc.documentType as string,
+        createdAt: doc.createdAt,
+        metadata: (doc.metadata || {}) as Record<string, unknown>,
+        contentLength: doc.content?.length || 0,
+        source: 'knowledge' as const,
+      }));
+
+      // Merge both document types
+      const documents = [
+        ...objectiveDocsTransformed,
+        ...knowledgeDocsTransformed,
+      ];
+
+      // Generate counts for all document types dynamically
+      const typeCounts = Object.create(null) as Record<string, number>;
+      for (const doc of documents) {
+        const type = doc.documentType || 'unknown';
+        typeCounts[type] = (typeCounts[type] || 0) + 1;
+      }
 
       logger.debug('[ListDocuments Tool] Retrieved documents:', {
         count: documents.length,
-        types: documents.reduce(
-          (acc, d) => {
-            acc[d.documentType] = (acc[d.documentType] || 0) + 1;
-            return acc;
-          },
-          {} as Record<string, number>,
-        ),
-        totalSize: documents.reduce((sum, d) => sum + d.contentLength, 0),
-        totalTokens: documents.reduce((sum, d) => sum + d.estimatedTokens, 0),
+        objectiveCount: objectiveDocsTransformed.length,
+        knowledgeCount: knowledgeDocsTransformed.length,
+        types: typeCounts,
       });
-
-      // Generate counts for all document types dynamically
-      const typeCounts = documents.reduce(
-        (acc, doc) => {
-          const type = doc.documentType || 'unknown';
-          acc[type] = (acc[type] || 0) + 1;
-          return acc;
-        },
-        {} as Record<string, number>,
-      );
 
       const summary = {
         total: documents.length,
         byType: typeCounts,
-        totalSizeBytes: documents.reduce((sum, d) => sum + d.contentLength, 0),
-        totalEstimatedTokens: documents.reduce(
-          (sum, d) => sum + d.estimatedTokens,
-          0,
-        ),
+        // PHASE 4 REFACTORING: Size metrics will be restored with new document structure
       };
 
       if (documents.length === 0) {
@@ -147,44 +172,9 @@ export const listDocuments = async ({
         'documents with summary',
       );
 
-      // Remove contentPreview and clean up metadata
-      let transcriptsRemoved = 0;
-      const documentsWithoutPreview = documents.map(
-        ({ contentPreview, metadata, ...doc }) => {
-          // Clean up metadata by removing transcript if it exists
-          if (
-            metadata &&
-            typeof metadata === 'object' &&
-            'transcript' in metadata
-          ) {
-            const { transcript, ...cleanMetadata } = metadata as Record<
-              string,
-              unknown
-            > & { transcript?: unknown };
-            if (transcript) {
-              transcriptsRemoved++;
-            }
-            return {
-              ...doc,
-              metadata: cleanMetadata,
-            };
-          }
-          return {
-            ...doc,
-            metadata,
-          };
-        },
-      );
-
-      // Only log if we actually removed transcripts
-      if (transcriptsRemoved > 0) {
-        logger.warn(
-          `[ListDocuments Tool] Removed transcript from metadata for ${transcriptsRemoved} documents`,
-        );
-      }
-
+      // PHASE 4 REFACTORING: Return stub documents - metadata handling will be updated
       return {
-        documents: documentsWithoutPreview,
+        documents,
         summary,
       };
     },
