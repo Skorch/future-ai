@@ -5,7 +5,8 @@
  */
 
 import { streamText, smoothStream } from 'ai';
-import { createDocument, getPublishedDocumentById } from '@/lib/db/documents';
+import { getKnowledgeDocumentById } from '@/lib/db/knowledge-document';
+import { getObjectiveDocumentById } from '@/lib/db/objective-document';
 import type { LanguageModel, UIMessageStreamWriter } from 'ai';
 import type { ChatMessage } from '@/lib/types';
 import type { ArtifactKind } from '@/components/artifact';
@@ -100,28 +101,28 @@ export async function saveGeneratedDocument(
   props: SaveDocumentProps,
 ): Promise<{ envelopeId: string; versionId: string } | null> {
   if (props.session?.user?.id) {
-    // Use new envelope/version schema
-    const doc = await createDocument({
-      id: props.id, // Use pre-generated ID from tool
-      title: props.title,
-      content,
-      messageId: null, // NULL: Will be linked to assistant message in onFinish callback
-      workspaceId: props.workspaceId,
-      userId: props.session.user.id,
-      documentType: props.metadata?.documentType as string | undefined,
-      kind: props.kind,
-      metadata: props.metadata,
-    });
+    // Create ObjectiveDocument (chat-generated documents)
+    // TODO: Need objectiveId - for now this is incomplete
+    // This function needs refactoring to receive objectiveId from chat context
+    throw new Error(
+      'saveGeneratedDocument needs objectiveId - requires refactoring for new schema',
+    );
 
-    // createDocument always creates initial draft, so currentDraft should never be null
-    if (!doc.currentDraft) {
-      throw new Error('Failed to create initial draft version');
-    }
-
-    return {
-      envelopeId: doc.envelope.id,
-      versionId: doc.currentDraft.id,
-    };
+    // Placeholder for future implementation:
+    // const result = await createObjectiveDocument(
+    //   objectiveId, // Need from context
+    //   props.workspaceId,
+    //   props.session.user.id,
+    //   {
+    //     title: props.title,
+    //     content,
+    //     chatId: chatId, // Need from context
+    //   }
+    // );
+    // return {
+    //   envelopeId: result.document.id,
+    //   versionId: result.version.id,
+    // };
   }
   return null;
 }
@@ -167,9 +168,31 @@ export async function fetchSourceDocuments(
     return '';
   }
 
-  // Fetch all source documents in parallel (only published versions)
+  // Fetch all source documents in parallel (try both types)
   const sourceDocuments = await Promise.all(
-    docIdsToFetch.map((docId) => getPublishedDocumentById(docId, workspaceId)),
+    docIdsToFetch.map(async (docId) => {
+      // Try KnowledgeDocument first
+      const knowledgeDoc = await getKnowledgeDocumentById(docId, ''); // TODO: Need userId
+      if (knowledgeDoc) {
+        return {
+          id: knowledgeDoc.id,
+          title: knowledgeDoc.title,
+          content: knowledgeDoc.content,
+        };
+      }
+
+      // Try ObjectiveDocument
+      const objectiveDoc = await getObjectiveDocumentById(docId, ''); // TODO: Need userId
+      if (objectiveDoc?.latestVersion) {
+        return {
+          id: objectiveDoc.document.id,
+          title: objectiveDoc.document.title,
+          content: objectiveDoc.latestVersion.content,
+        };
+      }
+
+      return null;
+    }),
   );
 
   // Filter out null/undefined documents

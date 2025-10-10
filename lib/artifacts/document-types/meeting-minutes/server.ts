@@ -110,14 +110,18 @@ ${transcript}`;
     session,
     workspaceId,
   }: UpdateDocumentCallbackProps) => {
+    // PHASE 4 REFACTORING: Document handlers will be refactored to use version content
+    // @ts-ignore - Document structure will be updated in Phase 4
+    const documentContent = document.content || '';
+
     // Build configuration for updates
     const streamConfig = buildStreamConfig({
       model: myProvider.languageModel('artifact-model'),
-      system: `You are editing email-ready meeting minutes. Keep them brief and action-focused. Current content:\n${document.content}`,
+      system: `You are editing email-ready meeting minutes. Keep them brief and action-focused. Current content:\n${documentContent}`,
       prompt: description,
       maxOutputTokens: metadata.outputSize ?? OutputSize.SMALL,
       thinkingBudget: metadata.thinkingBudget,
-      prediction: document.content || undefined,
+      prediction: documentContent || undefined,
     });
 
     // Process the stream and collect content

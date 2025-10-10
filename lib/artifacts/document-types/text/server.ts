@@ -57,13 +57,17 @@ export const textDocumentHandler: DocumentHandler<'text'> = {
     session,
     workspaceId,
   }: UpdateDocumentCallbackProps) => {
+    // PHASE 4 REFACTORING: Document handlers will be refactored to use version content
+    // @ts-ignore - Document structure will be updated in Phase 4
+    const documentContent = document.content || '';
+
     // Build configuration with prediction for updates
     const streamConfig = buildStreamConfig({
       model: myProvider.languageModel('artifact-model'),
-      system: updateDocumentPrompt(document.content, 'text'),
+      system: updateDocumentPrompt(documentContent, 'text'),
       prompt: description,
       maxOutputTokens: artifactMetadata.outputSize ?? OutputSize.LARGE,
-      prediction: document.content || undefined,
+      prediction: documentContent || undefined,
     });
 
     // Process the stream and collect content

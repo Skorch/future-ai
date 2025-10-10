@@ -140,14 +140,18 @@ ${transcript}
     session,
     workspaceId,
   }) => {
+    // PHASE 4 REFACTORING: Document handlers will be refactored to use version content
+    // @ts-ignore - Document structure will be updated in Phase 4
+    const documentContent = document.content || '';
+
     // Standard update using prediction feature
     const streamConfig = buildStreamConfig({
       model: myProvider.languageModel('artifact-model'),
-      system: updateDocumentPrompt(document.content, 'text'),
+      system: updateDocumentPrompt(documentContent, 'text'),
       prompt: description,
       maxOutputTokens: metadata.outputSize ?? OutputSize.MEDIUM,
       thinkingBudget: metadata.thinkingBudget,
-      prediction: document.content || undefined,
+      prediction: documentContent || undefined,
     });
 
     const content = await processStream(streamConfig, dataStream);

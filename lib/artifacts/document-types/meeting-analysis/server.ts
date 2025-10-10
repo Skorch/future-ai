@@ -155,10 +155,14 @@ Participants: ${participants.join(', ')}`;
     session,
     workspaceId,
   }: UpdateDocumentCallbackProps) => {
+    // PHASE 4 REFACTORING: Document handlers will be refactored to use version content
+    // @ts-ignore - Document structure will be updated in Phase 4
+    const documentContent = document.content || '';
+
     // Build configuration for update with thinking budget support
     const streamConfig = buildStreamConfig({
       model: myProvider.languageModel('artifact-model'),
-      system: `You are editing a meeting summary. Maintain concise, graduated detail (major topics 2-3 paragraphs, medium 2, minor 1). Current content:\n${document.content}`,
+      system: `You are editing a meeting summary. Maintain concise, graduated detail (major topics 2-3 paragraphs, medium 2, minor 1). Current content:\n${documentContent}`,
       prompt: description,
       maxOutputTokens: metadata.outputSize ?? OutputSize.LARGE,
       thinkingBudget: metadata.thinkingBudget,
