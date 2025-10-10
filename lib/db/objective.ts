@@ -1,60 +1,209 @@
-// STUB: Real implementation in Phase 2
-// This file contains type definitions and stub functions for Objective entity
-// These will be replaced with real implementations connecting to the database
+import 'server-only';
 
-export interface Objective {
-  id: string;
-  workspaceId: string;
-  objectiveDocumentId?: string; // Nullable FK to ObjectiveDocument
-  title: string;
-  description?: string;
-  documentType: string;
-  status: 'open' | 'published';
-  createdAt: Date;
-  updatedAt: Date;
-  publishedAt?: Date;
-  createdByUserId: string;
-}
+import { and, eq, isNull } from 'drizzle-orm';
+import { db } from './queries';
+import { objective, workspace } from './schema';
+import type { Objective } from './schema';
+import { getDomain } from '@/lib/domains';
+import { ChatSDKError } from '@/lib/errors';
+
+export type { Objective };
 
 export async function createObjective(
   workspaceId: string,
   userId: string,
   data: { title: string; description?: string },
 ): Promise<Objective> {
-  throw new Error('STUB: Implement in Phase 2');
+  try {
+    // Get workspace to inherit documentType from domain
+    const [ws] = await db
+      .select()
+      .from(workspace)
+      .where(
+        and(
+          eq(workspace.id, workspaceId),
+          eq(workspace.userId, userId),
+          isNull(workspace.deletedAt),
+        ),
+      )
+      .limit(1);
+
+    if (!ws) {
+      throw new ChatSDKError(
+        'not_found:database',
+        'Workspace not found or access denied',
+      );
+    }
+
+    const domain = getDomain(ws.domainId);
+    const documentType = domain.defaultDocumentType;
+
+    const [newObjective] = await db
+      .insert(objective)
+      .values({
+        workspaceId,
+        title: data.title,
+        description: data.description,
+        documentType,
+        status: 'open',
+        createdByUserId: userId,
+      })
+      .returning();
+
+    return newObjective;
+  } catch (error) {
+    if (error instanceof ChatSDKError) {
+      throw error;
+    }
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to create objective',
+    );
+  }
 }
 
 export async function getObjectivesByWorkspaceId(
   workspaceId: string,
   includePublished = false,
 ): Promise<Objective[]> {
-  return []; // STUB: Implement in Phase 2
+  try {
+    const conditions = [eq(objective.workspaceId, workspaceId)];
+
+    if (!includePublished) {
+      conditions.push(eq(objective.status, 'open'));
+    }
+
+    const objectives = await db
+      .select()
+      .from(objective)
+      .where(and(...conditions))
+      .orderBy(objective.createdAt);
+
+    return objectives;
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get objectives by workspace',
+    );
+  }
 }
 
 export async function getObjectiveById(
   objectiveId: string,
   userId: string,
 ): Promise<Objective | null> {
-  return null; // STUB: Implement in Phase 2
+  try {
+    const [obj] = await db
+      .select({ objective })
+      .from(objective)
+      .innerJoin(workspace, eq(objective.workspaceId, workspace.id))
+      .where(
+        and(
+          eq(objective.id, objectiveId),
+          eq(workspace.userId, userId),
+          isNull(workspace.deletedAt),
+        ),
+      )
+      .limit(1);
+
+    return obj?.objective || null;
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get objective by id',
+    );
+  }
 }
 
 export async function publishObjective(
   objectiveId: string,
   userId: string,
 ): Promise<void> {
-  throw new Error('STUB: Implement in Phase 2');
+  try {
+    // Verify ownership via workspace
+    const obj = await getObjectiveById(objectiveId, userId);
+    if (!obj) {
+      throw new ChatSDKError(
+        'not_found:database',
+        'Objective not found or access denied',
+      );
+    }
+
+    await db
+      .update(objective)
+      .set({
+        status: 'published',
+        publishedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(objective.id, objectiveId));
+  } catch (error) {
+    if (error instanceof ChatSDKError) {
+      throw error;
+    }
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to publish objective',
+    );
+  }
 }
 
 export async function unpublishObjective(
   objectiveId: string,
   userId: string,
 ): Promise<void> {
-  throw new Error('STUB: Implement in Phase 2');
+  try {
+    // Verify ownership via workspace
+    const obj = await getObjectiveById(objectiveId, userId);
+    if (!obj) {
+      throw new ChatSDKError(
+        'not_found:database',
+        'Objective not found or access denied',
+      );
+    }
+
+    await db
+      .update(objective)
+      .set({
+        status: 'open',
+        publishedAt: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(objective.id, objectiveId));
+  } catch (error) {
+    if (error instanceof ChatSDKError) {
+      throw error;
+    }
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to unpublish objective',
+    );
+  }
 }
 
 export async function deleteObjective(
   objectiveId: string,
   userId: string,
 ): Promise<void> {
-  throw new Error('STUB: Implement in Phase 2');
+  try {
+    // Verify ownership via workspace
+    const obj = await getObjectiveById(objectiveId, userId);
+    if (!obj) {
+      throw new ChatSDKError(
+        'not_found:database',
+        'Objective not found or access denied',
+      );
+    }
+
+    // Delete objective (cascades to chats, but NOT to objective documents)
+    await db.delete(objective).where(eq(objective.id, objectiveId));
+  } catch (error) {
+    if (error instanceof ChatSDKError) {
+      throw error;
+    }
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to delete objective',
+    );
+  }
 }
