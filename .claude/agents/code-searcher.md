@@ -376,3 +376,7 @@ When to avoid CoD:
 - Latency: 50–75% reduction
 - Accuracy: 90–98% of standard mode (paper claims)
 - Best For: Experienced developers, large codebases, cost optimization
+
+## PRO TIPS
+- Always wrap file paths in double-quotes.  NextJS usually has (routes) in parenthesis and will cause your commands to fail
+

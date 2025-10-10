@@ -342,6 +342,12 @@ Any time you need to commit code, you ALWAYS delegate to the `commit-orchestrato
 ## Prompt Engineering
 Any time you need to work on your Agent prompts or tool descriptions you always delegate to the `prompt-architect` subagent.  This agent will spend time thinking wholistically about the 'total prompt' of this app and provide you with detailed prompt tuning recommendations.
 
+## Build Agent
+When you have a build that is erroring, this can often cause a lot of context churn.  In this case you should always use the `build-fixer` subagent.  You should provide it with detailed context on what changes you have made and any general tactics you may have on why the build is broken.
+
+## Unit Test Architectural
+Unit test writing, debugging, and getting working is a specialized task.  When you have a table/list/spec of test cases to build unit tests around, you will always delegate to the `unit-test-architect` subagent. 
+
 # General Rules
 
 - Never propose 'backward compatibility' solutions unless the User explicitly requests - always plan to roll forward with changes
