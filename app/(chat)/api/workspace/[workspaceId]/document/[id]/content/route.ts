@@ -1,14 +1,24 @@
-import { updatePublishedDocumentAction } from '@/lib/workspace/document-actions';
+import { auth } from '@clerk/nextjs/server';
+import { updateObjectiveDocumentContent } from '@/lib/db/objective-document';
+import { ChatSDKError } from '@/lib/errors';
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('DocumentContentAPI');
 
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ workspaceId: string; id: string }> },
 ) {
   const { workspaceId, id } = await params;
+  const { userId } = await auth();
+
+  if (!userId) {
+    return new ChatSDKError('unauthorized:document').toResponse();
+  }
 
   try {
     const body = await request.json();
-    const { content } = body;
+    const { content, chatId, metadata } = body;
 
     if (!content || typeof content !== 'string') {
       return Response.json(
@@ -17,17 +27,37 @@ export async function PATCH(
       );
     }
 
-    // Use updatePublishedDocumentAction for /document/[id]/edit route
-    // This creates a new version and immediately publishes it
-    // (Different from artifact editor which creates drafts)
-    const result = await updatePublishedDocumentAction(
-      id, // documentEnvelopeId
-      content,
+    logger.debug('Updating objective document content:', {
+      documentId: id,
       workspaceId,
+      hasChatId: !!chatId,
+    });
+
+    // Create new version (chatId can be null for direct edits)
+    const newVersion = await updateObjectiveDocumentContent(
+      id,
+      chatId || '', // Empty string for direct edits (not from chat)
+      userId,
+      content,
+      metadata,
     );
 
-    return Response.json(result);
+    logger.debug('Document content updated:', {
+      documentId: id,
+      versionNumber: newVersion.versionNumber,
+    });
+
+    return Response.json({
+      version: newVersion,
+      success: true,
+    });
   } catch (error) {
+    logger.error('Failed to update document content:', error);
+
+    if (error instanceof ChatSDKError) {
+      return error.toResponse();
+    }
+
     return Response.json(
       {
         error:

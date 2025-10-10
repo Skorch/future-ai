@@ -1,20 +1,39 @@
-import { deleteDocumentAction } from '@/lib/workspace/document-actions';
+import { auth } from '@clerk/nextjs/server';
+import { deleteObjectiveDocument } from '@/lib/db/objective-document';
+import { ChatSDKError } from '@/lib/errors';
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('DocumentDeleteAPI');
 
 /**
- * Soft delete endpoint for documents
- * Note: This is separate from the version-control DELETE at /document/[id]
- * which handles deleting document versions after a timestamp
+ * Delete endpoint for objective documents
  */
 export async function POST(
-  request: Request,
+  _request: Request,
   { params }: { params: Promise<{ workspaceId: string; id: string }> },
 ) {
-  const { workspaceId, id } = await params;
+  const { id } = await params;
+  const { userId } = await auth();
+
+  if (!userId) {
+    return new ChatSDKError('unauthorized:document').toResponse();
+  }
 
   try {
-    const result = await deleteDocumentAction(id, workspaceId);
-    return Response.json(result);
+    logger.debug('Deleting objective document:', { documentId: id });
+
+    await deleteObjectiveDocument(id, userId);
+
+    logger.debug('Document deleted successfully:', { documentId: id });
+
+    return Response.json({ success: true }, { status: 200 });
   } catch (error) {
+    logger.error('Failed to delete document:', error);
+
+    if (error instanceof ChatSDKError) {
+      return error.toResponse();
+    }
+
     return Response.json(
       {
         error:
