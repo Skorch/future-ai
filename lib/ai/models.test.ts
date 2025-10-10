@@ -1,6 +1,38 @@
 import { simulateReadableStream } from 'ai';
 import { MockLanguageModelV2 } from 'ai/test';
-import { getResponseChunksByPrompt } from '@/tests/prompts/utils';
+
+// Mock helper function to replace deleted test utility
+function getResponseChunksByPrompt(prompt: any, isReasoning = false): any[] {
+  // Return simple mock chunks for testing
+  const baseChunks: any[] = [
+    { type: 'text-delta', id: '1', delta: 'This is a ' },
+    { type: 'text-delta', id: '1', delta: 'mock response' },
+    {
+      type: 'finish',
+      finishReason: 'stop' as const,
+      usage: {
+        inputTokens: 10,
+        outputTokens: 20,
+        totalTokens: 30,
+      },
+    },
+  ];
+
+  if (isReasoning) {
+    // Add reasoning chunks for reasoning model
+    return [
+      {
+        type: 'text-delta',
+        id: '0',
+        delta: 'Thinking...',
+        contentType: 'reasoning',
+      },
+      ...baseChunks,
+    ];
+  }
+
+  return baseChunks;
+}
 
 export const chatModel = new MockLanguageModelV2({
   doGenerate: async () => ({
@@ -51,13 +83,15 @@ export const titleModel = new MockLanguageModelV2({
       chunkDelayInMs: 500,
       initialDelayInMs: 1000,
       chunks: [
-        { id: '1', type: 'text-start' },
-        { id: '1', type: 'text-delta', delta: 'This is a test title' },
-        { id: '1', type: 'text-end' },
+        { type: 'text-delta', id: '1', delta: 'This is a test title' },
         {
           type: 'finish',
-          finishReason: 'stop',
-          usage: { inputTokens: 3, outputTokens: 10, totalTokens: 13 },
+          finishReason: 'stop' as const,
+          usage: {
+            inputTokens: 3,
+            outputTokens: 10,
+            totalTokens: 13,
+          },
         },
       ],
     }),

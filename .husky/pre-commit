@@ -21,5 +21,4 @@ pnpm exec tsc --noEmit --project tsconfig.precommit.json || {
 
 echo "✅ All pre-commit checks passed!"
 
-# Note: Unit tests would go here if they existed
-# For now, we're skipping Playwright E2E tests as requested
+# Note: Unit tests are run separately via 'pnpm test'
