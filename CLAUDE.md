@@ -346,3 +346,15 @@ Any time you need to work on your Agent prompts or tool descriptions you always 
 
 - Never propose 'backward compatibility' solutions unless the User explicitly requests - always plan to roll forward with changes
 
+# Markdown and Specs
+When you generate specs that contain mermaid diagrams, you will 'render' the SVG using the mmdc command.  
+You will render into a 'rendered' folder so that the original is preserved
+When making edits, you will always edit the original and then re-render.
+
+You can always check the options for mmdc by using the `-h` flag
+
+Usage:
+`mmdc -i {filename}.md -a rendered/{filename} -o rendered/{filename}.md`
+
+example:
+`mmdc -i architecture_spec_objective_container.md -a rendered/architecture_spec_objective_container -o rendered/architecture_spec_objective_container.md`

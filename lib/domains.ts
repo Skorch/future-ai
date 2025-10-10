@@ -3,10 +3,11 @@ import { SALES_INTELLIGENCE_PROMPT } from '@/lib/ai/prompts/domains/sales-intell
 import type { DocumentType } from '@/lib/artifacts';
 
 export const DOMAINS = {
-  meeting: {
-    id: 'meeting' as const,
+  project: {
+    id: 'project' as const,
     label: 'Project',
     description: 'Project & meeting management',
+    defaultDocumentType: 'prd' as const,
     prompt: MEETING_INTELLIGENCE_PROMPT,
     // All types EXCEPT sales-analysis
     allowedTypes: [
@@ -22,6 +23,7 @@ export const DOMAINS = {
     id: 'sales' as const,
     label: 'Sales',
     description: 'Sales call summaries & strategy',
+    defaultDocumentType: 'proposal' as const,
     prompt: SALES_INTELLIGENCE_PROMPT,
     // ONLY sales-call-summary, sales-strategy + text
     allowedTypes: [

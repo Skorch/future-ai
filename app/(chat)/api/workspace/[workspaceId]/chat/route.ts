@@ -160,10 +160,12 @@ export async function POST(
         return new ChatSDKError('forbidden:chat').toResponse();
       }
 
-      // Validate chat belongs to the workspace
-      if (chat.workspaceId !== workspaceId) {
-        return new ChatSDKError('not_found:chat').toResponse();
-      }
+      // PHASE 1 NOTE: Workspace validation temporarily disabled
+      // Chat no longer has workspaceId (uses objectiveId instead)
+      // Will be re-implemented in Phase 2 with objective-based validation
+      // if (chat.workspaceId !== workspaceId) {
+      //   return new ChatSDKError('not_found:chat').toResponse();
+      // }
     }
 
     // === MODE SYSTEM INTEGRATION ===

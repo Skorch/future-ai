@@ -3,18 +3,7 @@ import { getLogger } from '@/lib/logger';
 const logger = getLogger('queries');
 import 'server-only';
 
-import {
-  and,
-  asc,
-  count,
-  desc,
-  eq,
-  gt,
-  gte,
-  inArray,
-  lt,
-  type SQL,
-} from 'drizzle-orm';
+import { and, asc, count, eq, gte, inArray } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/vercel-postgres';
 import { sql as vercelSql } from '@vercel/postgres';
 
@@ -24,7 +13,6 @@ import {
   message,
   vote,
   type DBMessage,
-  type Chat,
   type ChatMode,
   stream,
   documentEnvelope,
@@ -37,7 +25,6 @@ import {
 } from './schema';
 import type { VisibilityType } from '@/components/visibility-selector';
 import { ChatSDKError } from '../errors';
-import { cleanOrphanedVersions } from './documents';
 
 // Optionally, if not using email/pass login, you can
 // use the Drizzle adapter for Auth.js / NextAuth
@@ -128,57 +115,71 @@ export async function saveChat({
   visibility: VisibilityType;
   workspaceId: string;
 }) {
-  try {
-    return await db.insert(chat).values({
-      id,
-      createdAt: new Date(),
-      userId,
-      title,
-      visibility,
-      workspaceId,
-    });
-  } catch (error) {
-    throw new ChatSDKError('bad_request:database', 'Failed to save chat');
-  }
+  // PHASE 1 STUB: Chat creation requires objectiveId (not workspaceId)
+  // This will be properly implemented in Phase 2
+  throw new ChatSDKError(
+    'bad_request:database',
+    'PHASE 1: Chat creation temporarily disabled - requires objective implementation',
+  );
+
+  // try {
+  //   return await db.insert(chat).values({
+  //     id,
+  //     createdAt: new Date(),
+  //     userId,
+  //     title,
+  //     visibility,
+  //     objectiveId, // Phase 2: Need to determine/create objective first
+  //   });
+  // } catch (error) {
+  //   throw new ChatSDKError('bad_request:database', 'Failed to save chat');
+  // }
 }
 
 export async function deleteChatById({
   id,
   workspaceId,
 }: { id: string; workspaceId: string }) {
-  try {
-    // Verify chat belongs to workspace first
-    const [chatToDelete] = await db
-      .select()
-      .from(chat)
-      .where(and(eq(chat.id, id), eq(chat.workspaceId, workspaceId)))
-      .limit(1);
+  // PHASE 1 STUB: Chat no longer has workspaceId - needs objective-based implementation
+  throw new ChatSDKError(
+    'bad_request:database',
+    'PHASE 1: deleteChatById temporarily disabled - requires objective implementation',
+  );
 
-    if (!chatToDelete) {
-      return null; // Chat doesn't exist or doesn't belong to workspace
-    }
-
-    await db.delete(vote).where(eq(vote.chatId, id));
-    await db.delete(message).where(eq(message.chatId, id));
-    await db.delete(stream).where(eq(stream.chatId, id));
-
-    const [chatsDeleted] = await db
-      .delete(chat)
-      .where(and(eq(chat.id, id), eq(chat.workspaceId, workspaceId)))
-      .returning();
-
-    // Clean up orphaned document versions after chat deletion
-    if (chatsDeleted) {
-      await cleanOrphanedVersions(workspaceId);
-    }
-
-    return chatsDeleted;
-  } catch (error) {
-    throw new ChatSDKError(
-      'bad_request:database',
-      'Failed to delete chat by id',
-    );
-  }
+  // PHASE 2 TODO: Implement with objective-based validation
+  // try {
+  //   // Verify chat belongs to objective's workspace first
+  //   const [chatToDelete] = await db
+  //     .select()
+  //     .from(chat)
+  //     .leftJoin(objective, eq(chat.objectiveId, objective.id))
+  //     .where(and(eq(chat.id, id), eq(objective.workspaceId, workspaceId)))
+  //     .limit(1);
+  //
+  //   if (!chatToDelete) {
+  //     return null;
+  //   }
+  //
+  //   await db.delete(vote).where(eq(vote.chatId, id));
+  //   await db.delete(message).where(eq(message.chatId, id));
+  //   await db.delete(stream).where(eq(stream.chatId, id));
+  //
+  //   const [chatsDeleted] = await db
+  //     .delete(chat)
+  //     .where(eq(chat.id, id))
+  //     .returning();
+  //
+  //   if (chatsDeleted) {
+  //     await cleanOrphanedVersions(workspaceId);
+  //   }
+  //
+  //   return chatsDeleted;
+  // } catch (error) {
+  //   throw new ChatSDKError(
+  //     'bad_request:database',
+  //     'Failed to delete chat by id',
+  //   );
+  // }
 }
 
 export async function getChatsByWorkspaceAndUser({
@@ -194,99 +195,14 @@ export async function getChatsByWorkspaceAndUser({
   startingAfter: string | null;
   endingBefore: string | null;
 }) {
-  try {
-    const extendedLimit = limit + 1;
+  // PHASE 1 STUB: Chat no longer has workspaceId - needs objective join
+  throw new ChatSDKError(
+    'bad_request:database',
+    'PHASE 1: getChatsByWorkspaceAndUser temporarily disabled - requires objective implementation',
+  );
 
-    const query = (whereCondition?: SQL<unknown>) =>
-      db
-        .select({
-          // Select all chat columns
-          id: chat.id,
-          createdAt: chat.createdAt,
-          title: chat.title,
-          userId: chat.userId,
-          workspaceId: chat.workspaceId,
-          visibility: chat.visibility,
-          mode: chat.mode,
-          modeSetAt: chat.modeSetAt,
-          goal: chat.goal,
-          goalSetAt: chat.goalSetAt,
-          todoList: chat.todoList,
-          todoListUpdatedAt: chat.todoListUpdatedAt,
-          complete: chat.complete,
-          completedAt: chat.completedAt,
-          firstCompletedAt: chat.firstCompletedAt,
-          // Add message count
-          messageCount: count(message.id),
-        })
-        .from(chat)
-        .leftJoin(message, eq(chat.id, message.chatId))
-        .where(
-          whereCondition
-            ? and(
-                whereCondition,
-                eq(chat.workspaceId, workspaceId),
-                eq(chat.userId, userId),
-              )
-            : and(eq(chat.workspaceId, workspaceId), eq(chat.userId, userId)),
-        )
-        .groupBy(
-          chat.id,
-          chat.createdAt,
-          chat.title,
-          chat.userId,
-          chat.workspaceId,
-          chat.visibility,
-          chat.mode,
-          chat.modeSetAt,
-          chat.goal,
-          chat.goalSetAt,
-          chat.todoList,
-          chat.todoListUpdatedAt,
-          chat.complete,
-          chat.completedAt,
-          chat.firstCompletedAt,
-        )
-        .orderBy(desc(chat.createdAt))
-        .limit(extendedLimit);
-
-    let filteredChats: Array<Chat & { messageCount: number }> = [];
-
-    if (startingAfter) {
-      const [selectedChat] = await db
-        .select()
-        .from(chat)
-        .where(eq(chat.id, startingAfter));
-
-      filteredChats = await query(gt(chat.createdAt, selectedChat.createdAt));
-    } else if (endingBefore) {
-      const [selectedChat] = await db
-        .select()
-        .from(chat)
-        .where(eq(chat.id, endingBefore));
-
-      filteredChats = await query(lt(chat.createdAt, selectedChat.createdAt));
-    } else {
-      filteredChats = await query();
-    }
-
-    const hasMore = filteredChats.length > limit;
-
-    return filteredChats.slice(0, limit).map((chat) => ({
-      ...chat,
-      hasMore,
-      hasBefore: startingAfter ? true : !!endingBefore,
-    }));
-  } catch (error) {
-    logger.error(
-      '[Database] Error getting chats by workspace and user:',
-      error,
-    );
-    throw new ChatSDKError(
-      'bad_request:database',
-      'Failed to get chats by workspace and user',
-    );
-  }
+  // PHASE 2 TODO: Implement with objective join
+  // Will join chat -> objective to filter by workspace
 }
 
 export async function getChatsByWorkspaceAndUserId({
@@ -302,88 +218,37 @@ export async function getChatsByWorkspaceAndUserId({
   startingAfter: string | null;
   endingBefore: string | null;
 }) {
-  try {
-    const extendedLimit = limit + 1;
+  // PHASE 1 STUB: Chat no longer has workspaceId - needs objective join
+  throw new ChatSDKError(
+    'bad_request:database',
+    'PHASE 1: getChatsByWorkspaceAndUserId temporarily disabled - requires objective implementation',
+  );
 
-    const query = (whereCondition?: SQL<unknown>) =>
-      db
-        .select()
-        .from(chat)
-        .where(
-          whereCondition
-            ? and(
-                whereCondition,
-                eq(chat.workspaceId, workspaceId),
-                eq(chat.userId, userId),
-              )
-            : and(eq(chat.workspaceId, workspaceId), eq(chat.userId, userId)),
-        )
-        .orderBy(desc(chat.createdAt))
-        .limit(extendedLimit);
-
-    let filteredChats: Array<Chat> = [];
-
-    if (startingAfter) {
-      const [selectedChat] = await db
-        .select()
-        .from(chat)
-        .where(eq(chat.id, startingAfter))
-        .limit(1);
-
-      if (!selectedChat) {
-        throw new ChatSDKError(
-          'not_found:database',
-          `Chat with id ${startingAfter} not found`,
-        );
-      }
-
-      filteredChats = await query(gt(chat.createdAt, selectedChat.createdAt));
-    } else if (endingBefore) {
-      const [selectedChat] = await db
-        .select()
-        .from(chat)
-        .where(eq(chat.id, endingBefore))
-        .limit(1);
-
-      if (!selectedChat) {
-        throw new ChatSDKError(
-          'not_found:database',
-          `Chat with id ${endingBefore} not found`,
-        );
-      }
-
-      filteredChats = await query(lt(chat.createdAt, selectedChat.createdAt));
-    } else {
-      filteredChats = await query();
-    }
-
-    const hasMore = filteredChats.length > limit;
-
-    return {
-      chats: hasMore ? filteredChats.slice(0, limit) : filteredChats,
-      hasMore,
-    };
-  } catch (error) {
-    throw new ChatSDKError(
-      'bad_request:database',
-      'Failed to get chats by user id',
-    );
-  }
+  // PHASE 2 TODO: Implement with objective join
+  // Will join chat -> objective to filter by workspace
 }
 
 export async function getChatById({
   id,
   workspaceId,
 }: { id: string; workspaceId: string }) {
-  try {
-    const [selectedChat] = await db
-      .select()
-      .from(chat)
-      .where(and(eq(chat.id, id), eq(chat.workspaceId, workspaceId)));
-    return selectedChat;
-  } catch (error) {
-    throw new ChatSDKError('bad_request:database', 'Failed to get chat by id');
-  }
+  // PHASE 1 STUB: Chat no longer has workspaceId - needs objective join
+  throw new ChatSDKError(
+    'bad_request:database',
+    'PHASE 1: getChatById temporarily disabled - requires objective implementation',
+  );
+
+  // PHASE 2 TODO: Implement with objective join to validate workspace
+  // try {
+  //   const [selectedChat] = await db
+  //     .select()
+  //     .from(chat)
+  //     .leftJoin(objective, eq(chat.objectiveId, objective.id))
+  //     .where(and(eq(chat.id, id), eq(objective.workspaceId, workspaceId)));
+  //   return selectedChat;
+  // } catch (error) {
+  //   throw new ChatSDKError('bad_request:database', 'Failed to get chat by id');
+  // }
 }
 
 export async function saveMessages({

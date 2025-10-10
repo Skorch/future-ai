@@ -225,7 +225,7 @@ export function DocConfigForm({ config, onChange }: DocConfigFormProps) {
               type="radio"
               name="doc-domain"
               value="meeting"
-              checked={config.domain === 'meeting'}
+              checked={config.domain === 'project'}
               onChange={(e) => {
                 const newDomain = e.target.value as DomainId;
                 const newAllowedTypes = DOMAINS[newDomain].allowedTypes;

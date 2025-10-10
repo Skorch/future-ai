@@ -47,7 +47,7 @@ export function AgentConfigForm({ config, onChange }: AgentConfigFormProps) {
               type="radio"
               name="domain"
               value="meeting"
-              checked={config.domain === 'meeting'}
+              checked={config.domain === 'project'}
               onChange={(e) =>
                 onChange({ ...config, domain: e.target.value as DomainId })
               }

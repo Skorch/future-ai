@@ -165,3 +165,35 @@ export async function findUserDemoWorkspace(userId: string) {
 
   return result[0] || null;
 }
+
+/**
+ * STUB: Create objective for workspace
+ * Real implementation in Phase 2 - will create objective with workspace domain
+ */
+// Stub type - Phase 2 will import from lib/db/objective.ts
+type StubObjective = {
+  id: string;
+  title: string;
+  description: string | null;
+  workspaceId: string;
+};
+
+export async function createObjectiveForWorkspace(
+  workspaceId: string,
+  userId: string,
+  data: { title: string; description?: string },
+): Promise<StubObjective> {
+  throw new Error(
+    'STUB: Implement in Phase 2 - will create objective with workspace domain',
+  );
+}
+
+/**
+ * STUB: Get open objectives for workspace
+ * Real implementation in Phase 2
+ */
+export async function getOpenObjectivesForWorkspace(
+  workspaceId: string,
+): Promise<StubObjective[]> {
+  return []; // STUB: Implement in Phase 2
+}
