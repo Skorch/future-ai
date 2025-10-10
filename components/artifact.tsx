@@ -145,8 +145,9 @@ function PureArtifact({
       const mostRecentDocument = documents.at(-1);
 
       logger.debug(' Most recent document:', {
-        hasContent: !!mostRecentDocument?.content,
-        contentLength: mostRecentDocument?.content?.length || 0,
+        hasContent: !!(mostRecentDocument as { content?: string })?.content,
+        contentLength:
+          (mostRecentDocument as { content?: string })?.content?.length || 0,
         documentId: mostRecentDocument?.id,
         title: mostRecentDocument?.title,
       });
@@ -158,7 +159,7 @@ function PureArtifact({
         logger.debug(' Updating artifact with document content');
         setArtifact((currentArtifact) => ({
           ...currentArtifact,
-          content: mostRecentDocument.content ?? '',
+          content: (mostRecentDocument as { content?: string })?.content ?? '',
         }));
       }
     } else {
@@ -207,7 +208,9 @@ function PureArtifact({
           return;
         }
 
-        if (currentDocument.content === updatedContent) {
+        if (
+          (currentDocument as { content?: string })?.content === updatedContent
+        ) {
           logger.debug('Content unchanged, skipping save');
           setIsContentDirty(false);
           return;
@@ -215,15 +218,15 @@ function PureArtifact({
 
         logger.debug('Content changed, saving...');
 
-        // Get messageId from current draft
-        const messageId = docWithVersions?.currentDraft?.messageId || null;
+        // PHASE 4 REFACTORING: Using chatId from draft - artifact actions will be refactored
+        const chatId = docWithVersions?.currentDraft?.chatId || undefined;
 
         // Save to server (this also revalidates Next.js pages)
+        // PHASE 4 REFACTORING: Artifact save actions will be updated
         const result = await autoSaveDocumentDraftAction(
           artifact.documentId,
           updatedContent,
-          workspaceId,
-          messageId,
+          chatId,
         );
 
         logger.debug('Save result:', result);
@@ -252,11 +255,15 @@ function PureArtifact({
       logger.debug('saveContent called', {
         hasDocument: !!document,
         contentLength: updatedContent?.length,
-        currentContentLength: document?.content?.length,
+        currentContentLength: (document as { content?: string })?.content
+          ?.length,
         debounce,
       });
 
-      if (document && updatedContent !== document.content) {
+      if (
+        document &&
+        updatedContent !== (document as { content?: string })?.content
+      ) {
         logger.debug('Content differs, triggering save');
         setIsContentDirty(true);
 
@@ -275,7 +282,7 @@ function PureArtifact({
   function getDocumentContentById(index: number) {
     if (!documents) return '';
     if (!documents[index]) return '';
-    return documents[index].content ?? '';
+    return (documents[index] as { content?: string })?.content ?? '';
   }
 
   const handleVersionChange = (type: 'next' | 'prev' | 'toggle' | 'latest') => {

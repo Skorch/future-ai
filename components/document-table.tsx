@@ -118,7 +118,8 @@ export function DocumentTable({
   // Unpublish handler
   const handleUnpublish = useCallback(
     async (doc: { id: string; title: string }) => {
-      const promise = unpublishDocumentAction(doc.id, workspaceId);
+      // PHASE 4 REFACTORING: Unpublish action signature will be updated
+      const promise = unpublishDocumentAction(doc.id);
 
       toast.promise(promise, {
         loading: 'Unpublishing document...',

@@ -33,12 +33,8 @@ export function FloatingPublishButton({
     e.stopPropagation(); // Prevent click from bubbling
     setProcessing(true);
     try {
-      await publishDocumentAction(
-        documentEnvelopeId,
-        versionId,
-        makeSearchable,
-        workspaceId,
-      );
+      // PHASE 4 REFACTORING: Publish actions will be refactored
+      await publishDocumentAction(documentEnvelopeId);
       toast.success('Document published successfully');
     } catch (error) {
       toast.error(
@@ -53,7 +49,8 @@ export function FloatingPublishButton({
     e.stopPropagation(); // Prevent click from bubbling
     setProcessing(true);
     try {
-      await unpublishDocumentAction(documentEnvelopeId, workspaceId);
+      // PHASE 4 REFACTORING: Unpublish actions will be refactored
+      await unpublishDocumentAction(documentEnvelopeId);
       toast.success('Document unpublished');
     } catch (error) {
       toast.error(

@@ -26,13 +26,17 @@ import {
 import { memo } from 'react';
 import { useChatVisibility } from '@/hooks/use-chat-visibility';
 
+type ChatWithObjective = Chat & {
+  objective: { id: string; workspaceId: string };
+};
+
 const PureChatItem = ({
   chat,
   isActive,
   onDelete,
   setOpenMobile,
 }: {
-  chat: Chat;
+  chat: ChatWithObjective;
   isActive: boolean;
   onDelete: (chatId: string) => void;
   setOpenMobile: (open: boolean) => void;
@@ -42,8 +46,8 @@ const PureChatItem = ({
     initialVisibilityType: chat.visibility,
   });
 
-  // Workspace is always available from the chat's workspaceId
-  const chatUrl = `/workspace/${chat.workspaceId}/chat/${chat.id}`;
+  // Chat URL now includes objective in the hierarchy
+  const chatUrl = `/workspace/${chat.objective.workspaceId}/objective/${chat.objectiveId}/chat/${chat.id}`;
 
   return (
     <SidebarMenuItem>

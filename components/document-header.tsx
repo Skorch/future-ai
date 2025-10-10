@@ -29,7 +29,7 @@ interface DocumentHeaderProps {
     metadata: { documentType?: string };
     createdAt: Date;
     contentLength: number;
-    isSearchable: boolean;
+    isSearchable?: boolean; // Optional - only for KnowledgeDocuments
   };
   workspaceId: string;
 }
@@ -37,7 +37,9 @@ interface DocumentHeaderProps {
 export function DocumentHeader({ document, workspaceId }: DocumentHeaderProps) {
   const router = useRouter();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [isSearchable, setIsSearchable] = useState(document.isSearchable);
+  const [isSearchable, setIsSearchable] = useState(
+    document.isSearchable ?? false,
+  );
 
   // Toggle searchable handler
   const handleToggleSearchable = () => {
@@ -129,17 +131,19 @@ export function DocumentHeader({ document, workspaceId }: DocumentHeaderProps) {
         </div>
 
         <div className="flex flex-wrap gap-3 pt-2">
-          {/* Toggle Searchable */}
-          <div className="flex items-center gap-2">
-            <Switch
-              id="searchable"
-              checked={isSearchable}
-              onCheckedChange={handleToggleSearchable}
-            />
-            <Label htmlFor="searchable" className="cursor-pointer">
-              In Knowledge Base
-            </Label>
-          </div>
+          {/* Toggle Searchable - Only for Knowledge Documents (not ObjectiveDocuments) */}
+          {document.isSearchable !== undefined && (
+            <div className="flex items-center gap-2">
+              <Switch
+                id="searchable"
+                checked={isSearchable}
+                onCheckedChange={handleToggleSearchable}
+              />
+              <Label htmlFor="searchable" className="cursor-pointer">
+                In Knowledge Base
+              </Label>
+            </div>
+          )}
 
           {/* Edit Button */}
           <Button onClick={handleEdit} variant="outline">

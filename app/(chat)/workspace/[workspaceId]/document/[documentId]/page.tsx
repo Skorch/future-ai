@@ -1,6 +1,6 @@
 import { auth } from '@clerk/nextjs/server';
 import { redirect, notFound } from 'next/navigation';
-import { getDocumentWithVersions } from '@/lib/db/documents';
+import { getObjectiveDocumentById } from '@/lib/db/objective-document';
 import { DocumentDetailClient } from '@/components/document-detail-client';
 
 export default async function DocumentDetailPage({
@@ -15,21 +15,20 @@ export default async function DocumentDetailPage({
     redirect('/login');
   }
 
-  const docWithVersions = await getDocumentWithVersions(documentId);
+  const docWithVersions = await getObjectiveDocumentById(documentId, userId);
 
   if (
     !docWithVersions ||
-    docWithVersions.envelope.workspaceId !== workspaceId
+    docWithVersions.document.workspaceId !== workspaceId
   ) {
     notFound();
   }
 
-  // ONLY show published version on this route
-  // Drafts are only viewable/editable in the artifact/chat interface
-  const versionToShow = docWithVersions.currentPublished;
+  // Show latest version
+  const versionToShow = docWithVersions.latestVersion;
 
   if (!versionToShow) {
-    // No published version exists - document hasn't been published yet
+    // No versions exist yet
     notFound();
   }
 
@@ -40,12 +39,12 @@ export default async function DocumentDetailPage({
     <DocumentDetailClient
       workspaceId={workspaceId}
       document={{
-        id: docWithVersions.envelope.id,
-        title: docWithVersions.envelope.title,
-        metadata: versionToShow.metadata as { documentType?: string },
+        id: docWithVersions.document.id,
+        title: docWithVersions.document.title,
+        metadata: (versionToShow.metadata as { documentType?: string }) || {},
         createdAt: versionToShow.createdAt,
         contentLength,
-        isSearchable: docWithVersions.envelope.isSearchable,
+        // Don't pass isSearchable - ObjectiveDocuments don't have this field
         content: versionToShow.content || '',
       }}
     />

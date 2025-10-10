@@ -275,21 +275,16 @@ const PublishButton = ({
     setPublishing(true);
     try {
       if (isPublished) {
-        // Unpublish
-        await unpublishDocumentAction(documentEnvelopeId, workspaceId);
+        // PHASE 4 REFACTORING: Unpublish action signature will be updated
+        await unpublishDocumentAction(documentEnvelopeId);
         toast.success('Document unpublished');
       } else {
-        // Publish
+        // PHASE 4 REFACTORING: Publish action signature will be updated
         if (!versionId) {
           toast.error('No draft version to publish');
           return;
         }
-        await publishDocumentAction(
-          documentEnvelopeId,
-          versionId,
-          true, // Always make searchable
-          workspaceId,
-        );
+        await publishDocumentAction(documentEnvelopeId);
         toast.success('Document published successfully');
       }
       // Refresh both document and envelope data

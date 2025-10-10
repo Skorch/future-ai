@@ -16,7 +16,7 @@ interface DocumentDetailClientProps {
     metadata: { documentType?: string };
     createdAt: Date;
     contentLength: number;
-    isSearchable: boolean;
+    isSearchable?: boolean; // Optional - only for KnowledgeDocuments
     content: string;
   };
 }
@@ -46,7 +46,9 @@ export function DocumentDetailClient({
           metadata: document.metadata,
           createdAt: document.createdAt,
           contentLength: document.contentLength,
-          isSearchable: document.isSearchable,
+          ...(document.isSearchable !== undefined && {
+            isSearchable: document.isSearchable,
+          }),
         }}
         workspaceId={workspaceId}
       />

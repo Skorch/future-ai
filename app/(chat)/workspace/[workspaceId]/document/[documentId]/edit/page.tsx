@@ -1,6 +1,6 @@
 import { auth } from '@clerk/nextjs/server';
 import { redirect, notFound } from 'next/navigation';
-import { getDocumentWithVersions } from '@/lib/db/documents';
+import { getObjectiveDocumentById } from '@/lib/db/objective-document';
 import { DocumentEditorWithNav } from './_components/document-editor-with-nav';
 
 export default async function DocumentEditPage({
@@ -15,23 +15,20 @@ export default async function DocumentEditPage({
     redirect('/login');
   }
 
-  const docWithVersions = await getDocumentWithVersions(documentId);
+  const docWithVersions = await getObjectiveDocumentById(documentId, userId);
 
   if (
     !docWithVersions ||
-    docWithVersions.envelope.workspaceId !== workspaceId
+    docWithVersions.document.workspaceId !== workspaceId
   ) {
     notFound();
   }
 
-  // ONLY edit published version on this route
-  // Drafts are only editable in the artifact/chat interface
-  // When you save here, it creates a NEW published version
-  const versionToEdit = docWithVersions.currentPublished;
+  // Edit latest version
+  const versionToEdit = docWithVersions.latestVersion;
 
   if (!versionToEdit) {
-    // No published version exists - document hasn't been published yet
-    // Can't edit an unpublished document on this route
+    // No version exists
     notFound();
   }
 
@@ -40,7 +37,7 @@ export default async function DocumentEditPage({
       workspaceId={workspaceId}
       documentId={documentId}
       initialContent={versionToEdit.content || ''}
-      initialTitle={docWithVersions.envelope.title}
+      initialTitle={docWithVersions.document.title}
     />
   );
 }

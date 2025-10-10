@@ -42,20 +42,14 @@ export function QuickPublishButton({
     setPublishing(true);
     try {
       if (isPublished) {
-        // Unpublish
-        await unpublishDocumentAction(documentEnvelopeId, workspaceId);
+        // Unpublish - Phase 2: removed workspaceId parameter
+        await unpublishDocumentAction(documentEnvelopeId);
         toast.success('Document unpublished');
       } else {
-        // Publish
-        const result = await quickPublishDocumentAction(
-          documentEnvelopeId,
-          workspaceId,
-        );
-        if (result.success) {
-          toast.success('Document published to workspace');
-        } else {
-          toast.error(result.error || 'Failed to publish document');
-        }
+        // Publish - Phase 2: quickPublishDocumentAction now takes (documentId, content)
+        // This is deprecated code - passing empty content as stub
+        await quickPublishDocumentAction(documentEnvelopeId, '');
+        toast.success('Document published to workspace');
       }
       mutate(); // Refresh document data
     } catch (error) {

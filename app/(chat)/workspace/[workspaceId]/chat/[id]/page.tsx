@@ -2,7 +2,10 @@ import { notFound, redirect } from 'next/navigation';
 
 import { auth } from '@clerk/nextjs/server';
 import { Chat } from '@/components/chat';
-import { getChatById, getMessagesByChatId } from '@/lib/db/queries';
+import {
+  getChatByIdWithWorkspace,
+  getMessagesByChatId,
+} from '@/lib/db/queries';
 import { DataStreamHandler } from '@/components/data-stream-handler';
 import { convertToUIMessages } from '@/lib/utils';
 
@@ -11,16 +14,17 @@ export default async function Page(props: {
 }) {
   const params = await props.params;
   const { workspaceId, id } = params;
-  const chat = await getChatById({ id, workspaceId });
-
-  if (!chat) {
-    notFound();
-  }
 
   const { userId } = await auth();
 
   if (!userId) {
     redirect('/login');
+  }
+
+  const chat = await getChatByIdWithWorkspace({ id, workspaceId, userId });
+
+  if (!chat) {
+    notFound();
   }
 
   if (chat.visibility === 'private') {
