@@ -2,7 +2,9 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { auth } from '@clerk/nextjs/server';
-import { createDocument, publishDocument } from '@/lib/db/documents';
+// TODO: Rewire to createKnowledgeDocument for transcript uploads
+// import { createDocument, publishDocument } from '@/lib/db/documents';
+import { createKnowledgeDocument } from '@/lib/db/knowledge-document';
 import { generateUUID } from '@/lib/utils';
 import { getActiveWorkspace } from '@/lib/workspace/context';
 import { getLogger } from '@/lib/logger';
@@ -94,54 +96,38 @@ export async function POST(request: Request) {
     // Get workspace from cookie/context
     const workspaceId = await getActiveWorkspace(userId);
 
-    // Create transcript document in new envelope/version schema
-    // Note: Transcripts are uploaded independently (not tied to a specific message)
-    const doc = await createDocument({
-      id: documentId,
+    // Create transcript as KnowledgeDocument (immutable, searchable)
+    const doc = await createKnowledgeDocument(workspaceId, userId, {
       title: filename,
       content: content,
-      messageId: null, // NULL: transcripts uploaded outside message context
-      workspaceId,
-      userId: userId,
+      category: 'raw', // Transcripts are raw uploads
       documentType: 'transcript',
-      kind: 'text',
       metadata: {
-        documentType: 'transcript',
         fileName: filename,
         fileSize: file.size,
         uploadedAt: new Date().toISOString(),
       },
     });
 
-    // Transcripts are published and searchable by default (unlike AI-generated docs)
-    if (!doc.currentDraft) {
-      throw new Error('Failed to create initial draft version');
-    }
-    await publishDocument(
-      doc.envelope.id,
-      doc.currentDraft.id,
-      true, // makeSearchable
-    );
+    // Revalidate Next.js cache so document pages show the new document
+    revalidateDocumentPaths(workspaceId, doc.id);
 
-    // Revalidate Next.js cache so document pages show the published version
-    revalidateDocumentPaths(workspaceId, doc.envelope.id);
-
-    logger.debug('Created and published transcript document', {
-      documentId,
+    logger.debug('Created knowledge document (transcript)', {
+      documentId: doc.id,
       // fileName removed - may contain sensitive info
       fileSize: file.size,
       userId: userId,
-      isPublished: true,
-      isSearchable: true,
+      category: 'raw',
+      isSearchable: doc.isSearchable,
     });
 
     // Return document ID with explicit transcript marker for chat
     return NextResponse.json({
       success: true,
-      documentId,
+      documentId: doc.id,
       fileName: filename,
       // This message appears in the chat and triggers AI processing
-      message: `TRANSCRIPT_DOCUMENT: ${documentId}\nFILENAME: ${filename}`,
+      message: `TRANSCRIPT_DOCUMENT: ${doc.id}\nFILENAME: ${filename}`,
     });
   } catch (error) {
     logger.error('File upload error:', error);

@@ -16,12 +16,13 @@ import { composeSystemPrompt } from '@/lib/ai/prompts/system';
 import { getDomain, DEFAULT_DOMAIN, type DomainId } from '@/lib/domains';
 import {
   createStreamId,
-  getChatById,
+  getChatByIdWithWorkspace,
   getMessagesByChatId,
   saveChat,
   saveMessages,
   db,
 } from '@/lib/db/queries';
+import { getOrCreateActiveObjective } from '@/lib/db/objective';
 import { workspace } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { convertToUIMessages, generateUUID } from '@/lib/utils';
@@ -35,7 +36,8 @@ import { loadDocuments } from '@/lib/ai/tools/load-documents';
 import { setMode } from '@/lib/ai/tools/set-mode';
 import { askUser } from '@/lib/ai/tools/ask-user';
 import { getPlaybook } from '@/lib/ai/tools/get-playbook';
-import { updateDocumentVersionsMessageId } from '@/lib/db/documents';
+// TODO: Rewire to new DAL - updateDocumentVersionsMessageId stub removed
+// import { updateDocumentVersionsMessageId } from '@/lib/db/documents';
 import { isProductionEnvironment } from '@/lib/constants';
 import { myProvider } from '@/lib/ai/providers';
 import { postRequestBodySchema, type PostRequestBody } from './schema';
@@ -139,7 +141,11 @@ export async function POST(
 
     // Rate limiting removed - no message limits
 
-    const chat = await getChatById({ id, workspaceId });
+    const chat = await getChatByIdWithWorkspace({
+      id,
+      workspaceId,
+      userId,
+    });
 
     // Workspace context now comes from route params
 
@@ -148,24 +154,16 @@ export async function POST(
         message,
       });
 
+      // Get or create active objective for this workspace
+      const objectiveId = await getOrCreateActiveObjective(workspaceId, userId);
+
       await saveChat({
         id,
         userId: userId,
         title,
         visibility: selectedVisibilityType,
-        workspaceId,
+        objectiveId,
       });
-    } else {
-      if (chat.userId !== userId) {
-        return new ChatSDKError('forbidden:chat').toResponse();
-      }
-
-      // PHASE 1 NOTE: Workspace validation temporarily disabled
-      // Chat no longer has workspaceId (uses objectiveId instead)
-      // Will be re-implemented in Phase 2 with objective-based validation
-      // if (chat.workspaceId !== workspaceId) {
-      //   return new ChatSDKError('not_found:chat').toResponse();
-      // }
     }
 
     // === MODE SYSTEM INTEGRATION ===
@@ -929,21 +927,30 @@ export async function POST(
             }));
         });
 
+        // TODO: Phase 4 - Implement updateDocumentVersionsMessageId for objective-document
+        // This will link document versions to the messages that created them
         if (documentVersionUpdates.length > 0) {
-          try {
-            await updateDocumentVersionsMessageId(documentVersionUpdates);
-            logger.debug('Linked document versions to messages', {
+          logger.debug(
+            'Document versions created (linking to messages not yet implemented)',
+            {
               count: documentVersionUpdates.length,
               updates: documentVersionUpdates,
-            });
-          } catch (error) {
-            logger.error('Failed to link document versions to messages', {
-              error,
-              updates: documentVersionUpdates,
-            });
-            // Don't fail the entire request - versions will remain unlinked
-            // but documents are still created and functional
-          }
+            },
+          );
+          // try {
+          //   await updateDocumentVersionsMessageId(documentVersionUpdates);
+          //   logger.debug('Linked document versions to messages', {
+          //     count: documentVersionUpdates.length,
+          //     updates: documentVersionUpdates,
+          //   });
+          // } catch (error) {
+          //   logger.error('Failed to link document versions to messages', {
+          //     error,
+          //     updates: documentVersionUpdates,
+          //   });
+          //   // Don't fail the entire request - versions will remain unlinked
+          //   // but documents are still created and functional
+          // }
         }
       },
       onError: (error: unknown) => {

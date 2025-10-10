@@ -36,12 +36,9 @@ export async function GET(
     endingBefore,
   });
 
-  // Extract hasMore from the first chat if it exists
-  const hasMore = chats.length > 0 ? chats[0].hasMore : false;
-
   // Return in the expected ChatHistory format
   return Response.json({
     chats,
-    hasMore,
+    hasMore: chats.length === limit,
   });
 }

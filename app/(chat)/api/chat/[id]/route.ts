@@ -1,5 +1,5 @@
 import { auth } from '@clerk/nextjs/server';
-import { deleteChatById, getChatById } from '@/lib/db/queries';
+import { deleteChatById, getChatByIdWithWorkspace } from '@/lib/db/queries';
 import { ChatSDKError } from '@/lib/errors';
 import { getActiveWorkspace } from '@/lib/workspace/context';
 import { getLogger } from '@/lib/logger';
@@ -21,7 +21,11 @@ export async function GET(
   const workspaceId = await getActiveWorkspace(userId);
 
   try {
-    const chat = await getChatById({ id: chatId, workspaceId });
+    const chat = await getChatByIdWithWorkspace({
+      id: chatId,
+      workspaceId,
+      userId,
+    });
 
     if (!chat) {
       return new ChatSDKError('not_found:chat').toResponse();
@@ -52,7 +56,17 @@ export async function DELETE(
   const workspaceId = await getActiveWorkspace(userId);
 
   try {
-    await deleteChatById({ id: chatId, workspaceId });
+    const chat = await getChatByIdWithWorkspace({
+      id: chatId,
+      workspaceId,
+      userId,
+    });
+
+    if (!chat) {
+      return new ChatSDKError('not_found:chat').toResponse();
+    }
+
+    await deleteChatById({ id: chatId, objectiveId: chat.objectiveId });
     return Response.json({ success: true });
   } catch (error) {
     logger.error('Failed to delete chat:', error);

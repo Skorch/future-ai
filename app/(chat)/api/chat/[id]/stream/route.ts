@@ -1,6 +1,6 @@
 import { auth } from '@clerk/nextjs/server';
 import {
-  getChatById,
+  getChatByIdWithWorkspace,
   getMessagesByChatId,
   getStreamIdsByChatId,
 } from '@/lib/db/queries';
@@ -44,7 +44,7 @@ export async function GET(
   let chat: Chat;
 
   try {
-    chat = await getChatById({ id: chatId, workspaceId });
+    chat = await getChatByIdWithWorkspace({ id: chatId, workspaceId, userId });
   } catch {
     return new ChatSDKError('not_found:chat').toResponse();
   }

@@ -1,5 +1,5 @@
 import { auth } from '@clerk/nextjs/server';
-import { getDocumentWithVersions } from '@/lib/db/documents';
+import { getObjectiveDocumentById } from '@/lib/db/objective-document';
 
 export async function GET(
   request: Request,
@@ -13,9 +13,9 @@ export async function GET(
   }
 
   try {
-    const doc = await getDocumentWithVersions(id);
+    const doc = await getObjectiveDocumentById(id, userId);
 
-    if (!doc || doc.envelope.workspaceId !== workspaceId) {
+    if (!doc || doc.document.workspaceId !== workspaceId) {
       return Response.json({ error: 'Not found' }, { status: 404 });
     }
 

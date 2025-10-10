@@ -1,7 +1,10 @@
 import { auth } from '@clerk/nextjs/server';
 import { getWorkspaceById } from '@/lib/workspace/queries';
 import { getChatsByWorkspaceAndUser } from '@/lib/db/queries';
-import { getPublishedDocuments } from '@/lib/db/documents';
+// TODO: Rewire to count both ObjectiveDocuments and KnowledgeDocuments
+// import { getPublishedDocuments } from '@/lib/db/documents';
+import { getKnowledgeByWorkspaceId } from '@/lib/db/knowledge-document';
+import { getAllObjectiveDocumentsByWorkspaceId } from '@/lib/db/objective-document';
 import { getLogger } from '@/lib/logger';
 
 const logger = getLogger('WorkspaceStatsAPI');
@@ -33,12 +36,15 @@ export async function GET(
       endingBefore: null,
     });
 
-    // Get published document count (using new envelope/version schema)
-    const documents = await getPublishedDocuments(workspaceId);
+    // Get document counts (both types)
+    const [objectiveDocs, knowledgeDocs] = await Promise.all([
+      getAllObjectiveDocumentsByWorkspaceId(workspaceId, userId),
+      getKnowledgeByWorkspaceId(workspaceId),
+    ]);
 
     return Response.json({
       chatCount: chats.length,
-      documentCount: documents.length,
+      documentCount: objectiveDocs.length + knowledgeDocs.length,
     });
   } catch (error) {
     logger.error('Failed to get workspace stats:', error);

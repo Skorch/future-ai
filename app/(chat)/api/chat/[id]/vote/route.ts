@@ -1,5 +1,9 @@
 import { auth } from '@clerk/nextjs/server';
-import { getChatById, getVotesByChatId, voteMessage } from '@/lib/db/queries';
+import {
+  getChatByIdWithWorkspace,
+  getVotesByChatId,
+  voteMessage,
+} from '@/lib/db/queries';
 import { ChatSDKError } from '@/lib/errors';
 import { getActiveWorkspace } from '@/lib/workspace/context';
 
@@ -17,14 +21,14 @@ export async function GET(
   }
 
   const workspaceId = await getActiveWorkspace(userId);
-  const chat = await getChatById({ id: chatId, workspaceId });
+  const chat = await getChatByIdWithWorkspace({
+    id: chatId,
+    workspaceId,
+    userId,
+  });
 
   if (!chat) {
     return new ChatSDKError('not_found:chat').toResponse();
-  }
-
-  if (chat.userId !== userId) {
-    return new ChatSDKError('forbidden:vote').toResponse();
   }
 
   const votes = await getVotesByChatId({ id: chatId });
@@ -55,14 +59,14 @@ export async function PATCH(
   }
 
   const workspaceId = await getActiveWorkspace(userId);
-  const chat = await getChatById({ id: chatId, workspaceId });
+  const chat = await getChatByIdWithWorkspace({
+    id: chatId,
+    workspaceId,
+    userId,
+  });
 
   if (!chat) {
     return new ChatSDKError('not_found:vote').toResponse();
-  }
-
-  if (chat.userId !== userId) {
-    return new ChatSDKError('forbidden:vote').toResponse();
   }
 
   await voteMessage({
