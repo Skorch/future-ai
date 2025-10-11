@@ -4,6 +4,7 @@ import {
   useState,
   useEffect,
   useCallback,
+  useMemo,
   forwardRef,
   useImperativeHandle,
 } from 'react';
@@ -17,7 +18,6 @@ import { Card, CardContent, CardHeader } from './ui/card';
 import { debounce } from '@/lib/utils/debounce';
 import { useSWRConfig } from 'swr';
 import { createDocumentCacheMutator } from '@/lib/cache/document-cache';
-import { useMemo } from 'react';
 
 interface DocumentEditorProps {
   documentId: string;

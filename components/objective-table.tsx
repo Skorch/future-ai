@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import DataGrid, { type Column } from 'react-data-grid';
 import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
@@ -57,43 +57,55 @@ export function ObjectiveTable({
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  const handleView = (objectiveId: string) => {
-    router.push(`/workspace/${workspaceId}/objective/${objectiveId}`);
-  };
+  const handleView = useCallback(
+    (objectiveId: string) => {
+      router.push(`/workspace/${workspaceId}/objective/${objectiveId}`);
+    },
+    [router, workspaceId],
+  );
 
-  const handleStartChat = (objectiveId: string) => {
-    router.push(
-      `/workspace/${workspaceId}/chat/new?objectiveId=${objectiveId}`,
-    );
-  };
+  const handleStartChat = useCallback(
+    (objectiveId: string) => {
+      router.push(
+        `/workspace/${workspaceId}/chat/new?objectiveId=${objectiveId}`,
+      );
+    },
+    [router, workspaceId],
+  );
 
-  const handlePublish = async (objectiveId: string) => {
-    const result = await publishObjectiveAction(objectiveId);
+  const handlePublish = useCallback(
+    async (objectiveId: string) => {
+      const result = await publishObjectiveAction(objectiveId);
 
-    if (result.success) {
-      toast.success('Objective published');
-      // Invalidate SWR cache
-      if (result.revalidate?.swrKeys) {
-        result.revalidate.swrKeys.forEach((key) => mutate(key));
+      if (result.success) {
+        toast.success('Objective published');
+        // Invalidate SWR cache
+        if (result.revalidate?.swrKeys) {
+          result.revalidate.swrKeys.forEach((key) => mutate(key));
+        }
+      } else {
+        toast.error(`Failed to publish: ${result.error}`);
       }
-    } else {
-      toast.error(`Failed to publish: ${result.error}`);
-    }
-  };
+    },
+    [mutate],
+  );
 
-  const handleUnpublish = async (objectiveId: string) => {
-    const result = await unpublishObjectiveAction(objectiveId);
+  const handleUnpublish = useCallback(
+    async (objectiveId: string) => {
+      const result = await unpublishObjectiveAction(objectiveId);
 
-    if (result.success) {
-      toast.success('Objective unpublished');
-      // Invalidate SWR cache
-      if (result.revalidate?.swrKeys) {
-        result.revalidate.swrKeys.forEach((key) => mutate(key));
+      if (result.success) {
+        toast.success('Objective unpublished');
+        // Invalidate SWR cache
+        if (result.revalidate?.swrKeys) {
+          result.revalidate.swrKeys.forEach((key) => mutate(key));
+        }
+      } else {
+        toast.error(`Failed to unpublish: ${result.error}`);
       }
-    } else {
-      toast.error(`Failed to unpublish: ${result.error}`);
-    }
-  };
+    },
+    [mutate],
+  );
 
   const handleDelete = async () => {
     if (!deleteId) return;
@@ -176,9 +188,9 @@ export function ObjectiveTable({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 p-0 data-[state=open]:bg-muted hover:bg-muted/50 transition-colors"
+                  className="size-8 p-0 data-[state=open]:bg-muted hover:bg-muted/50 transition-colors"
                 >
-                  <MoreHorizontalIcon className="h-4 w-4" />
+                  <MoreHorizontalIcon className="size-4" />
                   <span className="sr-only">Open menu</span>
                 </Button>
               </DropdownMenuTrigger>
@@ -232,7 +244,7 @@ export function ObjectiveTable({
         ),
       },
     ],
-    [workspaceId],
+    [handleView, handleStartChat, handlePublish, handleUnpublish],
   );
 
   // Apply responsive column filtering

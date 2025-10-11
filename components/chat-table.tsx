@@ -121,9 +121,9 @@ export function ChatTable({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 p-0 data-[state=open]:bg-muted hover:bg-muted/50 transition-colors"
+                  className="size-8 p-0 data-[state=open]:bg-muted hover:bg-muted/50 transition-colors"
                 >
-                  <MoreHorizontalIcon className="h-4 w-4" />
+                  <MoreHorizontalIcon className="size-4" />
                   <span className="sr-only">Open menu</span>
                 </Button>
               </DropdownMenuTrigger>

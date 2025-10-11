@@ -130,7 +130,7 @@ export function DocumentTable({
         error: 'Failed to unpublish document',
       });
     },
-    [workspaceId, onDocumentDeleted],
+    [onDocumentDeleted],
   );
 
   const columns = useMemo<Column<DocumentRow>[]>(() => {

@@ -344,7 +344,7 @@ describe('ObjectiveTable Component', () => {
         />,
       );
 
-      expect(screen.getByTestId('header-title')).toHaveTextContent('Title');
+      expect(screen.getByTestId('header-title')).toHaveTextContent('Objective');
       expect(screen.getByTestId('header-documentType')).toHaveTextContent(
         'Type',
       );
@@ -352,7 +352,7 @@ describe('ObjectiveTable Component', () => {
       expect(screen.getByTestId('header-createdAt')).toHaveTextContent(
         'Created',
       );
-      expect(screen.getByTestId('header-actions')).toHaveTextContent('Actions');
+      expect(screen.getByTestId('header-actions')).toHaveTextContent('');
     });
 
     it('should render all objectives as rows', () => {

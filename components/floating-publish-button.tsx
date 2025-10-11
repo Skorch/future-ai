@@ -100,12 +100,12 @@ export function FloatingPublishButton({
           '...'
         ) : isPublished ? (
           <>
-            <XIcon className="w-3.5 h-3.5" />
+            <XIcon className="size-3.5" />
             Unpublish
           </>
         ) : (
           <>
-            <UploadIcon className="w-3.5 h-3.5" />
+            <UploadIcon className="size-3.5" />
             Publish
           </>
         )}
