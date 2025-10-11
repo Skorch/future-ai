@@ -24,7 +24,7 @@ export default async function WorkspacePage(props: {
 
   // Fetch all data in parallel
   const [objectives, knowledge, raw] = await Promise.all([
-    getObjectivesByWorkspaceId(workspaceId, false), // Only 'open' objectives
+    getObjectivesByWorkspaceId(workspaceId, true), // Include both 'open' and 'published' objectives
     getKnowledgeByWorkspaceId(workspaceId, 'knowledge'),
     getKnowledgeByWorkspaceId(workspaceId, 'raw'),
   ]);
