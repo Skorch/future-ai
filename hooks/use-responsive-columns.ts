@@ -1,5 +1,4 @@
-import { useMemo } from 'react';
-import { useWindowSize } from 'usehooks-ts';
+import { useMemo, useEffect, useState } from 'react';
 import type { Column } from 'react-data-grid';
 
 export interface ResponsiveColumnConfig {
@@ -17,7 +16,21 @@ export function useResponsiveColumns<T>(
   allColumns: Column<T>[],
   config: ResponsiveColumnConfig,
 ): Column<T>[] {
-  const { width = 0 } = useWindowSize();
+  // Default to desktop to avoid hydration mismatch
+  const [width, setWidth] = useState(1024);
+
+  useEffect(() => {
+    // Set initial width
+    setWidth(window.innerWidth);
+
+    // Listen for resize
+    const handleResize = () => {
+      setWidth(window.innerWidth);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   return useMemo(() => {
     // Mobile breakpoint: < 640px

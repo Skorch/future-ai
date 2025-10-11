@@ -97,6 +97,9 @@ Always turn this workflow into a task list using the `TodoWrite` tool. You never
    - [ ] update and close the `Issue` if applicable
    - [ ] Report results and any outstanding issues including any follow-up tasks needed
 
+- [ ] 9. Summary
+   - [ ] You will always write a completion report so that the next phase has context of what you implemented
+   
 
 
 ## Proposal Best Practices
