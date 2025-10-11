@@ -299,9 +299,30 @@ export async function getChatsByObjectiveId(
 ) {
   try {
     const chats = await db
-      .select()
+      .select({
+        id: chat.id,
+        title: chat.title,
+        createdAt: chat.createdAt,
+        userId: chat.userId,
+        objectiveId: chat.objectiveId,
+        visibility: chat.visibility,
+        mode: chat.mode,
+        complete: chat.complete,
+        messageCount: count(message.id),
+      })
       .from(chat)
+      .leftJoin(message, eq(message.chatId, chat.id))
       .where(and(eq(chat.objectiveId, objectiveId), eq(chat.userId, userId)))
+      .groupBy(
+        chat.id,
+        chat.title,
+        chat.createdAt,
+        chat.userId,
+        chat.objectiveId,
+        chat.visibility,
+        chat.mode,
+        chat.complete,
+      )
       .orderBy(desc(chat.createdAt));
 
     return chats;

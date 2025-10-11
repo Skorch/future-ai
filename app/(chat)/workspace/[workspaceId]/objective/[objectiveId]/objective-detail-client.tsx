@@ -1,0 +1,310 @@
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { formatDistanceToNow } from 'date-fns';
+import {
+  PlusIcon,
+  FileTextIcon,
+  UploadIcon,
+  MessageSquare,
+  ChevronRightIcon,
+} from 'lucide-react';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { SidebarTrigger } from '@/components/ui/sidebar';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
+import { toggleObjectivePublishAction } from '@/lib/objective/actions';
+import type { Objective } from '@/lib/db/objective';
+
+interface Chat {
+  id: string;
+  title: string;
+  createdAt: Date;
+  messageCount: number;
+  visibility: 'public' | 'private';
+}
+
+interface Document {
+  document: {
+    id: string;
+    title: string;
+  };
+  latestVersion?: {
+    id: string;
+    content: string;
+    versionNumber: number;
+    createdAt: Date;
+  } | null;
+}
+
+interface ObjectiveDetailClientProps {
+  workspaceId: string;
+  objectiveId: string;
+  objective: Objective;
+  document: Document | null;
+  chats: Chat[];
+}
+
+export function ObjectiveDetailClient({
+  workspaceId,
+  objectiveId,
+  objective,
+  document,
+  chats,
+}: ObjectiveDetailClientProps) {
+  const router = useRouter();
+  const [isPublished, setIsPublished] = useState(
+    objective.status === 'published',
+  );
+  const [isToggling, setIsToggling] = useState(false);
+
+  const handleTogglePublish = async (checked: boolean) => {
+    setIsToggling(true);
+    setIsPublished(checked); // Optimistic update
+
+    try {
+      const result = await toggleObjectivePublishAction(objectiveId, checked);
+
+      if (result.error) {
+        // Revert on error
+        setIsPublished(!checked);
+        toast.error(checked ? 'Failed to publish' : 'Failed to unpublish');
+        return;
+      }
+
+      toast.success(checked ? 'Objective published' : 'Objective unpublished');
+      router.refresh();
+    } catch (error) {
+      // Revert on error
+      setIsPublished(!checked);
+      toast.error(checked ? 'Failed to publish' : 'Failed to unpublish');
+    } finally {
+      setIsToggling(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Enhanced Header with Toggle */}
+      <div className="border-b">
+        <div className="px-6 pt-8 pb-6">
+          <div className="flex items-center gap-3 mb-4">
+            <SidebarTrigger className="md:hidden" />
+            <Link
+              href={`/workspace/${workspaceId}`}
+              className="text-sm text-muted-foreground hover:underline transition-all"
+            >
+              ← Back to Workspace
+            </Link>
+          </div>
+
+          {/* Title Row with Toggle */}
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-3xl font-bold mb-2 break-words">
+                {objective.title}
+              </h1>
+              {objective.description && (
+                <p className="text-lg text-muted-foreground mb-3 break-words">
+                  {objective.description}
+                </p>
+              )}
+            </div>
+
+            {/* Published Toggle */}
+            <div className="flex items-center gap-2 shrink-0">
+              <Switch
+                id="published"
+                checked={isPublished}
+                onCheckedChange={handleTogglePublish}
+                disabled={isToggling}
+              />
+              <Label
+                htmlFor="published"
+                className="text-sm font-medium cursor-pointer"
+              >
+                Published
+              </Label>
+            </div>
+          </div>
+
+          {/* Metadata Row */}
+          <div className="flex items-center gap-4 flex-wrap">
+            <Badge variant="outline" className="text-sm capitalize">
+              {objective.documentType}
+            </Badge>
+            <span className="text-sm text-muted-foreground">
+              Created{' '}
+              {formatDistanceToNow(new Date(objective.createdAt), {
+                addSuffix: true,
+              })}
+            </span>
+            {objective.updatedAt &&
+              objective.updatedAt.toString() !==
+                objective.createdAt.toString() && (
+                <span className="text-sm text-muted-foreground">
+                  Updated{' '}
+                  {formatDistanceToNow(new Date(objective.updatedAt), {
+                    addSuffix: true,
+                  })}
+                </span>
+              )}
+          </div>
+        </div>
+
+        {/* Quick Actions Bar */}
+        <div className="px-6 pb-6">
+          <div className="flex gap-2 flex-wrap">
+            <Button
+              asChild
+              variant="outline"
+              className="flex items-center gap-2 rounded-full hover:bg-muted/50 transition-all"
+            >
+              <Link
+                href={`/workspace/${workspaceId}/chat/new?objectiveId=${objectiveId}`}
+              >
+                <PlusIcon className="size-4" />
+                <span className="font-medium">New Task</span>
+              </Link>
+            </Button>
+
+            <Button
+              variant="outline"
+              className="flex items-center gap-2 rounded-full hover:bg-muted/50 transition-all"
+              onClick={() => toast.info('Upload transcript coming soon')}
+            >
+              <UploadIcon className="size-4" />
+              <span className="font-medium">Upload Transcript</span>
+            </Button>
+
+            <Button
+              variant="outline"
+              className="flex items-center gap-2 rounded-full hover:bg-muted/50 transition-all"
+              onClick={() => toast.info('Add knowledge coming soon')}
+            >
+              <FileTextIcon className="size-4" />
+              <span className="font-medium">Add Knowledge</span>
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Content Area */}
+      <div className="flex-1 overflow-auto p-6 space-y-6">
+        {/* Document Viewer */}
+        {document && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileTextIcon className="size-5" />
+                Document: {document.document.title}
+              </CardTitle>
+              {document.latestVersion && (
+                <CardDescription>
+                  Version {document.latestVersion.versionNumber} • Last updated{' '}
+                  {formatDistanceToNow(
+                    new Date(document.latestVersion.createdAt),
+                    {
+                      addSuffix: true,
+                    },
+                  )}
+                </CardDescription>
+              )}
+            </CardHeader>
+            <CardContent>
+              {document.latestVersion ? (
+                <div className="prose max-w-none dark:prose-invert">
+                  {document.latestVersion.content}
+                </div>
+              ) : (
+                <p className="text-muted-foreground">No document content yet</p>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Task History Section */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold tracking-tight">Task History</h2>
+            <span className="text-sm font-medium text-muted-foreground">
+              {chats.length} {chats.length === 1 ? 'task' : 'tasks'}
+            </span>
+          </div>
+
+          {chats.length === 0 ? (
+            <Card className="border-dashed">
+              <CardContent className="flex flex-col items-center justify-center py-16">
+                <div className="rounded-full bg-muted p-4 mb-4">
+                  <MessageSquare className="size-8 text-muted-foreground" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2">No tasks yet</h3>
+                <p className="text-sm text-muted-foreground mb-6 text-center max-w-sm">
+                  Start your first task to begin working on this objective
+                </p>
+                <Button asChild className="rounded-full">
+                  <Link
+                    href={`/workspace/${workspaceId}/chat/new?objectiveId=${objectiveId}`}
+                  >
+                    <PlusIcon className="size-4 mr-2" />
+                    New Task
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-3">
+              {chats.map((chat) => (
+                <Link
+                  key={chat.id}
+                  href={`/workspace/${workspaceId}/chat/${chat.id}`}
+                  className="group"
+                >
+                  <Card className="hover:shadow-lg transition-all duration-200 cursor-pointer group-hover:translate-y-[-2px]">
+                    <CardHeader>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <CardTitle className="text-base font-semibold mb-1 truncate">
+                            {chat.title}
+                          </CardTitle>
+                          <CardDescription className="flex items-center gap-2 flex-wrap text-sm">
+                            <span className="flex items-center gap-1">
+                              <MessageSquare className="size-3.5" />
+                              {chat.messageCount || 0}{' '}
+                              {chat.messageCount === 1 ? 'message' : 'messages'}
+                            </span>
+                            <span className="text-muted-foreground/40">•</span>
+                            <span>
+                              Updated{' '}
+                              {formatDistanceToNow(new Date(chat.createdAt), {
+                                addSuffix: true,
+                              })}
+                            </span>
+                          </CardDescription>
+                        </div>
+
+                        {/* Hover indicator */}
+                        <ChevronRightIcon className="size-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                      </div>
+                    </CardHeader>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
