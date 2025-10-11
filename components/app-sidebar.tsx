@@ -3,8 +3,7 @@
 import { useRouter } from 'next/navigation';
 
 import { PlusIcon } from '@/components/icons';
-import { SidebarHistory } from '@/components/sidebar-history';
-import { SidebarDocuments } from '@/components/sidebar-documents';
+import { SidebarObjectives } from '@/components/sidebar-objectives';
 import { SidebarUserNav } from '@/components/sidebar-user-nav';
 import { WorkspaceSwitcher } from '@/components/workspace-switcher';
 import { Button } from '@/components/ui/button';
@@ -22,10 +21,6 @@ export function AppSidebar({ workspaceId }: { workspaceId: string }) {
   const router = useRouter();
   const { setOpenMobile } = useSidebar();
 
-  const newChatUrl = `/workspace/${workspaceId}/chat/new`;
-  const chatsUrl = `/workspace/${workspaceId}/chat`;
-  const documentsUrl = `/workspace/${workspaceId}/document`;
-
   return (
     <Sidebar className="group-data-[side=left]:border-r-0">
       <SidebarHeader className="pt-8 pb-4 border-b border-sidebar-border">
@@ -39,19 +34,17 @@ export function AppSidebar({ workspaceId }: { workspaceId: string }) {
               className="w-full justify-start"
               onClick={() => {
                 setOpenMobile(false);
-                router.push(newChatUrl);
-                router.refresh();
+                router.push(`/workspace/${workspaceId}?create=true`);
               }}
             >
               <PlusIcon size={16} />
-              New Chat
+              New Objective
             </Button>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <SidebarHistory workspaceId={workspaceId} />
-        <SidebarDocuments workspaceId={workspaceId} />
+        <SidebarObjectives workspaceId={workspaceId} />
       </SidebarContent>
       <SidebarFooter>
         <SidebarUserNav />

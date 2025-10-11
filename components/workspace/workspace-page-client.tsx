@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ObjectiveList } from './objective-list';
 import { KnowledgeExplorer } from './knowledge-explorer';
@@ -22,6 +23,18 @@ export function WorkspacePageClient({
   raw,
 }: WorkspacePageClientProps) {
   const [activeTab, setActiveTab] = useState('objectives');
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  // Open dialog if ?create=true query param is present
+  useEffect(() => {
+    if (searchParams.get('create') === 'true') {
+      setShowCreateDialog(true);
+      // Clean up URL by removing the query param
+      router.replace(`/workspace/${workspace.id}`);
+    }
+  }, [searchParams, workspace.id, router]);
 
   return (
     <div className="flex flex-col h-full">
@@ -53,7 +66,12 @@ export function WorkspacePageClient({
 
         <div className="flex-1 overflow-auto">
           <TabsContent value="objectives" className="mt-0 p-6">
-            <ObjectiveList workspaceId={workspace.id} objectives={objectives} />
+            <ObjectiveList
+              workspaceId={workspace.id}
+              objectives={objectives}
+              showCreateDialog={showCreateDialog}
+              setShowCreateDialog={setShowCreateDialog}
+            />
           </TabsContent>
 
           <TabsContent value="knowledge" className="mt-0 p-6">

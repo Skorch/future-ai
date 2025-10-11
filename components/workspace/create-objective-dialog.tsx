@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useSWRConfig } from 'swr';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -32,6 +33,7 @@ export function CreateObjectiveDialog({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+  const { mutate } = useSWRConfig();
 
   const handleCreate = async () => {
     if (!title.trim()) return;
@@ -49,6 +51,10 @@ export function CreateObjectiveDialog({
       }
 
       const objective = await response.json();
+
+      // Invalidate SWR cache for sidebar to refetch
+      mutate(`/api/workspace/${workspaceId}/objectives`);
+
       setTitle('');
       setDescription('');
       onOpenChange(false);

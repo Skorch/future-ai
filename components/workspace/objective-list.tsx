@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { PlusIcon } from 'lucide-react';
@@ -11,10 +10,16 @@ import type { Objective } from '@/lib/db/objective';
 interface ObjectiveListProps {
   workspaceId: string;
   objectives: Objective[];
+  showCreateDialog: boolean;
+  setShowCreateDialog: (show: boolean) => void;
 }
 
-export function ObjectiveList({ workspaceId, objectives }: ObjectiveListProps) {
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
+export function ObjectiveList({
+  workspaceId,
+  objectives,
+  showCreateDialog,
+  setShowCreateDialog,
+}: ObjectiveListProps) {
   const router = useRouter();
 
   const handleObjectiveCreated = (objectiveId: string) => {
