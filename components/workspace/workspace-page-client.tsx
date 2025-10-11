@@ -7,8 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { ObjectiveTable } from '@/components/objective-table';
+import { KnowledgeTable } from '@/components/knowledge-table';
 import { CreateObjectiveDialog } from './create-objective-dialog';
-import { KnowledgeExplorer } from './knowledge-explorer';
 import type { Workspace } from '@/lib/db/schema';
 import type { Objective } from '@/lib/db/objective';
 import type { KnowledgeDocument } from '@/lib/db/knowledge-document';
@@ -31,6 +31,14 @@ export function WorkspacePageClient({
   const searchParams = useSearchParams();
   const router = useRouter();
 
+  // Initialize from URL hash on mount
+  useEffect(() => {
+    const hash = window.location.hash.slice(1); // Remove '#'
+    if (hash === 'knowledge' || hash === 'raw' || hash === 'objectives') {
+      setActiveTab(hash);
+    }
+  }, []);
+
   // Open dialog if ?create=true query param is present
   useEffect(() => {
     if (searchParams.get('create') === 'true') {
@@ -40,11 +48,17 @@ export function WorkspacePageClient({
     }
   }, [searchParams, workspace.id, router]);
 
+  // Update URL hash when tab changes
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    window.history.replaceState(null, '', `#${value}`);
+  };
+
   return (
     <div className="flex flex-col h-full">
       <Tabs
         value={activeTab}
-        onValueChange={setActiveTab}
+        onValueChange={handleTabChange}
         className="flex-1 flex flex-col"
       >
         {/* Unified Header + Tabs Section */}
@@ -119,19 +133,42 @@ export function WorkspacePageClient({
           </TabsContent>
 
           <TabsContent value="knowledge" className="mt-0 p-6">
-            <KnowledgeExplorer
-              workspaceId={workspace.id}
-              documents={knowledge}
-              category="knowledge"
-            />
+            {knowledge.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <h3 className="text-lg font-semibold mb-2">
+                  No knowledge documents yet
+                </h3>
+                <p className="text-muted-foreground">
+                  Knowledge documents will appear here as you create summaries
+                  and analyses
+                </p>
+              </div>
+            ) : (
+              <KnowledgeTable
+                documents={knowledge}
+                workspaceId={workspace.id}
+                objectives={objectives}
+              />
+            )}
           </TabsContent>
 
           <TabsContent value="raw" className="mt-0 p-6">
-            <KnowledgeExplorer
-              workspaceId={workspace.id}
-              documents={raw}
-              category="raw"
-            />
+            {raw.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <h3 className="text-lg font-semibold mb-2">
+                  No raw documents yet
+                </h3>
+                <p className="text-muted-foreground">
+                  Raw documents are uploaded within objectives
+                </p>
+              </div>
+            ) : (
+              <KnowledgeTable
+                documents={raw}
+                workspaceId={workspace.id}
+                objectives={objectives}
+              />
+            )}
           </TabsContent>
         </div>
       </Tabs>
