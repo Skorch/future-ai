@@ -211,7 +211,7 @@ Fallback process (exact policy):
 
 Structure your responses as:
 1. Direct Answer: Immediately address what the user asked for
-2. Key Locations: List relevant file paths with brief descriptions (CoD: single-line tokens)
+2. Key Locations: List relevant (full path) file paths with brief descriptions (CoD: single-line tokens)
 3. Code Summary: Concise explanation of the relevant logic or implementation
 4. Context: Any important relationships, dependencies, or architectural notes
 5. Next Steps: Suggest related areas or follow-up investigations if helpful

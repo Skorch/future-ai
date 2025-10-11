@@ -12,6 +12,24 @@ Execute this workflow when you need to plan, design, or strategize before implem
 
 ## Architecture Specification Process
 
+### ⚠️ MANDATORY IMPLEMENTATION RULES
+
+**CRITICAL: These rules are NON-NEGOTIABLE and must be followed:**
+
+1. **NO FULL CODE BLOCKS** - You are providing DIRECTION, not implementation
+   - ❌ **NEVER** write complete functions or components
+   - ❌ **NEVER** provide full file contents for new files
+   - ✅ **ALWAYS** use bullet points describing WHAT to do
+   - ✅ **ALWAYS** focus on business rules and key decisions
+   - ✅ For existing files: Use BEFORE/AFTER diffs showing only the specific changes
+   - ✅ For new files: Provide structure outline, key interfaces, and business rules
+
+2. **TEST SPECIFICATIONS ONLY** - No test code, only test strategy
+   - ❌ **NEVER** write actual test code or assertions
+   - ✅ **ALWAYS** use markdown tables with columns: Component/Function | Test Goals | Golden Path | Edge Cases | What NOT to Test
+
+**Violation of these rules requires revision before approval.**
+
 ### Task Setup
 - [ ] Read and understand requirements
 - [ ] Summarize your goals and purpose  
@@ -62,7 +80,7 @@ Execute this workflow when you need to plan, design, or strategize before implem
 - [ ] **New/Missing Component Specifications:** Detail specs for any new components needed
 - [ ] **Component Hierarchy Diagrams:** Generate a *separate* Mermaid `classDiagram` for *each distinct page* (e.g., List, Detail, Create/Edit), clearly labeling components as `<<Server>>` or `<<Client>>`. Add a note clarifying that diagrams show rendering structure, not direct import dependencies between Server/Client components
 - [ ] **User Action Flow Diagrams:** Generate *concrete* Mermaid `sequence` diagrams for *each major user interaction flow* (e.g., Filtering List, Creating Opportunity, Viewing Related Data, Status Changes). Focus *only* on User → Client Component → Server Component/Action flow, omitting internal `activate`/`deactivate`, DAL, and database steps
-- [ ] **Unit Testing Plan:** Include a table outlining test goals and key assertions for the DAL, Server Actions, and all *newly created Client Components*
+- [ ] **Unit Testing Strategy:** Include a markdown table with columns: Component/Function | Test Goals | Golden Path | Edge Cases | What NOT to Test (NO test code allowed)
 - [ ] **Framework Notes:** Explicitly note that the project uses Next.js 15+ and that `params`/`searchParams` in async Server Components are `Promise` objects requiring `await`. Include an example signature
 
 ### Architecture Validation
@@ -114,8 +132,17 @@ When creating architecture specifications, use the following template structure:
 ## 6. User Action Flow Diagrams
 [Sequence diagrams for user interactions]
 
-## 7. Unit Testing Table
-[Table listing all core unit test assertions and edge cases]
+## 7. Unit Testing Strategy
+
+MANDATORY FORMAT - Use this table structure:
+
+| Component/Function | Test Goals | Golden Path | Edge Cases | What NOT to Test |
+|-------------------|------------|-------------|------------|------------------|
+| generateMetadata() | Verify AI generation | Returns valid type, Title ≤ 80 chars | Network timeout → fallback, Invalid content → 'other' | AI SDK internals |
+| UploadButton | Validate upload flow | Select file → Progress → Success | File > 10MB rejected, Wrong extension | FormData API |
+| AddKnowledgeModal | Modal interactions | Open → Enter text → Submit | Empty content error, API fail → retry | Dialog animations |
+
+[Define tests ONLY as strategy. NEVER write actual test code]
 
 ## 7. Phase Plan
 [List of big milestones and the scope of each in a checklist format]
@@ -128,6 +155,12 @@ When creating architecture specifications, use the following template structure:
 ```
 
 ### Phase Document Template
+
+> ⚠️ **REMINDER: When creating phase documents:**
+> - **NEVER** write full implementations - provide direction only
+> - **NEVER** write test code - use strategy tables only
+> - Focus on WHAT to do, not HOW to code it
+> - The coder will implement based on your direction
 
 When breaking implementation into phases, use this template for each phase document:
 
@@ -191,14 +224,47 @@ EXISTING FILES TO REVIEW:
 ### Step 2: [Task Name]
 [Continue with clear, actionable steps using contextual diffs]
 
-## Code Change Format
+## Code Change Format (MANDATORY)
 
-Your goal is not to write the code for the 'Coding Agent'.  Rather your goal is to provide key direction and focus.  You accomplish this by focusing on the following:
-- What file
-- What function signature
-- Key business rule examples
+**REMINDER: Your goal is NOT to write code. You provide DIRECTION and BUSINESS RULES only.**
 
-When documenting code changes in implementation steps, use contextual diff format:
+### ❌ WRONG - Never Write Full Code:
+```typescript
+// NEVER DO THIS - Full implementation
+export function UploadButton({ workspaceId }) {
+  const [isUploading, setIsUploading] = useState(false);
+  const handleUpload = async (file) => {
+    // 50 lines of implementation...
+  };
+  return <Button>Upload</Button>;
+}
+```
+
+### ✅ CORRECT - Provide Direction Only:
+
+**For NEW Files:**
+```typescript
+// File: components/upload-button.tsx (NEW)
+
+// STRUCTURE:
+- React functional component
+- Props: workspaceId, objectiveId, onComplete?
+
+// KEY STATE:
+- isUploading: boolean
+- uploadProgress: number (0-100)
+
+// KEY FUNCTIONS:
+- handleFileSelect(): Validate extension & size, POST to /api/upload
+- handleError(): Toast with retry option
+
+// BUSINESS RULES:
+- Max file size: 10MB
+- Allowed extensions: .txt, .md, .vtt
+- Reset input after selection
+```
+
+**For EXISTING Files - use contextual diff format:**
 
 ### Basic Change Example:
 ```typescript
@@ -253,7 +319,7 @@ async onGenerateDocument(context, params): Promise<{ documentId: string; version
 - Include approximate line numbers or semantic markers (e.g., "in POST handler")
 - Add WHY comments explaining the reasoning for each change
 - For deletions, show what to remove with clear markers
-- For new files, show the complete file content
+- For new files, show STRUCTURE, KEY FUNCTIONS, and BUSINESS RULES only (NO full code)
 - For patterns across multiple files, show one example then list all affected files
 
 ## Coder Workflow Checklist
@@ -323,4 +389,21 @@ async onGenerateDocument(context, params): Promise<{ documentId: string; version
    - Dependencies must be explicit
    - Later phases can reference stubs from earlier phases
    - Phases can leave the system partially broken (document this clearly)
+
+---
+
+## Architecture Specification Validation Checklist
+
+**MANDATORY: Before submitting for review, verify ALL items are checked:**
+
+- [ ] **NO full code implementations** (only direction and business rules)
+- [ ] **NO test code** (only strategy tables with 5 required columns)
+- [ ] All existing file changes use BEFORE/AFTER diff format
+- [ ] All new files show STRUCTURE/INTERFACES/RULES ONLY
+- [ ] Test strategy uses mandatory table format: Component/Function | Test Goals | Golden Path | Edge Cases | What NOT to Test
+- [ ] Business rules are explicit and complete
+- [ ] Each phase has clear success criteria
+- [ ] No complete functions or components are written
+
+**⚠️ If ANY checkbox is unchecked, the specification MUST be revised before approval.**
 
