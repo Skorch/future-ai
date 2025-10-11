@@ -42,55 +42,59 @@ export function WorkspacePageClient({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="border-b px-6 py-4">
-        <div className="flex items-center gap-3">
-          <SidebarTrigger className="md:hidden" />
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold">{workspace.name}</h1>
-            {workspace.description && (
-              <p className="text-muted-foreground mt-1">
-                {workspace.description}
-              </p>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Tabs */}
       <Tabs
         value={activeTab}
         onValueChange={setActiveTab}
         className="flex-1 flex flex-col"
       >
-        <TabsList className="h-auto w-full justify-start gap-2 bg-transparent px-6 py-6 border-b">
-          <TabsTrigger
-            value="objectives"
-            className="flex flex-col items-center gap-2 w-32 py-3 data-[state=active]:bg-muted hover:bg-muted/50 rounded-full transition-all"
-          >
-            <Target className="size-5" />
-            <span className="text-sm font-medium">
-              Objectives ({objectives.length})
-            </span>
-          </TabsTrigger>
-          <TabsTrigger
-            value="knowledge"
-            className="flex flex-col items-center gap-2 w-32 py-3 data-[state=active]:bg-muted hover:bg-muted/50 rounded-full transition-all"
-          >
-            <BookOpen className="size-5" />
-            <span className="text-sm font-medium">
-              Knowledge ({knowledge.length})
-            </span>
-          </TabsTrigger>
-          <TabsTrigger
-            value="raw"
-            className="flex flex-col items-center gap-2 w-32 py-3 data-[state=active]:bg-muted hover:bg-muted/50 rounded-full transition-all"
-          >
-            <FolderOpen className="size-5" />
-            <span className="text-sm font-medium">Raw ({raw.length})</span>
-          </TabsTrigger>
-        </TabsList>
+        {/* Unified Header + Tabs Section */}
+        <div className="border-b">
+          {/* Header */}
+          <div className="px-6 pt-8 pb-6">
+            <div className="flex items-center gap-3">
+              <SidebarTrigger className="md:hidden" />
+              <div className="flex-1">
+                <h1 className="text-2xl font-bold">{workspace.name}</h1>
+                {workspace.description && (
+                  <p className="text-muted-foreground mt-1">
+                    {workspace.description}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
 
+          {/* Tabs */}
+          <TabsList className="h-auto w-full justify-start gap-2 bg-transparent px-6 pb-6">
+            <TabsTrigger
+              value="objectives"
+              className="flex flex-col items-center gap-2 w-32 py-3 data-[state=active]:bg-muted hover:bg-muted/50 rounded-full transition-all"
+            >
+              <Target className="size-5" />
+              <span className="text-sm font-medium">
+                Objectives ({objectives.length})
+              </span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="knowledge"
+              className="flex flex-col items-center gap-2 w-32 py-3 data-[state=active]:bg-muted hover:bg-muted/50 rounded-full transition-all"
+            >
+              <BookOpen className="size-5" />
+              <span className="text-sm font-medium">
+                Knowledge ({knowledge.length})
+              </span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="raw"
+              className="flex flex-col items-center gap-2 w-32 py-3 data-[state=active]:bg-muted hover:bg-muted/50 rounded-full transition-all"
+            >
+              <FolderOpen className="size-5" />
+              <span className="text-sm font-medium">Raw ({raw.length})</span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
+
+        {/* Content Area */}
         <div className="flex-1 overflow-auto">
           <TabsContent value="objectives" className="mt-0 p-6">
             {objectives.length === 0 ? (

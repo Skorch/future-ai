@@ -162,7 +162,7 @@ export function ChatTable({
         columns={columns}
         rows={chats}
         rowKeyGetter={(row) => row.id}
-        className="rdg-light dark:rdg-dark [&_.rdg-row:hover]:bg-muted/50 [&_.rdg-row]:transition-colors [&_.rdg-cell]:py-4 [&_.rdg-header-row]:font-semibold"
+        className="rdg-light dark:rdg-dark [&_.rdg-row:hover]:bg-muted/50 [&_.rdg-row]:transition-colors [&_.rdg-cell]:py-2 [&_.rdg-header-row]:text-sm [&_.rdg-header-row]:font-bold"
         style={{ height }}
       />
 
