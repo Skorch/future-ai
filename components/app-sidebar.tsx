@@ -1,12 +1,11 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { Home } from 'lucide-react';
 
-import { PlusIcon } from '@/components/icons';
 import { SidebarObjectives } from '@/components/sidebar-objectives';
 import { SidebarUserNav } from '@/components/sidebar-user-nav';
 import { WorkspaceSwitcher } from '@/components/workspace-switcher';
-import { Button } from '@/components/ui/button';
 import {
   Sidebar,
   SidebarContent,
@@ -14,6 +13,7 @@ import {
   SidebarHeader,
   SidebarMenu,
   SidebarMenuItem,
+  SidebarMenuButton,
   useSidebar,
 } from '@/components/ui/sidebar';
 
@@ -23,23 +23,24 @@ export function AppSidebar({ workspaceId }: { workspaceId: string }) {
 
   return (
     <Sidebar className="group-data-[side=left]:border-r-0">
-      <SidebarHeader className="pt-8 pb-4 border-b border-sidebar-border">
-        <SidebarMenu className="gap-3">
+      <SidebarHeader className="pt-6 pb-4 border-b border-sidebar-border">
+        <SidebarMenu className="gap-4">
+          {/* Home Button */}
           <SidebarMenuItem>
-            <WorkspaceSwitcher currentWorkspaceId={workspaceId} />
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <Button
-              variant="outline"
-              className="w-full justify-start"
+            <SidebarMenuButton
+              className="justify-center py-6"
               onClick={() => {
                 setOpenMobile(false);
-                router.push(`/workspace/${workspaceId}?create=true`);
+                router.push('/');
               }}
             >
-              <PlusIcon size={16} />
-              New Objective
-            </Button>
+              <Home className="size-5" />
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+
+          {/* Workspace Switcher */}
+          <SidebarMenuItem>
+            <WorkspaceSwitcher currentWorkspaceId={workspaceId} />
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>

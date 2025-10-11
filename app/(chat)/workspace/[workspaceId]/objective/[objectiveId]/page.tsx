@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { SidebarTrigger } from '@/components/ui/sidebar';
 import { PlusIcon, FileTextIcon, UploadIcon } from 'lucide-react';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
@@ -45,6 +46,7 @@ export default async function ObjectiveDetailPage(props: {
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-2">
+            <SidebarTrigger className="md:hidden" />
             <Link
               href={`/workspace/${workspaceId}`}
               className="text-sm text-muted-foreground hover:underline"

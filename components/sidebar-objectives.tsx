@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { PlusIcon } from 'lucide-react';
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -10,6 +11,7 @@ import {
   SidebarMenuButton,
   useSidebar,
 } from '@/components/ui/sidebar';
+import { Button } from '@/components/ui/button';
 import { fetcher } from '@/lib/utils';
 import { CheckCircleFillIcon, FileIcon } from '@/components/icons';
 import useSWR from 'swr';
@@ -28,12 +30,30 @@ export function SidebarObjectives({ workspaceId }: { workspaceId: string }) {
   const objectives = data ?? [];
   const currentObjectiveId = params.objectiveId as string | undefined;
 
+  // Shared header component
+  const SectionHeader = () => (
+    <div className="px-2 pb-2 flex items-center justify-between">
+      <span className="text-xs font-semibold text-sidebar-foreground/70 uppercase tracking-wider">
+        Objectives
+      </span>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-6 px-2"
+        onClick={() => {
+          setOpenMobile(false);
+          router.push(`/workspace/${workspaceId}?create=true`);
+        }}
+      >
+        <PlusIcon className="size-3" />
+      </Button>
+    </div>
+  );
+
   if (isLoading) {
     return (
-      <SidebarGroup>
-        <div className="px-2 py-1 text-xs text-sidebar-foreground/50">
-          Objectives
-        </div>
+      <SidebarGroup className="pt-4">
+        <SectionHeader />
         <SidebarGroupContent>
           <div className="flex flex-col">
             {[44, 32, 48, 36, 52].map((width) => (
@@ -59,12 +79,10 @@ export function SidebarObjectives({ workspaceId }: { workspaceId: string }) {
 
   if (objectives.length === 0) {
     return (
-      <SidebarGroup>
-        <div className="px-2 py-1 text-xs text-sidebar-foreground/50">
-          Objectives
-        </div>
+      <SidebarGroup className="pt-4">
+        <SectionHeader />
         <SidebarGroupContent>
-          <div className="flex flex-row gap-2 justify-center items-center px-2 w-full text-sm text-zinc-500">
+          <div className="flex flex-row gap-2 justify-center items-center px-2 w-full text-xs text-muted-foreground py-4">
             No objectives yet. Create one to get started!
           </div>
         </SidebarGroupContent>
@@ -73,12 +91,8 @@ export function SidebarObjectives({ workspaceId }: { workspaceId: string }) {
   }
 
   return (
-    <SidebarGroup>
-      <div className="border-t border-sidebar-border pt-4">
-        <div className="px-2 pb-2 text-sm font-semibold text-sidebar-foreground">
-          Objectives
-        </div>
-      </div>
+    <SidebarGroup className="pt-4">
+      <SectionHeader />
       <SidebarGroupContent>
         <SidebarMenu>
           {objectives.map((objective) => {
@@ -96,6 +110,7 @@ export function SidebarObjectives({ workspaceId }: { workspaceId: string }) {
                       `/workspace/${workspaceId}/objective/${objective.id}`,
                     );
                   }}
+                  className="transition-all hover:translate-x-0.5"
                 >
                   <StatusIcon size={16} />
                   <span className="truncate">{objective.title}</span>
@@ -109,7 +124,7 @@ export function SidebarObjectives({ workspaceId }: { workspaceId: string }) {
         <div className="p-2">
           <button
             type="button"
-            className="w-full text-left text-sm text-muted-foreground hover:text-foreground transition-colors py-1"
+            className="w-full text-left text-xs text-muted-foreground hover:text-foreground transition-colors py-1.5"
             onClick={() => {
               setOpenMobile(false);
               router.push(`/workspace/${workspaceId}`);
