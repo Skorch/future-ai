@@ -57,9 +57,10 @@ Always turn this workflow into a task list using the `TodoWrite` tool. You never
 - [ ] 2. Load Context and State Plan
    - [ ] Use `code-searcher` subagent to find the possible files to load into context
    - [ ] THINK DEEPLY about the requirements and the scope of changes needed
+   - [ ] You always use the Code Plan format described below
 
 - [ ] 3. SubAgent Plan Review
-   - [ ] if instructed bythe User: use the `jenny` subagent to create a validation report of your plan
+   - [ ] if instructed by the User: use the `jenny` subagent to create a validation report of your plan
    - [ ] Summarize report `jenny` and analyze any suggested changes 
 
 - [ ] 4. User Review
@@ -72,6 +73,10 @@ Always turn this workflow into a task list using the `TodoWrite` tool. You never
 - [ ] 5. Implementation
    - [ ] Implement code
    - [ ] Write and Run tests frequently and incrementally to verify progress
+   - [ ] When building, always use the `build-fixer` subagent to build and fix minor build issues
+   - [ ] when testing, always use the `unit-test-architect` subagent to write tests, run tests, fix test issues 
+   - in both cases, be sure to give it context of the changes (ie give it the path to the speec file) so it can make decisions on the fly
+   
 
 - [ ] 6. Validation
    - [ ] Run tests to verify functionality
@@ -95,8 +100,125 @@ Always turn this workflow into a task list using the `TodoWrite` tool. You never
 
 
 ## Proposal Best Practices
-- always show file tree indicating which files are referenced, edited, added, removed
-- always show relivant code snippets where proposed changes will be made - highlighting the diff
+Always follow this format for quick Human code reviews.  Your aim is to demonstrate WHY, WHERE, HOW in a brief but comprehensive fashion.  Less is more so long as you have highlighted all of the complexities
+
+````
+## Overview
+[Brief description of what this phase accomplishes]
+
+**Dependency**: [Prerequisites - which phases must be complete, or "None - this is the foundation phase"]
+
+**Scope**: [Quantified summary, e.g. "~25 files | 3 DAL implementations | 8 new API routes | 5 server actions"]
+
+## Success Criteria
+- ✅ [What will work after this phase]
+- ✅ [Measurable outcomes]
+- ❌ [What will still be broken - be explicit]
+- ✅ [How to verify success]
+
+## Out of Scope (NOT in this phase)
+
+This phase focuses on [primary goal]. The following are explicitly OUT OF SCOPE:
+
+- **[Feature/System]**: [Why deferred - e.g., "Save for dedicated epic"]
+- **[Optimization]**: [Why not included - e.g., "Not critical for MVP"]
+- **[Complex Change]**: [Why avoided - e.g., "Requires broader refactor"]
+
+## Critical Review Points
+
+### ⚠️ High Risk Areas
+
+**[Risk Name]** → [Step N: Section Name, Function/Area]
+- [What could go wrong]
+- [Why this is risky]
+- [Impact if not handled correctly]
+- **✓ Verify**: [What decision needs validation from reviewer]
+
+[Additional risk areas as needed...]
+
+## File Tree
+
+```
+ADD:
+├── [New files with annotations]
+
+UPDATE:
+├── [Modified files with change type]
+
+REMOVE:
+├── [Files to delete]
+
+EXISTING FILES TO REVIEW:
+├── [Files that exist but need checking]
+```
+
+## Implementation Steps
+
+### Step 1: [Task Name]
+[Use contextual diff format for code changes - see Code Change Format below]
+
+### Step 2: [Task Name]
+[Continue with clear, actionable steps using contextual diffs]
+
+## Code Change Format
+
+When you create a Plan, you are NOT writing the full code.  Even when showing a 'new file' you NEVER show the entire code written - instead you condense into:  
+- What file: file path you intend to make change in
+- What function signature
+- Snippets of key business rules /complexity
+
+Everything else is assumed to be written using best practices and does not require human review.
+
+Example of a contextual diff format:
+
+### Basic Change Example:
+```typescript
+// BEFORE (around line 120):
+const { id, workspaceId, messages } = body;
+
+// AFTER:
+const { id, workspaceId, objectiveId, messages } = body;
+if (!objectiveId) {
+  return NextResponse.json({ error: 'objectiveId required' }, { status: 400 });
+}
+
+// WHY: Every chat must belong to an objective now - no standalone chats
+// This enforces the objective-centric architecture
+```
+
+### Deletion Example:
+```typescript
+// DELETE entire onFinish callback (lines ~145-171):
+onFinish: async ({ response }) => {
+  // ... 20+ lines of messageId linking logic ...
+}
+
+// WHY: No longer linking documents to messages after creation
+// Documents now link to objectives during creation
+```
+
+### Pattern Example (Multiple Files):
+```typescript
+// PATTERN for all handlers in lib/artifacts/document-types/*/server.ts:
+
+// BEFORE:
+async onGenerateDocument(context, params): Promise<{ versionId: string }> {
+  // ...
+  return { versionId: result.versionId };
+}
+
+// AFTER:
+async onGenerateDocument(context, params): Promise<{ documentId: string; versionId: string }> {
+  // ...
+  return { documentId: result.documentId, versionId: result.versionId };
+}
+
+// Apply to: sales-call-summary, meeting-analysis, meeting-agenda,
+// meeting-minutes, business-requirements, sales-strategy, text, use-case
+
+// WHY: Return structure needs both IDs for complete reference
+```
+````
 
 ## Workflow Rules
 These rules are critical to the success of your workflow. 

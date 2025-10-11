@@ -193,6 +193,11 @@ EXISTING FILES TO REVIEW:
 
 ## Code Change Format
 
+Your goal is not to write the code for the 'Coding Agent'.  Rather your goal is to provide key direction and focus.  You accomplish this by focusing on the following:
+- What file
+- What function signature
+- Key business rule examples
+
 When documenting code changes in implementation steps, use contextual diff format:
 
 ### Basic Change Example:
