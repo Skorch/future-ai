@@ -1,11 +1,10 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { revalidatePath } from 'next/cache';
 
 import { auth } from '@clerk/nextjs/server';
-// TODO: Rewire to createKnowledgeDocument for transcript uploads
-// import { createDocument, publishDocument } from '@/lib/db/documents';
 import { createKnowledgeDocument } from '@/lib/db/knowledge-document';
-import { generateUUID } from '@/lib/utils';
+import { generateDocumentMetadata } from '@/lib/ai/generate-document-metadata';
 import { getActiveWorkspace } from '@/lib/workspace/context';
 import { getLogger } from '@/lib/logger';
 import { revalidateDocumentPaths } from '@/lib/cache/document-cache.server';
@@ -15,12 +14,12 @@ const logger = getLogger('FileUploadAPI');
 // Only transcript-related file extensions
 const ALLOWED_EXTENSIONS = ['.txt', '.md', '.vtt', '.srt', '.transcript'];
 
-// 10MB max file size for transcripts
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
+// 400KB max file size to ensure ~100k tokens (well under 200k limit)
+const MAX_FILE_SIZE = 400 * 1024;
 
 const FileSchema = z.object({
   file: z.instanceof(Blob).refine((file) => file.size <= MAX_FILE_SIZE, {
-    message: `File size exceeds maximum allowed (${MAX_FILE_SIZE / 1024 / 1024}MB)`,
+    message: `File size exceeds maximum allowed (${MAX_FILE_SIZE / 1024}KB)`,
   }),
   filename: z.string(),
 });
@@ -39,9 +38,17 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData();
     const file = formData.get('file') as Blob;
+    const objectiveId = formData.get('objectiveId') as string | null;
 
     if (!file) {
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
+    }
+
+    if (!objectiveId) {
+      return NextResponse.json(
+        { error: 'objectiveId is required' },
+        { status: 400 },
+      );
     }
 
     // Get filename from formData since Blob doesn't have name property
@@ -76,56 +83,64 @@ export async function POST(request: Request) {
     // Read file content as text
     const content = await file.text();
 
-    // Generate document ID
-    const documentId = generateUUID();
-
-    logger.debug('Attempting to save document:', {
-      id: documentId,
-      // title removed - may contain sensitive filename
-      contentLength: content.length,
-      kind: 'text',
-      userId: userId,
-      metadata: {
-        documentType: 'transcript',
-        // fileName removed - may contain sensitive info
-        fileSize: file.size,
-        uploadedAt: new Date().toISOString(),
-      },
-    });
-
     // Get workspace from cookie/context
     const workspaceId = await getActiveWorkspace(userId);
 
+    // Generate AI metadata (title, type, summary) from Phase 1
+    logger.debug('Generating AI metadata for transcript', {
+      fileName: filename,
+      contentLength: content.length,
+      userId: userId,
+    });
+
+    const metadata = await generateDocumentMetadata({
+      content,
+      fileName: filename,
+    });
+
+    logger.debug('AI metadata generated', {
+      title: metadata.title,
+      documentType: metadata.documentType,
+      hasSummary: !!metadata.summary,
+    });
+
     // Create transcript as KnowledgeDocument (immutable, searchable)
     const doc = await createKnowledgeDocument(workspaceId, userId, {
-      title: filename,
+      objectiveId,
+      title: metadata.title,
       content: content,
-      category: 'raw', // Transcripts are raw uploads
-      documentType: 'transcript',
+      category: 'raw',
+      documentType: metadata.documentType,
       metadata: {
         fileName: filename,
         fileSize: file.size,
         uploadedAt: new Date().toISOString(),
+        aiSummary: metadata.summary,
       },
     });
 
     // Revalidate Next.js cache so document pages show the new document
     revalidateDocumentPaths(workspaceId, doc.id);
+    revalidatePath(`/workspace/${workspaceId}`);
+    revalidatePath(`/workspace/${workspaceId}/objective/${objectiveId}`);
 
-    logger.debug('Created knowledge document (transcript)', {
+    logger.debug('Created knowledge document', {
       documentId: doc.id,
-      // fileName removed - may contain sensitive info
+      title: metadata.title,
+      documentType: metadata.documentType,
       fileSize: file.size,
       userId: userId,
       category: 'raw',
       isSearchable: doc.isSearchable,
     });
 
-    // Return document ID with explicit transcript marker for chat
+    // Return document ID with AI-generated metadata
     return NextResponse.json({
       success: true,
       documentId: doc.id,
       fileName: filename,
+      title: metadata.title,
+      documentType: metadata.documentType,
       // This message appears in the chat and triggers AI processing
       message: `TRANSCRIPT_DOCUMENT: ${doc.id}\nFILENAME: ${filename}`,
     });

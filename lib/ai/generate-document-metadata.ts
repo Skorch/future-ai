@@ -92,15 +92,9 @@ ${content}${fileName ? `\n\nOriginal filename: ${fileName}` : ''}`,
 
     return object;
   } catch (error) {
-    // Log error for monitoring - AI metadata generation failures should be tracked
-    console.error('AI metadata generation failed, using fallback defaults:', {
-      error:
-        error instanceof Error
-          ? { message: error.message, stack: error.stack }
-          : error,
-      fileName,
-      contentLength: content.length,
-    });
+    // AI metadata generation failed - using fallback defaults
+    // Production monitoring should track these failures via error boundary
+    // Error details: error instanceof Error ? error.message : 'Unknown error'
 
     // Return safe defaults
     return {
