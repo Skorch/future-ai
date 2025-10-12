@@ -19,6 +19,7 @@ interface CreateDocumentProps {
   dataStream: UIMessageStreamWriter<ChatMessage>;
   workspaceId: string;
   domainId: DomainId;
+  objectiveId: string;
 }
 
 // Build schema dynamically based on allowed document types for domain
@@ -94,6 +95,7 @@ export const createDocument = async ({
   dataStream,
   workspaceId,
   domainId,
+  objectiveId,
 }: CreateDocumentProps) => {
   // Get domain-specific allowed types
   const domain = getDomain(domainId);
@@ -190,6 +192,7 @@ export const createDocument = async ({
           dataStream,
           session,
           workspaceId,
+          objectiveId,
           metadata: {
             ...metadata,
             sourceDocumentIds, // Combined array of primary + reference

@@ -102,10 +102,12 @@ export async function POST(
       id,
       message,
       selectedVisibilityType,
+      objectiveId: providedObjectiveId,
     }: {
       id: string;
       message: ChatMessage;
       selectedVisibilityType: VisibilityType;
+      objectiveId?: string;
     } = requestBody;
 
     logger.debug('Processing message', {
@@ -147,23 +149,29 @@ export async function POST(
       userId,
     });
 
-    // Workspace context now comes from route params
+    // Determine the final objectiveId for this chat
+    let chatObjectiveId: string;
 
     if (!chat) {
       const title = await generateTitleFromUserMessage({
         message,
       });
 
-      // Get or create active objective for this workspace
-      const objectiveId = await getOrCreateActiveObjective(workspaceId, userId);
+      // Use provided objectiveId or fall back to active objective
+      chatObjectiveId =
+        providedObjectiveId ||
+        (await getOrCreateActiveObjective(workspaceId, userId));
 
       await saveChat({
         id,
         userId: userId,
         title,
         visibility: selectedVisibilityType,
-        objectiveId,
+        objectiveId: chatObjectiveId,
       });
+    } else {
+      // Chat already exists, use its objectiveId
+      chatObjectiveId = chat.objectiveId;
     }
 
     // === MODE SYSTEM INTEGRATION ===
@@ -454,6 +462,7 @@ export async function POST(
                     dataStream,
                     workspaceId,
                     domainId,
+                    objectiveId: chatObjectiveId,
                   }),
                   updateDocument: updateDocument({
                     session,
