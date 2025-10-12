@@ -4,12 +4,11 @@ import { Button } from '@/components/ui/button';
 import { FileAudioIcon, LoaderIcon } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { useRouter } from 'next/navigation';
 
 interface UploadTranscriptButtonProps {
   workspaceId: string;
   objectiveId: string;
-  onUploadComplete?: (documentId: string) => void;
+  onFileSelected: (content: string) => void; // Callback to open modal with content
 }
 
 const ALLOWED_EXTENSIONS = ['.txt', '.md', '.vtt', '.srt', '.transcript'];
@@ -18,11 +17,10 @@ const MAX_FILE_SIZE = 400 * 1024; // 400KB to ensure ~100k tokens (well under 20
 export function UploadTranscriptButton({
   workspaceId,
   objectiveId,
-  onUploadComplete,
+  onFileSelected,
 }: UploadTranscriptButtonProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const router = useRouter();
+  const [isReading, setIsReading] = useState(false);
 
   const handleButtonClick = () => {
     fileInputRef.current?.click();
@@ -34,7 +32,7 @@ export function UploadTranscriptButton({
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Reset input so same file can be uploaded again
+    // Reset input so same file can be selected again
     event.target.value = '';
 
     // Validate file extension
@@ -55,43 +53,15 @@ export function UploadTranscriptButton({
       return;
     }
 
-    await uploadFile(file);
-  };
-
-  const uploadFile = async (file: File) => {
-    setIsUploading(true);
-
+    // Read file and open modal with content
+    setIsReading(true);
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('objectiveId', objectiveId);
-      formData.append('workspaceId', workspaceId);
-
-      const response = await fetch('/api/files/upload', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Upload failed');
-      }
-
-      const data = await response.json();
-
-      toast.success('Transcript uploaded and analyzed successfully!');
-
-      // Refresh the page to show new document
-      router.refresh();
-
-      // Notify parent component
-      onUploadComplete?.(data.documentId);
+      const content = await file.text();
+      onFileSelected(content);
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to upload transcript',
-      );
+      toast.error('Failed to read file content');
     } finally {
-      setIsUploading(false);
+      setIsReading(false);
     }
   };
 
@@ -103,22 +73,23 @@ export function UploadTranscriptButton({
         className="fixed -top-4 -left-4 size-0.5 opacity-0 pointer-events-none"
         onChange={handleFileChange}
         accept={ALLOWED_EXTENSIONS.join(',')}
-        disabled={isUploading}
+        disabled={isReading}
         tabIndex={-1}
       />
       <Button
         onClick={handleButtonClick}
-        disabled={isUploading}
-        className="flex items-center gap-2 rounded-lg shadow-sm hover:shadow-md transition-all"
+        disabled={isReading}
+        variant="outline"
+        className="flex items-center gap-2 rounded-full hover:bg-muted/50 transition-all"
         size="default"
       >
-        {isUploading ? (
+        {isReading ? (
           <LoaderIcon className="size-4 animate-spin" />
         ) : (
           <FileAudioIcon className="size-4" />
         )}
         <span className="font-medium">
-          {isUploading ? 'Uploading...' : 'Upload Transcript'}
+          {isReading ? 'Reading...' : 'Upload Transcript'}
         </span>
       </Button>
     </>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
@@ -27,6 +27,21 @@ import { toggleObjectivePublishAction } from '@/lib/objective/actions';
 import type { Objective } from '@/lib/db/objective';
 import { UploadTranscriptButton } from '@/components/upload-transcript-button';
 import { AddKnowledgeModal } from '@/components/objective/add-knowledge-modal';
+import { DocumentViewer } from '@/components/document-viewer';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  ChevronDownIcon,
+  ExternalLinkIcon,
+  BookOpen,
+  FolderOpen,
+} from 'lucide-react';
+import { KnowledgeTable } from '@/components/knowledge-table';
+import type { KnowledgeDocument } from '@/lib/db/knowledge-document';
 
 interface Chat {
   id: string;
@@ -55,6 +70,8 @@ interface ObjectiveDetailClientProps {
   objective: Objective;
   document: Document | null;
   chats: Chat[];
+  knowledge: KnowledgeDocument[];
+  raw: KnowledgeDocument[];
 }
 
 export function ObjectiveDetailClient({
@@ -63,6 +80,8 @@ export function ObjectiveDetailClient({
   objective,
   document,
   chats,
+  knowledge,
+  raw,
 }: ObjectiveDetailClientProps) {
   const router = useRouter();
   const [isPublished, setIsPublished] = useState(
@@ -70,6 +89,9 @@ export function ObjectiveDetailClient({
   );
   const [isToggling, setIsToggling] = useState(false);
   const [isAddKnowledgeOpen, setIsAddKnowledgeOpen] = useState(false);
+  const [initialContent, setInitialContent] = useState<string>('');
+  const [isVersionHistoryOpen, setIsVersionHistoryOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('objective');
 
   const handleTogglePublish = async (checked: boolean) => {
     setIsToggling(true);
@@ -94,6 +116,20 @@ export function ObjectiveDetailClient({
     } finally {
       setIsToggling(false);
     }
+  };
+
+  // Initialize from URL hash on mount
+  useEffect(() => {
+    const hash = window.location.hash.slice(1); // Remove '#'
+    if (hash === 'knowledge' || hash === 'raw' || hash === 'objective') {
+      setActiveTab(hash);
+    }
+  }, []);
+
+  // Update URL hash when tab changes
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    window.history.replaceState(null, '', `#${value}`);
   };
 
   return (
@@ -184,9 +220,9 @@ export function ObjectiveDetailClient({
             <UploadTranscriptButton
               workspaceId={workspaceId}
               objectiveId={objectiveId}
-              onUploadComplete={() => {
-                // Component already shows success toast
-                router.refresh();
+              onFileSelected={(content) => {
+                setInitialContent(content);
+                setIsAddKnowledgeOpen(true);
               }}
             />
 
@@ -207,48 +243,212 @@ export function ObjectiveDetailClient({
         workspaceId={workspaceId}
         objectiveId={objectiveId}
         open={isAddKnowledgeOpen}
-        onOpenChange={setIsAddKnowledgeOpen}
+        onOpenChange={(open) => {
+          setIsAddKnowledgeOpen(open);
+          if (!open) {
+            // Clear initial content when modal closes
+            setInitialContent('');
+          }
+        }}
+        initialContent={initialContent}
         onSuccess={() => {
           // Modal handles toast, just refresh
           router.refresh();
         }}
       />
 
-      {/* Content Area */}
-      <div className="flex-1 overflow-auto p-6 space-y-6">
-        {/* Document Viewer */}
-        {document && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileTextIcon className="size-5" />
-                Document: {document.document.title}
-              </CardTitle>
-              {document.latestVersion && (
-                <CardDescription>
-                  Version {document.latestVersion.versionNumber} • Last updated{' '}
-                  {formatDistanceToNow(
-                    new Date(document.latestVersion.createdAt),
-                    {
-                      addSuffix: true,
-                    },
-                  )}
-                </CardDescription>
-              )}
-            </CardHeader>
-            <CardContent>
-              {document.latestVersion ? (
-                <div className="prose max-w-none dark:prose-invert">
-                  {document.latestVersion.content}
-                </div>
-              ) : (
-                <p className="text-muted-foreground">No document content yet</p>
-              )}
-            </CardContent>
-          </Card>
-        )}
+      {/* Content Area with Tabs */}
+      <Tabs
+        value={activeTab}
+        onValueChange={handleTabChange}
+        className="flex flex-col"
+      >
+        {/* Tabs Navigation */}
+        <div className="border-b px-6 pt-4">
+          <TabsList className="h-auto w-full justify-start gap-2 bg-transparent">
+            <TabsTrigger
+              value="objective"
+              className="flex flex-col items-center gap-2 w-32 py-3 data-[state=active]:bg-muted hover:bg-muted/50 rounded-full transition-all"
+            >
+              <FileTextIcon className="size-5" />
+              <span className="text-sm font-medium text-center leading-tight">
+                Objective
+                <br />
+                Document
+              </span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="knowledge"
+              className="flex flex-col items-center gap-2 w-32 py-3 data-[state=active]:bg-muted hover:bg-muted/50 rounded-full transition-all"
+            >
+              <BookOpen className="size-5" />
+              <span className="text-sm font-medium">
+                Knowledge ({knowledge.length})
+              </span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="raw"
+              className="flex flex-col items-center gap-2 w-32 py-3 data-[state=active]:bg-muted hover:bg-muted/50 rounded-full transition-all"
+            >
+              <FolderOpen className="size-5" />
+              <span className="text-sm font-medium">Raw ({raw.length})</span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
-        {/* Task History Section */}
+        {/* Tab Content */}
+        <div className="overflow-auto">
+          <TabsContent value="objective" className="mt-0 px-6 pt-6 pb-6">
+            {/* Document Viewer */}
+            {document && (
+              <div className="space-y-4">
+                <Card className="overflow-hidden">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <FileTextIcon className="size-5" />
+                      {document.document.title}
+                    </CardTitle>
+                    {document.latestVersion && (
+                      <CardDescription>
+                        Version {document.latestVersion.versionNumber} • Last
+                        updated{' '}
+                        {formatDistanceToNow(
+                          new Date(document.latestVersion.createdAt),
+                          {
+                            addSuffix: true,
+                          },
+                        )}
+                      </CardDescription>
+                    )}
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    {document.latestVersion ? (
+                      <Link
+                        href={`/workspace/${workspaceId}/document/${document.document.id}`}
+                        className="block relative cursor-pointer group"
+                      >
+                        {/* Preview Container with Fixed Height */}
+                        <div className="relative h-[300px] overflow-hidden">
+                          <div className="px-6 pt-4 pb-16">
+                            <DocumentViewer
+                              content={document.latestVersion.content}
+                            />
+                          </div>
+                          {/* Gradient Fade Overlay */}
+                          <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-card to-transparent pointer-events-none" />
+                        </div>
+                        {/* View Full Document Button */}
+                        <div className="absolute inset-x-0 bottom-0 flex items-center justify-center pb-4 pointer-events-none">
+                          <div className="flex items-center gap-2 px-4 py-2 bg-primary/90 text-primary-foreground rounded-full text-sm font-medium group-hover:bg-primary transition-colors pointer-events-auto">
+                            <ExternalLinkIcon className="size-4" />
+                            View Full Document
+                          </div>
+                        </div>
+                      </Link>
+                    ) : (
+                      <div className="px-6 py-4">
+                        <p className="text-muted-foreground">
+                          No document content yet
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Version History */}
+                {document.latestVersion && (
+                  <Collapsible
+                    open={isVersionHistoryOpen}
+                    onOpenChange={setIsVersionHistoryOpen}
+                  >
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CollapsibleTrigger className="flex items-center justify-between w-full group">
+                          <CardTitle className="text-base font-semibold">
+                            Version History
+                          </CardTitle>
+                          <ChevronDownIcon
+                            className={`size-5 text-muted-foreground transition-transform ${
+                              isVersionHistoryOpen ? 'rotate-180' : ''
+                            }`}
+                          />
+                        </CollapsibleTrigger>
+                      </CardHeader>
+                      <CollapsibleContent>
+                        <CardContent className="space-y-3 pt-0">
+                          <div className="flex items-start gap-3 pb-3 border-b last:border-b-0">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-medium text-sm">
+                                  Version {document.latestVersion.versionNumber}
+                                </span>
+                                <Badge variant="secondary" className="text-xs">
+                                  Current
+                                </Badge>
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                Updated{' '}
+                                {formatDistanceToNow(
+                                  new Date(document.latestVersion.createdAt),
+                                  {
+                                    addSuffix: true,
+                                  },
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </CollapsibleContent>
+                    </Card>
+                  </Collapsible>
+                )}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="knowledge" className="mt-0 px-6 pt-6 pb-6">
+            {knowledge.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <h3 className="text-lg font-semibold mb-2">
+                  No knowledge documents yet
+                </h3>
+                <p className="text-muted-foreground">
+                  Knowledge documents will appear here as you create summaries
+                  and analyses
+                </p>
+              </div>
+            ) : (
+              <KnowledgeTable
+                documents={knowledge}
+                workspaceId={workspaceId}
+                hideObjectiveColumn={true}
+              />
+            )}
+          </TabsContent>
+
+          <TabsContent value="raw" className="mt-0 px-6 pt-6 pb-6">
+            {raw.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <h3 className="text-lg font-semibold mb-2">
+                  No raw documents yet
+                </h3>
+                <p className="text-muted-foreground">
+                  Raw documents are uploaded within objectives
+                </p>
+              </div>
+            ) : (
+              <KnowledgeTable
+                documents={raw}
+                workspaceId={workspaceId}
+                hideObjectiveColumn={true}
+              />
+            )}
+          </TabsContent>
+        </div>
+      </Tabs>
+
+      {/* Task History Section - Always Visible */}
+      <div className="border-t px-6 pt-4 pb-6">
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold tracking-tight">Task History</h2>
