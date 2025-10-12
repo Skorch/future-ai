@@ -17,6 +17,27 @@ vi.mock('sonner', () => ({
   },
 }));
 
+// Mock Phase 4 utilities
+vi.mock('@/lib/prompts/document-summary-prompts', () => ({
+  buildSummaryPromptWithContent: vi.fn(
+    (type, content, title) =>
+      `Summary prompt for ${type}: ${title}\n\n${content}`,
+  ),
+}));
+
+vi.mock('@/lib/db/types/document-types', () => ({
+  extractRawDocumentType: vi.fn((metadata) => {
+    if (
+      typeof metadata === 'object' &&
+      metadata !== null &&
+      'documentType' in metadata
+    ) {
+      return metadata.documentType;
+    }
+    return 'other';
+  }),
+}));
+
 // Mock Button component
 vi.mock('@/components/ui/button', () => ({
   Button: ({
@@ -65,6 +86,28 @@ describe('UploadTranscriptButton Component', () => {
   let mockPush: ReturnType<typeof vi.fn>;
   let mockToastSuccess: ReturnType<typeof vi.fn>;
   let mockToastError: ReturnType<typeof vi.fn>;
+
+  // Helper function to create file with text() method
+  const createMockFile = (
+    content: string | string[],
+    filename: string,
+    options?: FilePropertyBag,
+  ) => {
+    const file = new File(
+      Array.isArray(content) ? content : [content],
+      filename,
+      options,
+    );
+    // Mock the text() method that Phase 4 uses
+    Object.defineProperty(file, 'text', {
+      value: vi
+        .fn()
+        .mockResolvedValue(Array.isArray(content) ? content.join('') : content),
+      writable: false,
+      configurable: true,
+    });
+    return file;
+  };
 
   // Helper function to simulate file selection
   const simulateFileSelection = (file: File) => {
@@ -201,13 +244,18 @@ describe('UploadTranscriptButton Component', () => {
 
       vi.mocked(fetch).mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ success: true, documentId: 'doc-123' }),
+        json: async () => ({
+          success: true,
+          documentId: 'doc-123',
+          documentType: 'other',
+          title: 'Test',
+        }),
       } as Response);
 
       const fileInput = container.querySelector(
         'input[type="file"]',
       ) as HTMLInputElement;
-      const file = new File(['transcript content'], 'meeting.txt', {
+      const file = createMockFile('transcript content', 'meeting.txt', {
         type: 'text/plain',
       });
 
@@ -234,7 +282,7 @@ describe('UploadTranscriptButton Component', () => {
       const fileInput = container.querySelector(
         'input[type="file"]',
       ) as HTMLInputElement;
-      const file = new File(['# Meeting Notes'], 'notes.md', {
+      const file = createMockFile('# Meeting Notes', 'notes.md', {
         type: 'text/markdown',
       });
 
@@ -261,7 +309,7 @@ describe('UploadTranscriptButton Component', () => {
       const fileInput = container.querySelector(
         'input[type="file"]',
       ) as HTMLInputElement;
-      const file = new File(['WEBVTT\n\n00:00.000'], 'captions.vtt', {
+      const file = createMockFile('WEBVTT\n\n00:00.000', 'captions.vtt', {
         type: 'text/vtt',
       });
 
@@ -288,7 +336,7 @@ describe('UploadTranscriptButton Component', () => {
       const fileInput = container.querySelector(
         'input[type="file"]',
       ) as HTMLInputElement;
-      const file = new File(['1\n00:00:00,000'], 'subtitles.srt', {
+      const file = createMockFile('1\n00:00:00,000', 'subtitles.srt', {
         type: 'application/x-subrip',
       });
 
@@ -315,7 +363,7 @@ describe('UploadTranscriptButton Component', () => {
       const fileInput = container.querySelector(
         'input[type="file"]',
       ) as HTMLInputElement;
-      const file = new File(['Speaker 1: Hello'], 'call.transcript', {
+      const file = createMockFile('Speaker 1: Hello', 'call.transcript', {
         type: 'text/plain',
       });
 
@@ -1046,6 +1094,424 @@ describe('UploadTranscriptButton Component', () => {
       });
 
       expect(fetch).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('Phase 4: File Reading and Summary Prompt Building', () => {
+    it('should read file content before upload', async () => {
+      const user = userEvent.setup();
+      const { container } = render(
+        <UploadTranscriptButton {...defaultProps} />,
+      );
+
+      const fileContent = 'Meeting transcript content\nSpeaker 1: Hello';
+      const file = new File([fileContent], 'meeting.txt', {
+        type: 'text/plain',
+      });
+
+      // Mock text() method on the File
+      const textSpy = vi.fn().mockResolvedValue(fileContent);
+      Object.defineProperty(file, 'text', {
+        value: textSpy,
+        writable: false,
+      });
+
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          documentId: 'doc-123',
+          documentType: 'transcript',
+          title: 'Meeting Transcript',
+        }),
+      } as Response);
+
+      const fileInput = container.querySelector(
+        'input[type="file"]',
+      ) as HTMLInputElement;
+
+      await user.upload(fileInput, file);
+
+      await waitFor(() => {
+        expect(textSpy).toHaveBeenCalled();
+      });
+    });
+
+    it('should call extractRawDocumentType with API response metadata', async () => {
+      const user = userEvent.setup();
+      const { container } = render(
+        <UploadTranscriptButton {...defaultProps} />,
+      );
+
+      const file = new File(['content'], 'test.txt', { type: 'text/plain' });
+      Object.defineProperty(file, 'text', {
+        value: vi.fn().mockResolvedValue('content'),
+      });
+
+      const mockResponse = {
+        success: true,
+        documentId: 'doc-123',
+        documentType: 'meeting_notes',
+        title: 'Team Meeting',
+      };
+
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockResponse,
+      } as Response);
+
+      const fileInput = container.querySelector(
+        'input[type="file"]',
+      ) as HTMLInputElement;
+
+      await user.upload(fileInput, file);
+
+      await waitFor(() => {
+        expect(mockPush).toHaveBeenCalled();
+      });
+
+      const { extractRawDocumentType } = await import(
+        '@/lib/db/types/document-types'
+      );
+
+      // Should be called with metadata object containing documentType
+      expect(extractRawDocumentType).toHaveBeenCalledWith({
+        documentType: 'meeting_notes',
+      });
+    });
+
+    it('should call buildSummaryPromptWithContent with file content and metadata', async () => {
+      const user = userEvent.setup();
+      const { container } = render(
+        <UploadTranscriptButton {...defaultProps} />,
+      );
+
+      const fileContent = 'Detailed meeting notes about Q4 planning';
+      const file = new File([fileContent], 'planning.txt', {
+        type: 'text/plain',
+      });
+      Object.defineProperty(file, 'text', {
+        value: vi.fn().mockResolvedValue(fileContent),
+      });
+
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          documentId: 'doc-123',
+          documentType: 'meeting_notes',
+          title: 'Q4 Planning Meeting',
+        }),
+      } as Response);
+
+      const fileInput = container.querySelector(
+        'input[type="file"]',
+      ) as HTMLInputElement;
+
+      await user.upload(fileInput, file);
+
+      await waitFor(() => {
+        expect(mockPush).toHaveBeenCalled();
+      });
+
+      const { buildSummaryPromptWithContent } = await import(
+        '@/lib/prompts/document-summary-prompts'
+      );
+
+      expect(buildSummaryPromptWithContent).toHaveBeenCalledWith(
+        'meeting_notes',
+        fileContent,
+        'Q4 Planning Meeting',
+      );
+    });
+
+    it('should navigate with all 3 parameters: objectiveId, query, autoSubmit', async () => {
+      const user = userEvent.setup();
+      const { container } = render(
+        <UploadTranscriptButton {...defaultProps} />,
+      );
+
+      const file = new File(['content'], 'test.txt', { type: 'text/plain' });
+      Object.defineProperty(file, 'text', {
+        value: vi.fn().mockResolvedValue('content'),
+      });
+
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          documentId: 'doc-123',
+          documentType: 'transcript',
+          title: 'Sales Call',
+        }),
+      } as Response);
+
+      const fileInput = container.querySelector(
+        'input[type="file"]',
+      ) as HTMLInputElement;
+
+      await user.upload(fileInput, file);
+
+      await waitFor(() => {
+        expect(mockPush).toHaveBeenCalled();
+      });
+
+      const pushCall = mockPush.mock.calls[0][0];
+
+      // Verify all 3 params present
+      expect(pushCall).toContain('objectiveId=objective-456');
+      expect(pushCall).toContain('query=');
+      expect(pushCall).toContain('autoSubmit=true');
+      expect(pushCall).toContain('/workspace/workspace-123/chat/new');
+    });
+
+    it('should URL-encode the summary prompt in query parameter', async () => {
+      const user = userEvent.setup();
+      const { container } = render(
+        <UploadTranscriptButton {...defaultProps} />,
+      );
+
+      const file = new File(['content'], 'test.txt', { type: 'text/plain' });
+      Object.defineProperty(file, 'text', {
+        value: vi.fn().mockResolvedValue('content'),
+      });
+
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          documentId: 'doc-123',
+          documentType: 'email',
+          title: 'Q4 Sales & Marketing',
+        }),
+      } as Response);
+
+      const fileInput = container.querySelector(
+        'input[type="file"]',
+      ) as HTMLInputElement;
+
+      await user.upload(fileInput, file);
+
+      await waitFor(() => {
+        expect(mockPush).toHaveBeenCalled();
+      });
+
+      const pushCall = mockPush.mock.calls[0][0];
+
+      // Should encode special characters
+      expect(pushCall).toContain('Q4%20Sales%20%26%20Marketing');
+      expect(pushCall).toMatch(/query=[^&]+/);
+    });
+
+    it('should handle different file types with appropriate document types', async () => {
+      const user = userEvent.setup();
+      const { container } = render(
+        <UploadTranscriptButton {...defaultProps} />,
+      );
+
+      const testCases = [
+        {
+          fileName: 'meeting.vtt',
+          mimeType: 'text/vtt',
+          docType: 'transcript',
+        },
+        {
+          fileName: 'notes.md',
+          mimeType: 'text/markdown',
+          docType: 'meeting_notes',
+        },
+        {
+          fileName: 'call.srt',
+          mimeType: 'application/x-subrip',
+          docType: 'transcript',
+        },
+      ];
+
+      for (const testCase of testCases) {
+        vi.clearAllMocks();
+
+        const file = new File(['content'], testCase.fileName, {
+          type: testCase.mimeType,
+        });
+        Object.defineProperty(file, 'text', {
+          value: vi.fn().mockResolvedValue('content'),
+        });
+
+        vi.mocked(fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            success: true,
+            documentId: 'doc-123',
+            documentType: testCase.docType,
+            title: `Test ${testCase.docType}`,
+          }),
+        } as Response);
+
+        const fileInput = container.querySelector(
+          'input[type="file"]',
+        ) as HTMLInputElement;
+
+        await user.upload(fileInput, file);
+
+        await waitFor(() => {
+          expect(mockPush).toHaveBeenCalled();
+        });
+
+        const { buildSummaryPromptWithContent } = await import(
+          '@/lib/prompts/document-summary-prompts'
+        );
+
+        expect(buildSummaryPromptWithContent).toHaveBeenCalledWith(
+          testCase.docType,
+          'content',
+          `Test ${testCase.docType}`,
+        );
+      }
+    });
+
+    it('should skip navigation when documentType is missing', async () => {
+      const user = userEvent.setup();
+      const { container } = render(
+        <UploadTranscriptButton {...defaultProps} />,
+      );
+
+      const file = new File(['content'], 'test.txt', { type: 'text/plain' });
+      Object.defineProperty(file, 'text', {
+        value: vi.fn().mockResolvedValue('content'),
+      });
+
+      // Response without documentType
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          documentId: 'doc-123',
+          // Missing documentType and title
+        }),
+      } as Response);
+
+      const fileInput = container.querySelector(
+        'input[type="file"]',
+      ) as HTMLInputElement;
+
+      await user.upload(fileInput, file);
+
+      await waitFor(() => {
+        expect(mockToastSuccess).toHaveBeenCalled();
+      });
+
+      // Should not navigate when metadata missing
+      expect(mockPush).not.toHaveBeenCalled();
+    });
+
+    it('should skip navigation when title is missing', async () => {
+      const user = userEvent.setup();
+      const { container } = render(
+        <UploadTranscriptButton {...defaultProps} />,
+      );
+
+      const file = new File(['content'], 'test.txt', { type: 'text/plain' });
+      Object.defineProperty(file, 'text', {
+        value: vi.fn().mockResolvedValue('content'),
+      });
+
+      // Response without title
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          documentId: 'doc-123',
+          documentType: 'transcript',
+          // Missing title
+        }),
+      } as Response);
+
+      const fileInput = container.querySelector(
+        'input[type="file"]',
+      ) as HTMLInputElement;
+
+      await user.upload(fileInput, file);
+
+      await waitFor(() => {
+        expect(mockToastSuccess).toHaveBeenCalled();
+      });
+
+      // Should not navigate when title missing
+      expect(mockPush).not.toHaveBeenCalled();
+    });
+
+    it('should handle file reading errors gracefully', async () => {
+      const user = userEvent.setup();
+      const { container } = render(
+        <UploadTranscriptButton {...defaultProps} />,
+      );
+
+      const file = new File(['content'], 'test.txt', { type: 'text/plain' });
+
+      // Mock file.text() to throw error
+      Object.defineProperty(file, 'text', {
+        value: vi.fn().mockRejectedValue(new Error('File read error')),
+      });
+
+      const fileInput = container.querySelector(
+        'input[type="file"]',
+      ) as HTMLInputElement;
+
+      await user.upload(fileInput, file);
+
+      await waitFor(() => {
+        expect(mockToastError).toHaveBeenCalledWith('File read error');
+      });
+
+      // Should not call API when file read fails
+      expect(fetch).not.toHaveBeenCalled();
+    });
+
+    it('should use full file content not truncated for summary', async () => {
+      const user = userEvent.setup();
+      const { container } = render(
+        <UploadTranscriptButton {...defaultProps} />,
+      );
+
+      // Large file content
+      const largeContent = 'a'.repeat(100000);
+      const file = new File([largeContent], 'large.txt', {
+        type: 'text/plain',
+      });
+      Object.defineProperty(file, 'text', {
+        value: vi.fn().mockResolvedValue(largeContent),
+      });
+
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          documentId: 'doc-123',
+          documentType: 'research',
+          title: 'Large Document',
+        }),
+      } as Response);
+
+      const fileInput = container.querySelector(
+        'input[type="file"]',
+      ) as HTMLInputElement;
+
+      await user.upload(fileInput, file);
+
+      await waitFor(() => {
+        expect(mockPush).toHaveBeenCalled();
+      });
+
+      const { buildSummaryPromptWithContent } = await import(
+        '@/lib/prompts/document-summary-prompts'
+      );
+
+      // Should pass the full content, not truncated
+      expect(buildSummaryPromptWithContent).toHaveBeenCalledWith(
+        'research',
+        largeContent,
+        'Large Document',
+      );
     });
   });
 
