@@ -22,6 +22,7 @@ export const salesStrategyHandler: DocumentHandler<'text'> = {
     metadata: docMetadata,
     workspaceId,
     session,
+    objectiveId,
   }) => {
     const typedMetadata = docMetadata as {
       sourceDocumentIds?: string[];
@@ -120,6 +121,7 @@ ${analyses}
       kind: 'text',
       session,
       workspaceId,
+      objectiveId,
       metadata: {
         ...docMetadata,
         documentType: 'sales-strategy',
@@ -160,6 +162,7 @@ ${analyses}
       kind: 'text',
       session,
       workspaceId,
+      objectiveId: undefined,
     });
   },
 };

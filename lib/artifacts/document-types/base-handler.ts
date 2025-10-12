@@ -59,6 +59,7 @@ export interface SaveDocumentProps {
   kind: ArtifactKind;
   session: { user?: { id: string } } | undefined;
   workspaceId: string;
+  objectiveId?: string;
   metadata?: DocumentMetadata;
 }
 
@@ -101,28 +102,45 @@ export async function saveGeneratedDocument(
   props: SaveDocumentProps,
 ): Promise<{ envelopeId: string; versionId: string } | null> {
   if (props.session?.user?.id) {
-    // Create ObjectiveDocument (chat-generated documents)
-    // TODO: Need objectiveId - for now this is incomplete
-    // This function needs refactoring to receive objectiveId from chat context
-    throw new Error(
-      'saveGeneratedDocument needs objectiveId - requires refactoring for new schema',
+    // Import here to avoid circular dependencies
+    const { createObjectiveDocument, createDocumentVersion } = await import(
+      '@/lib/db/objective-document'
     );
 
-    // Placeholder for future implementation:
-    // const result = await createObjectiveDocument(
-    //   objectiveId, // Need from context
-    //   props.workspaceId,
-    //   props.session.user.id,
-    //   {
-    //     title: props.title,
-    //     content,
-    //     chatId: chatId, // Need from context
-    //   }
-    // );
-    // return {
-    //   envelopeId: result.document.id,
-    //   versionId: result.version.id,
-    // };
+    if (props.objectiveId) {
+      // Create new ObjectiveDocument with initial version (for new documents)
+      const result = await createObjectiveDocument(
+        props.objectiveId,
+        props.workspaceId,
+        props.session.user.id,
+        {
+          title: props.title,
+          content,
+          // chatId is optional - can be linked later if needed
+        },
+      );
+
+      return {
+        envelopeId: result.document.id,
+        versionId: result.version.id,
+      };
+    } else {
+      // Create new version for existing document (for updates)
+      const version = await createDocumentVersion(
+        props.id, // Use existing document ID
+        '', // chatId not needed for updates
+        props.session.user.id,
+        {
+          content,
+          metadata: props.metadata,
+        },
+      );
+
+      return {
+        envelopeId: props.id,
+        versionId: version.id,
+      };
+    }
   }
   return null;
 }

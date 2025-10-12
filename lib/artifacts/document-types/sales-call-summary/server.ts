@@ -25,6 +25,7 @@ export const salesCallSummaryHandler: DocumentHandler<'text'> = {
     metadata: docMetadata,
     workspaceId,
     session,
+    objectiveId,
   }) => {
     const typedMetadata = docMetadata as {
       sourceDocumentIds?: string[];
@@ -123,6 +124,7 @@ ${transcript}
       kind: 'text',
       session,
       workspaceId,
+      objectiveId,
       metadata: {
         ...docMetadata,
         documentType: 'sales-call-summary',
@@ -162,6 +164,7 @@ ${transcript}
       kind: 'text',
       session,
       workspaceId,
+      objectiveId: undefined,
     });
   },
 };

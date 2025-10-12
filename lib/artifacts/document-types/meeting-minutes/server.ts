@@ -32,6 +32,7 @@ export const meetingMinutesHandler: DocumentHandler<'text'> = {
     metadata: docMetadata,
     workspaceId,
     session,
+    objectiveId,
   }: CreateDocumentCallbackProps) => {
     // Cast metadata to our expected type
     const typedMetadata = docMetadata as MeetingMinutesMetadata | undefined;
@@ -94,6 +95,7 @@ ${transcript}`;
       kind: 'text',
       session,
       workspaceId,
+      objectiveId,
       metadata: {
         ...docMetadata,
         documentType: 'meeting-minutes',
@@ -134,6 +136,7 @@ ${transcript}`;
       kind: 'text',
       session,
       workspaceId,
+      objectiveId: undefined,
     });
 
     return;

@@ -22,6 +22,7 @@ export const textDocumentHandler: DocumentHandler<'text'> = {
     metadata,
     session,
     workspaceId,
+    objectiveId,
   }: CreateDocumentCallbackProps) => {
     // Build configuration for this document type
     const streamConfig = buildStreamConfig({
@@ -42,6 +43,7 @@ export const textDocumentHandler: DocumentHandler<'text'> = {
       kind: 'text',
       session,
       workspaceId,
+      objectiveId,
       metadata: {
         ...(metadata || {}),
         documentType: (metadata?.documentType as string | undefined) || 'text',
@@ -80,6 +82,7 @@ export const textDocumentHandler: DocumentHandler<'text'> = {
       kind: 'text',
       session,
       workspaceId,
+      objectiveId: undefined,
     });
 
     return;

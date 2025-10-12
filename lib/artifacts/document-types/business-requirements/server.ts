@@ -32,6 +32,7 @@ export const businessRequirementsHandler: DocumentHandler<'text'> = {
     metadata: docMetadata,
     workspaceId,
     session,
+    objectiveId,
   }: CreateDocumentCallbackProps) => {
     // Cast metadata to our expected type
     const typedMetadata = docMetadata as BRDMetadata | undefined;
@@ -94,6 +95,7 @@ ${transcripts}`;
       kind: 'text',
       session,
       workspaceId,
+      objectiveId,
       metadata: {
         ...docMetadata,
         documentType: 'business-requirements',
@@ -134,6 +136,7 @@ ${transcripts}`;
       kind: 'text',
       session,
       workspaceId,
+      objectiveId: undefined,
     });
 
     return;

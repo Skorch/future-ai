@@ -34,6 +34,7 @@ export const meetingSummaryHandler: DocumentHandler<'text'> = {
     metadata: docMetadata,
     workspaceId,
     session,
+    objectiveId,
   }: CreateDocumentCallbackProps) => {
     // Cast metadata to our expected type
     const typedMetadata = docMetadata as MeetingSummaryMetadata | undefined;
@@ -139,6 +140,7 @@ Participants: ${participants.join(', ')}`;
       kind: 'text',
       session,
       workspaceId,
+      objectiveId,
       metadata: {
         ...docMetadata,
         documentType: 'meeting-analysis',
@@ -178,6 +180,7 @@ Participants: ${participants.join(', ')}`;
       kind: 'text',
       session,
       workspaceId,
+      objectiveId: undefined,
     });
 
     return;

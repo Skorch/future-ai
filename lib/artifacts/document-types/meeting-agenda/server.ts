@@ -25,6 +25,7 @@ export const meetingAgendaHandler: DocumentHandler<'text'> = {
     metadata: docMetadata,
     session,
     workspaceId,
+    objectiveId,
   }: CreateDocumentCallbackProps) => {
     // Compose prompt with instructions and template
     const systemPrompt = composeSystemPrompt(
@@ -64,6 +65,7 @@ ${title !== meetingTitle ? `Additional context: ${title}` : ''}`;
       kind: 'text',
       session,
       workspaceId,
+      objectiveId,
       metadata: {
         ...docMetadata,
         documentType: 'meeting-agenda',
@@ -103,6 +105,7 @@ ${title !== meetingTitle ? `Additional context: ${title}` : ''}`;
       kind: 'text',
       session,
       workspaceId,
+      objectiveId: undefined,
     });
 
     return;

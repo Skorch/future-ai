@@ -33,6 +33,7 @@ export const useCaseHandler: DocumentHandler<'text'> = {
     metadata: docMetadata,
     workspaceId,
     session,
+    objectiveId,
   }: CreateDocumentCallbackProps) => {
     // Cast metadata to our expected type
     const typedMetadata = docMetadata as UseCaseMetadata | undefined;
@@ -97,6 +98,7 @@ ${transcript}`;
       kind: 'text',
       session,
       workspaceId,
+      objectiveId,
       metadata: {
         ...docMetadata,
         documentType: 'use-case',
@@ -137,6 +139,7 @@ ${transcript}`;
       kind: 'text',
       session,
       workspaceId,
+      objectiveId: undefined,
     });
 
     return;
