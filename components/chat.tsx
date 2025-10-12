@@ -2,7 +2,7 @@
 
 import { DefaultChatTransport } from 'ai';
 import { useChat } from '@ai-sdk/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 import { ChatHeader } from '@/components/chat-header';
 import type { Vote, Chat as ChatType } from '@/lib/db/schema';
@@ -13,7 +13,6 @@ import { Messages } from './messages';
 import type { VisibilityType } from './visibility-selector';
 import { useArtifactSelector } from '@/hooks/use-artifact';
 import { toast } from './toast';
-import { useSearchParams } from 'next/navigation';
 import { useChatVisibility } from '@/hooks/use-chat-visibility';
 import { useAutoResume } from '@/hooks/use-auto-resume';
 import { ChatSDKError } from '@/lib/errors';
@@ -31,6 +30,9 @@ export function Chat({
   isReadonly,
   autoResume,
   chat,
+  objectiveId,
+  initialQuery,
+  shouldAutoSubmit = false,
 }: {
   id: string;
   workspaceId: string;
@@ -39,6 +41,9 @@ export function Chat({
   isReadonly: boolean;
   autoResume: boolean;
   chat?: ChatType | null;
+  objectiveId?: string;
+  initialQuery?: string;
+  shouldAutoSubmit?: boolean;
 }) {
   const { visibilityType } = useChatVisibility({
     chatId: id,
@@ -72,6 +77,7 @@ export function Chat({
             id,
             message: messages.at(-1),
             selectedVisibilityType: visibilityType,
+            ...(objectiveId && { objectiveId }),
             ...body,
           },
         };
@@ -130,28 +136,29 @@ export function Chat({
     },
   });
 
-  const searchParams = useSearchParams();
-  const query = searchParams.get('query');
+  // Use ref to prevent duplicate auto-submit (avoids React 18 double-render issue)
+  const hasAutoSubmittedRef = useRef(false);
 
-  const [hasAppendedQuery, setHasAppendedQuery] = useState(false);
-
-  // Clear dataStream when chat id changes (navigating to new chat)
+  // Clear dataStream and reset auto-submit flag when chat id changes
   useEffect(() => {
     setDataStream([]);
+    hasAutoSubmittedRef.current = false;
   }, [id, setDataStream]);
 
+  // Auto-submit query when explicitly requested (only once)
   useEffect(() => {
-    if (query && !hasAppendedQuery) {
+    if (initialQuery && shouldAutoSubmit && !hasAutoSubmittedRef.current) {
+      hasAutoSubmittedRef.current = true;
+
       sendMessage({
         role: 'user' as const,
-        parts: [{ type: 'text', text: query }],
+        parts: [{ type: 'text', text: initialQuery }],
       });
 
-      setHasAppendedQuery(true);
       const newUrl = `/workspace/${workspaceId}/chat/${id}`;
       window.history.replaceState({}, '', newUrl);
     }
-  }, [query, sendMessage, hasAppendedQuery, id, workspaceId]);
+  }, [initialQuery, shouldAutoSubmit, sendMessage, id, workspaceId]);
 
   const { data: votes } = useSWR<Array<Vote>>(
     messages.length >= 2 ? `/api/chat/${id}/vote` : null,

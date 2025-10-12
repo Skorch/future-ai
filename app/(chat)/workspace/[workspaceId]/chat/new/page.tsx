@@ -6,11 +6,18 @@ import { generateUUID } from '@/lib/utils';
 
 export default async function NewChatPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ workspaceId: string }>;
+  searchParams: Promise<{
+    objectiveId?: string;
+    query?: string;
+    autoSubmit?: string;
+  }>;
 }) {
   const { userId } = await auth();
   const { workspaceId } = await params;
+  const { objectiveId, query, autoSubmit } = await searchParams;
 
   if (!userId) {
     redirect('/login');
@@ -29,6 +36,9 @@ export default async function NewChatPage({
         isReadonly={false}
         autoResume={false}
         chat={null}
+        objectiveId={objectiveId}
+        initialQuery={query}
+        shouldAutoSubmit={autoSubmit === 'true'}
       />
       <DataStreamHandler />
     </>
