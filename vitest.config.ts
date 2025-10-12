@@ -11,6 +11,7 @@ export default defineConfig({
       ['**/__tests__/unit/hooks/**/*.test.ts', 'jsdom'],
       ['**/__tests__/unit/sidebar/**/*.test.tsx', 'jsdom'],
       ['**/__tests__/unit/tables/**/*.test.tsx', 'jsdom'],
+      ['**/__tests__/unit/components/**/*.test.tsx', 'jsdom'],
     ],
     setupFiles: ['./vitest.setup.ts'],
     include: ['**/__tests__/**/*.test.ts', '**/__tests__/**/*.test.tsx'],
