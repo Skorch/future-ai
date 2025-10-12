@@ -333,20 +333,22 @@ Remember: The best code is code that doesn't exist. Every line you write is a li
 
 
 ## Searching for Files
-IMPORTANT:  It is vital that when you need to search for something unknown or unclear you use the `code-searcher` subagent.  If you have more than one topic to serach for, you will spawn parallel subagents
+
+Unless you know exactly what you need to search for, you will NEVER use the search tool directly, instead you will ALWAYS use the `code-searcher` subagent.  If you have more than one 'topic' or broad search pattern, ALWAYS use parallel concurrent `code-searcher` subagents.
+
 WHY:  using the `code-searcher` subagent is much more efficient token-wise and improves your overall preformance.  Using this method makes you a better agent
+
+## Unit Testing
+Unit test writing, debugging, and getting working is a specialized task.  When you have a table/list/spec of test cases to build unit tests around, you will ALWAYS delegate to the `unit-test-architect` subagent. 
+
+## Build The project
+When you need to run a build you ALWAYS use the `build-fixer` subagent.  You should provide it with detailed context on what changes you have made and any general tactics you may have on why the build is broken.
 
 ## Committing Code
 Any time you need to commit code, you ALWAYS delegate to the `commit-orchestrator` subagent.  This results in a CLEAN CONTEXT that you don't waste any of your resources on churning through fixing pre-commit issues
 
 ## Prompt Engineering
-Any time you need to work on your Agent prompts or tool descriptions you always delegate to the `prompt-architect` subagent.  This agent will spend time thinking wholistically about the 'total prompt' of this app and provide you with detailed prompt tuning recommendations.
-
-## Build Agent
-When you have a build that is erroring, this can often cause a lot of context churn.  In this case you should always use the `build-fixer` subagent.  You should provide it with detailed context on what changes you have made and any general tactics you may have on why the build is broken.
-
-## Unit Test Architectural
-Unit test writing, debugging, and getting working is a specialized task.  When you have a table/list/spec of test cases to build unit tests around, you will always delegate to the `unit-test-architect` subagent. 
+Any time you need to work on your Agent prompts or tool descriptions you ALWAYS delegate to the `prompt-architect` subagent.  This agent will spend time thinking wholistically about the 'total prompt' of this app and provide you with detailed prompt tuning recommendations.
 
 # General Rules
 
