@@ -26,6 +26,7 @@ import { toast } from 'sonner';
 import { toggleObjectivePublishAction } from '@/lib/objective/actions';
 import type { Objective } from '@/lib/db/objective';
 import { UploadTranscriptButton } from '@/components/upload-transcript-button';
+import { AddKnowledgeModal } from '@/components/objective/add-knowledge-modal';
 
 interface Chat {
   id: string;
@@ -68,6 +69,7 @@ export function ObjectiveDetailClient({
     objective.status === 'published',
   );
   const [isToggling, setIsToggling] = useState(false);
+  const [isAddKnowledgeOpen, setIsAddKnowledgeOpen] = useState(false);
 
   const handleTogglePublish = async (checked: boolean) => {
     setIsToggling(true);
@@ -191,7 +193,7 @@ export function ObjectiveDetailClient({
             <Button
               variant="outline"
               className="flex items-center gap-2 rounded-full hover:bg-muted/50 transition-all"
-              onClick={() => toast.info('Add knowledge coming soon')}
+              onClick={() => setIsAddKnowledgeOpen(true)}
             >
               <FileTextIcon className="size-4" />
               <span className="font-medium">Add Knowledge</span>
@@ -199,6 +201,18 @@ export function ObjectiveDetailClient({
           </div>
         </div>
       </div>
+
+      {/* Add Knowledge Modal */}
+      <AddKnowledgeModal
+        workspaceId={workspaceId}
+        objectiveId={objectiveId}
+        open={isAddKnowledgeOpen}
+        onOpenChange={setIsAddKnowledgeOpen}
+        onSuccess={() => {
+          // Modal handles toast, just refresh
+          router.refresh();
+        }}
+      />
 
       {/* Content Area */}
       <div className="flex-1 overflow-auto p-6 space-y-6">
