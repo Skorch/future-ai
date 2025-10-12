@@ -22,6 +22,27 @@ vi.mock('sonner', () => ({
   },
 }));
 
+// Mock Phase 4 utilities
+vi.mock('@/lib/prompts/document-summary-prompts', () => ({
+  buildSummaryPromptWithContent: vi.fn(
+    (type, content, title) =>
+      `Summary prompt for ${type}: ${title}\n\n${content}`,
+  ),
+}));
+
+vi.mock('@/lib/db/types/document-types', () => ({
+  extractRawDocumentType: vi.fn((metadata) => {
+    if (
+      typeof metadata === 'object' &&
+      metadata !== null &&
+      'documentType' in metadata
+    ) {
+      return metadata.documentType;
+    }
+    return 'other';
+  }),
+}));
+
 // Mock UI components
 vi.mock('@/components/ui/dialog', () => ({
   Dialog: ({ children, open }: { children: React.ReactNode; open: boolean }) =>
@@ -732,6 +753,296 @@ describe('AddKnowledgeModal Component', () => {
     });
   });
 
+  describe('Phase 4: Summary Prompt Building', () => {
+    it('should call extractRawDocumentType with document metadata', async () => {
+      const user = userEvent.setup();
+      render(<AddKnowledgeModal {...defaultProps} />);
+
+      const mockMetadata = {
+        documentType: 'meeting_notes',
+        source: 'manual_input',
+      };
+
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          document: {
+            id: 'doc-123',
+            title: 'Team Standup Notes',
+            metadata: mockMetadata,
+          },
+          shouldCreateSummary: true,
+        }),
+      } as Response);
+
+      const textarea = screen.getByTestId('content-textarea');
+      await user.type(textarea, 'Test meeting content');
+
+      const summaryButton = screen.getByTestId('add-summary-button');
+      await user.click(summaryButton);
+
+      await waitFor(() => {
+        expect(mockPush).toHaveBeenCalled();
+      });
+
+      // Verify extractRawDocumentType was called with metadata
+      const { extractRawDocumentType } = await import(
+        '@/lib/db/types/document-types'
+      );
+      expect(extractRawDocumentType).toHaveBeenCalledWith(mockMetadata);
+    });
+
+    it('should call buildSummaryPromptWithContent with correct parameters', async () => {
+      const user = userEvent.setup();
+      render(<AddKnowledgeModal {...defaultProps} />);
+
+      const testContent = 'Meeting notes about project planning';
+      const testTitle = 'Q4 Planning Meeting';
+      const mockMetadata = { documentType: 'meeting_notes' };
+
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          document: {
+            id: 'doc-123',
+            title: testTitle,
+            metadata: mockMetadata,
+          },
+          shouldCreateSummary: true,
+        }),
+      } as Response);
+
+      const textarea = screen.getByTestId('content-textarea');
+      await user.type(textarea, testContent);
+
+      const summaryButton = screen.getByTestId('add-summary-button');
+      await user.click(summaryButton);
+
+      await waitFor(() => {
+        expect(mockPush).toHaveBeenCalled();
+      });
+
+      // Verify buildSummaryPromptWithContent was called correctly
+      const { buildSummaryPromptWithContent } = await import(
+        '@/lib/prompts/document-summary-prompts'
+      );
+      expect(buildSummaryPromptWithContent).toHaveBeenCalledWith(
+        'meeting_notes',
+        testContent,
+        testTitle,
+      );
+    });
+
+    it('should navigate with encoded summary prompt in query parameter', async () => {
+      const user = userEvent.setup();
+      render(<AddKnowledgeModal {...defaultProps} />);
+
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          document: {
+            id: 'doc-123',
+            title: 'Sales Call Notes',
+            metadata: { documentType: 'transcript' },
+          },
+          shouldCreateSummary: true,
+        }),
+      } as Response);
+
+      const textarea = screen.getByTestId('content-textarea');
+      await user.type(textarea, 'Call transcript content');
+
+      const summaryButton = screen.getByTestId('add-summary-button');
+      await user.click(summaryButton);
+
+      await waitFor(() => {
+        expect(mockPush).toHaveBeenCalled();
+      });
+
+      const pushCall = mockPush.mock.calls[0][0];
+
+      // Verify all 3 params are present
+      expect(pushCall).toContain('objectiveId=objective-456');
+      expect(pushCall).toContain('query=');
+      expect(pushCall).toContain('autoSubmit=true');
+
+      // Verify query is URL-encoded
+      expect(pushCall).toMatch(/query=[^&]+/);
+    });
+
+    it('should handle different document types in summary prompts', async () => {
+      const user = userEvent.setup();
+
+      const documentTypes = [
+        'transcript',
+        'email',
+        'slack',
+        'meeting_notes',
+        'research',
+      ];
+
+      for (const docType of documentTypes) {
+        vi.clearAllMocks();
+        const { rerender } = render(<AddKnowledgeModal {...defaultProps} />);
+
+        vi.mocked(fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            document: {
+              id: 'doc-123',
+              title: `Test ${docType}`,
+              metadata: { documentType: docType },
+            },
+            shouldCreateSummary: true,
+          }),
+        } as Response);
+
+        const textarea = screen.getByTestId('content-textarea');
+        await user.type(textarea, `Content for ${docType}`);
+
+        const summaryButton = screen.getByTestId('add-summary-button');
+        await user.click(summaryButton);
+
+        await waitFor(() => {
+          expect(mockPush).toHaveBeenCalled();
+        });
+
+        const { buildSummaryPromptWithContent } = await import(
+          '@/lib/prompts/document-summary-prompts'
+        );
+        expect(buildSummaryPromptWithContent).toHaveBeenCalledWith(
+          docType,
+          expect.any(String),
+          expect.any(String),
+        );
+
+        // Cleanup for next iteration
+        rerender(
+          <AddKnowledgeModal
+            {...defaultProps}
+            open={false}
+            onOpenChange={vi.fn()}
+          />,
+        );
+      }
+    });
+
+    it('should handle missing metadata gracefully', async () => {
+      const user = userEvent.setup();
+      render(<AddKnowledgeModal {...defaultProps} />);
+
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          document: {
+            id: 'doc-123',
+            title: 'Test Doc',
+            metadata: {}, // No documentType
+          },
+          shouldCreateSummary: true,
+        }),
+      } as Response);
+
+      const textarea = screen.getByTestId('content-textarea');
+      await user.type(textarea, 'Test content');
+
+      const summaryButton = screen.getByTestId('add-summary-button');
+      await user.click(summaryButton);
+
+      await waitFor(() => {
+        expect(mockPush).toHaveBeenCalled();
+      });
+
+      // Should default to 'other' type
+      const { buildSummaryPromptWithContent } = await import(
+        '@/lib/prompts/document-summary-prompts'
+      );
+      expect(buildSummaryPromptWithContent).toHaveBeenCalledWith(
+        'other',
+        expect.any(String),
+        expect.any(String),
+      );
+    });
+
+    it('should include title in summary prompt', async () => {
+      const user = userEvent.setup();
+      render(<AddKnowledgeModal {...defaultProps} />);
+
+      const testTitle = 'Important Meeting Notes';
+
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          document: {
+            id: 'doc-123',
+            title: testTitle,
+            metadata: { documentType: 'meeting_notes' },
+          },
+          shouldCreateSummary: true,
+        }),
+      } as Response);
+
+      const textarea = screen.getByTestId('content-textarea');
+      await user.type(textarea, 'Meeting content');
+
+      const summaryButton = screen.getByTestId('add-summary-button');
+      await user.click(summaryButton);
+
+      await waitFor(() => {
+        expect(mockPush).toHaveBeenCalled();
+      });
+
+      const { buildSummaryPromptWithContent } = await import(
+        '@/lib/prompts/document-summary-prompts'
+      );
+      expect(buildSummaryPromptWithContent).toHaveBeenCalledWith(
+        'meeting_notes',
+        'Meeting content',
+        testTitle,
+      );
+    });
+
+    it('should pass original content not trimmed content to summary prompt', async () => {
+      const user = userEvent.setup();
+      render(<AddKnowledgeModal {...defaultProps} />);
+
+      const contentWithWhitespace =
+        '  Test content with leading/trailing spaces  \n\n';
+
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          document: {
+            id: 'doc-123',
+            title: 'Test',
+            metadata: { documentType: 'other' },
+          },
+          shouldCreateSummary: true,
+        }),
+      } as Response);
+
+      const textarea = screen.getByTestId('content-textarea');
+      setTextareaValue(textarea, contentWithWhitespace);
+
+      const summaryButton = screen.getByTestId('add-summary-button');
+      await user.click(summaryButton);
+
+      await waitFor(() => {
+        expect(mockPush).toHaveBeenCalled();
+      });
+
+      const { buildSummaryPromptWithContent } = await import(
+        '@/lib/prompts/document-summary-prompts'
+      );
+      // Should pass the original content, not trimmed
+      expect(buildSummaryPromptWithContent).toHaveBeenCalledWith(
+        'other',
+        contentWithWhitespace,
+        'Test',
+      );
+    });
+  });
+
   describe('Success Flow - Add and Create Summary Button', () => {
     it('should show success toast on successful Add and Create Summary', async () => {
       const user = userEvent.setup();
@@ -740,7 +1051,7 @@ describe('AddKnowledgeModal Component', () => {
       vi.mocked(fetch).mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          document: { id: 'doc-123', title: 'Test Doc' },
+          document: { id: 'doc-123', title: 'Test Doc', metadata: {} },
           shouldCreateSummary: true,
         }),
       } as Response);
