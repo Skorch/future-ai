@@ -7,6 +7,8 @@ import {
 import { getWorkspaceById } from '@/lib/workspace/queries';
 import { getLogger } from '@/lib/logger';
 import { ChatSDKError } from '@/lib/errors';
+import { generateDocumentMetadata } from '@/lib/ai/generate-document-metadata';
+import { revalidatePath } from 'next/cache';
 
 const logger = getLogger('WorkspaceKnowledgeAPI');
 
@@ -76,13 +78,19 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { objectiveId, title, content, category, documentType, metadata } =
-      body;
+    const {
+      objectiveId,
+      title: userTitle,
+      content,
+      category,
+      documentType: userDocumentType,
+      metadata,
+    } = body;
 
-    // Validate required fields
-    if (!title || !content || !category || !documentType) {
+    // Validate required fields - only content and category required
+    if (!content || !category) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'Content and category are required' },
         { status: 400 },
       );
     }
@@ -91,16 +99,47 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid category' }, { status: 400 });
     }
 
+    // Generate AI metadata if title or documentType not provided
+    let title = userTitle;
+    let documentType = userDocumentType;
+    let aiSummary: string | undefined;
+
+    if (!title || !documentType) {
+      const aiMetadata = await generateDocumentMetadata({ content });
+      title = userTitle || aiMetadata.title;
+      documentType = userDocumentType || aiMetadata.documentType;
+      aiSummary = aiMetadata.summary;
+    }
+
     const document = await createKnowledgeDocument(workspaceId, userId, {
       objectiveId,
       title,
       content,
       category,
       documentType,
-      metadata,
+      metadata: {
+        ...metadata,
+        ...(aiSummary && { aiSummary }),
+        ...((!userTitle || !userDocumentType) && {
+          aiGeneratedTitle: !userTitle,
+          aiGeneratedType: !userDocumentType,
+        }),
+      },
     });
 
-    return NextResponse.json({ document }, { status: 201 });
+    // Revalidate paths to update UI
+    revalidatePath(`/workspace/${workspaceId}`);
+    if (objectiveId) {
+      revalidatePath(`/workspace/${workspaceId}/objective/${objectiveId}`);
+    }
+
+    return NextResponse.json(
+      {
+        document,
+        shouldCreateSummary: request.headers.get('X-Create-Summary') === 'true',
+      },
+      { status: 201 },
+    );
   } catch (error) {
     logger.error('Failed to create knowledge document:', error);
 
