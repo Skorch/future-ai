@@ -7,7 +7,6 @@ import { formatDistanceToNow } from 'date-fns';
 import {
   PlusIcon,
   FileTextIcon,
-  UploadIcon,
   MessageSquare,
   ChevronRightIcon,
 } from 'lucide-react';
@@ -26,6 +25,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { toggleObjectivePublishAction } from '@/lib/objective/actions';
 import type { Objective } from '@/lib/db/objective';
+import { UploadTranscriptButton } from '@/components/upload-transcript-button';
 
 interface Chat {
   id: string;
@@ -179,14 +179,14 @@ export function ObjectiveDetailClient({
               </Link>
             </Button>
 
-            <Button
-              variant="outline"
-              className="flex items-center gap-2 rounded-full hover:bg-muted/50 transition-all"
-              onClick={() => toast.info('Upload transcript coming soon')}
-            >
-              <UploadIcon className="size-4" />
-              <span className="font-medium">Upload Transcript</span>
-            </Button>
+            <UploadTranscriptButton
+              workspaceId={workspaceId}
+              objectiveId={objectiveId}
+              onUploadComplete={() => {
+                // Component already shows success toast
+                router.refresh();
+              }}
+            />
 
             <Button
               variant="outline"
