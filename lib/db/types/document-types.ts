@@ -174,3 +174,29 @@ export function extractDocumentType(metadata: unknown): DocumentType {
   }
   return KNOWLEDGE_DOCUMENT_TYPES.TEXT; // Safe default for knowledge documents
 }
+
+/**
+ * Safely extract raw document type from database metadata
+ *
+ * Specifically for raw documents (category: 'raw') where we need
+ * to ensure we get a RawDocumentType for summary generation.
+ *
+ * @param metadata - Untyped metadata object from database
+ * @returns Valid RawDocumentType or 'other' as safe default
+ *
+ * @example
+ * const rawType = extractRawDocumentType(rawDoc.metadata);
+ * const prompt = buildSummaryPromptWithContent(rawType, content);
+ */
+export function extractRawDocumentType(metadata: unknown): RawDocumentType {
+  if (
+    typeof metadata === 'object' &&
+    metadata !== null &&
+    'documentType' in metadata &&
+    typeof metadata.documentType === 'string' &&
+    isRawDocumentType(metadata.documentType)
+  ) {
+    return metadata.documentType;
+  }
+  return RAW_DOCUMENT_TYPES.OTHER; // Safe default for raw documents
+}
