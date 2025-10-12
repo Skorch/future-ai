@@ -89,14 +89,21 @@ Reserve space for user messages, your responses, and other tool outputs.`,
           session.user.id,
         );
         if (objectiveDoc?.latestVersion) {
+          // Type metadata properly to avoid `any`
+          const metadata = objectiveDoc.latestVersion.metadata as Record<
+            string,
+            unknown
+          > | null;
+          const documentType =
+            typeof metadata?.documentType === 'string'
+              ? metadata.documentType
+              : 'text';
+
           document = {
             id: objectiveDoc.document.id,
             title: objectiveDoc.document.title,
             content: objectiveDoc.latestVersion.content,
-            // biome-ignore lint/suspicious/noExplicitAny: metadata schema doesn't have typed documentType field yet
-            documentType:
-              (objectiveDoc.latestVersion.metadata as any)?.documentType ||
-              'text',
+            documentType,
             createdAt: objectiveDoc.latestVersion.createdAt,
             metadata: objectiveDoc.latestVersion.metadata,
           };
