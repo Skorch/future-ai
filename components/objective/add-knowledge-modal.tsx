@@ -21,6 +21,7 @@ interface AddKnowledgeModalProps {
   onSuccess?: (documentId: string) => void;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialContent?: string; // Pre-fill content (e.g., from uploaded file)
 }
 
 const MAX_SIZE = 400 * 1024; // 400KB in bytes
@@ -31,8 +32,9 @@ export function AddKnowledgeModal({
   onSuccess,
   open,
   onOpenChange,
+  initialContent = '',
 }: AddKnowledgeModalProps) {
-  const [content, setContent] = useState('');
+  const [content, setContent] = useState(initialContent);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
 
@@ -44,12 +46,14 @@ export function AddKnowledgeModal({
 
   const isValid = content.trim().length > 0 && byteSize <= MAX_SIZE;
 
-  // Reset form when dialog closes
+  // Initialize content when modal opens with initialContent
   useEffect(() => {
-    if (!open) {
+    if (open && initialContent) {
+      setContent(initialContent);
+    } else if (!open) {
       setContent('');
     }
-  }, [open]);
+  }, [open, initialContent]);
 
   const createKnowledgeDocument = async (createSummary: boolean) => {
     if (!isValid) return;
@@ -90,11 +94,12 @@ export function AddKnowledgeModal({
 
       // Navigate to chat if summary requested
       if (createSummary && data.shouldCreateSummary) {
-        const summaryQuery = encodeURIComponent(
-          `Please summarize the "${data.document.title}" document I just uploaded.`,
-        );
+        // Simple instruction for AI to load and summarize the document
+        const summaryPrompt = `Please load and create a summary of the document I just created titled "${data.document.title}".`;
+
+        const queryParam = encodeURIComponent(summaryPrompt);
         router.push(
-          `/workspace/${workspaceId}/chat/new?objectiveId=${objectiveId}&query=${summaryQuery}`,
+          `/workspace/${workspaceId}/chat/new?objectiveId=${objectiveId}&query=${queryParam}&autoSubmit=true`,
         );
       }
     } catch (error) {
