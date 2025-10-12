@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { getObjectiveById } from '@/lib/db/objective';
 import { getDocumentByObjectiveId } from '@/lib/db/objective-document';
 import { getChatsByObjectiveId } from '@/lib/db/queries';
+import { getKnowledgeByObjectiveId } from '@/lib/db/knowledge-document';
 import { ObjectiveDetailClient } from './objective-detail-client';
 
 export default async function ObjectiveDetailPage(props: {
@@ -27,10 +28,11 @@ export default async function ObjectiveDetailPage(props: {
     redirect(`/workspace/${workspaceId}`);
   }
 
-  // Load document and chats in parallel
-  const [document, chatsRaw] = await Promise.all([
+  // Load document, chats, and knowledge documents in parallel
+  const [document, chatsRaw, knowledgeDocs] = await Promise.all([
     getDocumentByObjectiveId(objectiveId),
     getChatsByObjectiveId(objectiveId, userId),
+    getKnowledgeByObjectiveId(objectiveId),
   ]);
 
   // Array safety - ensure we always have an array
@@ -42,6 +44,12 @@ export default async function ObjectiveDetailPage(props: {
     visibility: chat.visibility,
   }));
 
+  // Filter knowledge documents by category
+  const knowledge = (knowledgeDocs ?? []).filter(
+    (doc) => doc.category === 'knowledge',
+  );
+  const raw = (knowledgeDocs ?? []).filter((doc) => doc.category === 'raw');
+
   return (
     <ObjectiveDetailClient
       workspaceId={workspaceId}
@@ -49,6 +57,8 @@ export default async function ObjectiveDetailPage(props: {
       objective={objective}
       document={document}
       chats={chats}
+      knowledge={knowledge}
+      raw={raw}
     />
   );
 }

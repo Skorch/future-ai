@@ -34,12 +34,14 @@ interface KnowledgeTableProps {
   documents: KnowledgeDocument[];
   workspaceId: string;
   objectives?: Array<{ id: string; title: string }>;
+  hideObjectiveColumn?: boolean;
 }
 
 export function KnowledgeTable({
   documents,
   workspaceId,
   objectives = [],
+  hideObjectiveColumn = false,
 }: KnowledgeTableProps) {
   const router = useRouter();
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -177,10 +179,19 @@ export function KnowledgeTable({
     [objectives, router, workspaceId],
   );
 
+  // Filter out objective column if requested
+  const filteredColumns = hideObjectiveColumn
+    ? allColumns.filter((col) => col.key !== 'objective')
+    : allColumns;
+
   // Apply responsive column filtering
-  const columns = useResponsiveColumns(allColumns, {
-    mobile: ['title', 'objective', 'actions'],
-    tablet: ['title', 'objective', 'createdAt', 'actions'],
+  const columns = useResponsiveColumns(filteredColumns, {
+    mobile: hideObjectiveColumn
+      ? ['title', 'actions']
+      : ['title', 'objective', 'actions'],
+    tablet: hideObjectiveColumn
+      ? ['title', 'documentType', 'createdAt', 'actions']
+      : ['title', 'objective', 'createdAt', 'actions'],
   });
 
   // Calculate dynamic table height
