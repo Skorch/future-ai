@@ -165,6 +165,7 @@ export const objectiveDocumentVersion = pgTable(
       .notNull(),
     chatId: uuid('chatId').references(() => chat.id, { onDelete: 'set null' }), // SET NULL requires manual cleanup
     content: text('content').notNull(),
+    punchlist: text('punchlist'), // Markdown-formatted punchlist tracking document evolution
     kind: text('kind').notNull().default('text'), // Document type (for backwards compatibility)
     metadata: json('metadata').$type<Record<string, unknown>>(),
     versionNumber: integer('versionNumber').notNull().default(1),
@@ -291,6 +292,8 @@ export const playbookStep = pgTable(
       .notNull(),
     sequence: integer('sequence').notNull(),
     instruction: text('instruction').notNull(),
+    toolCall: varchar('toolCall', { length: 255 }), // Tool name for automatic execution
+    condition: text('condition'), // Execution condition (e.g., 'if user approves')
     createdAt: timestamp('createdAt').defaultNow().notNull(),
     updatedAt: timestamp('updatedAt').defaultNow().notNull(),
   },
