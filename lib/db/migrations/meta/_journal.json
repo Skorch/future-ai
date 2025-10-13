@@ -22,6 +22,13 @@
       "when": 1760327934049,
       "tag": "0002_seed-playbooks",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1760329877200,
+      "tag": "0003_clear_thundra",
+      "breakpoints": true
     }
   ]
 }

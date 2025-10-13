@@ -133,6 +133,10 @@ export const chat = pgTable(
     objectiveId: uuid('objectiveId')
       .references(() => objective.id, { onDelete: 'cascade' })
       .notNull(), // NEW REQUIRED FIELD
+    objectiveDocumentVersionId: uuid('objectiveDocumentVersionId').references(
+      () => objectiveDocumentVersion.id,
+      { onDelete: 'set null' },
+    ), // FK to version (one chat = one version)
     visibility: varchar('visibility', { enum: ['public', 'private'] })
       .notNull()
       .default('private'),
@@ -150,12 +154,13 @@ export const chat = pgTable(
   (table) => ({
     objectiveIdx: index('idx_chat_objective').on(table.objectiveId),
     userIdx: index('idx_chat_user').on(table.userId),
+    versionIdx: index('idx_chat_version').on(table.objectiveDocumentVersionId),
   }),
 );
 
 export type Chat = InferSelectModel<typeof chat>;
 
-// ObjectiveDocumentVersion table
+// ObjectiveDocumentVersion table (FK relationship inverted - Chat now references Version)
 export const objectiveDocumentVersion = pgTable(
   'ObjectiveDocumentVersion',
   {
@@ -163,12 +168,10 @@ export const objectiveDocumentVersion = pgTable(
     documentId: uuid('documentId')
       .references(() => objectiveDocument.id, { onDelete: 'cascade' })
       .notNull(),
-    chatId: uuid('chatId').references(() => chat.id, { onDelete: 'set null' }), // SET NULL requires manual cleanup
     content: text('content').notNull(),
     punchlist: text('punchlist'), // Markdown-formatted punchlist tracking document evolution
     kind: text('kind').notNull().default('text'), // Document type (for backwards compatibility)
     metadata: json('metadata').$type<Record<string, unknown>>(),
-    versionNumber: integer('versionNumber').notNull().default(1),
     createdAt: timestamp('createdAt').defaultNow().notNull(), // Latest = MAX(createdAt)
     createdByUserId: varchar('createdByUserId', { length: 255 })
       .references(() => user.id, { onDelete: 'cascade' })
@@ -176,7 +179,6 @@ export const objectiveDocumentVersion = pgTable(
   },
   (table) => ({
     documentIdx: index('idx_objective_version_document').on(table.documentId),
-    chatIdx: index('idx_objective_version_chat').on(table.chatId),
   }),
 );
 
@@ -407,10 +409,6 @@ export const objectiveDocumentVersionRelations = relations(
       fields: [objectiveDocumentVersion.documentId],
       references: [objectiveDocument.id],
     }),
-    chat: one(chat, {
-      fields: [objectiveDocumentVersion.chatId],
-      references: [chat.id],
-    }),
     createdBy: one(user, {
       fields: [objectiveDocumentVersion.createdByUserId],
       references: [user.id],
@@ -445,8 +443,11 @@ export const chatRelations = relations(chat, ({ one, many }) => ({
     fields: [chat.objectiveId],
     references: [objective.id],
   }),
+  objectiveDocumentVersion: one(objectiveDocumentVersion, {
+    fields: [chat.objectiveDocumentVersionId],
+    references: [objectiveDocumentVersion.id],
+  }),
   messages: many(message),
-  documentVersions: many(objectiveDocumentVersion),
 }));
 
 export const messageRelations = relations(message, ({ one, many }) => ({
