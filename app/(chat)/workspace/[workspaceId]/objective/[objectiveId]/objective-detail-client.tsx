@@ -58,7 +58,6 @@ interface Document {
   latestVersion?: {
     id: string;
     content: string;
-    versionNumber: number;
     createdAt: Date;
   } | null;
 }
@@ -292,8 +291,7 @@ export function ObjectiveDetailClient({
                     </CardTitle>
                     {document.latestVersion && (
                       <CardDescription>
-                        Version {document.latestVersion.versionNumber} • Last
-                        updated{' '}
+                        Last updated{' '}
                         {formatDistanceToNow(
                           new Date(document.latestVersion.createdAt),
                           {
@@ -362,7 +360,7 @@ export function ObjectiveDetailClient({
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-1">
                                 <span className="font-medium text-sm">
-                                  Version {document.latestVersion.versionNumber}
+                                  Latest Version
                                 </span>
                                 <Badge variant="secondary" className="text-xs">
                                   Current

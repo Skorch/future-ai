@@ -554,7 +554,7 @@ const PurePreviewMessage = ({
                 }
               }
 
-              if (type === 'tool-createDocument') {
+              if (type === 'tool-generateDocumentVersion') {
                 const { toolCallId } = part;
 
                 if (part.output && 'error' in part.output) {
@@ -563,7 +563,7 @@ const PurePreviewMessage = ({
                       key={toolCallId}
                       className="p-4 text-red-500 bg-red-50 rounded-lg border border-red-200 dark:bg-red-950/50"
                     >
-                      Error creating document: {String(part.output.error)}
+                      Error generating document: {String(part.output.error)}
                     </div>
                   );
                 }
@@ -575,32 +575,6 @@ const PurePreviewMessage = ({
                     result={part.output}
                     workspaceId={workspaceId}
                   />
-                );
-              }
-
-              if (type === 'tool-updateDocument') {
-                const { toolCallId } = part;
-
-                if (part.output && 'error' in part.output) {
-                  return (
-                    <div
-                      key={toolCallId}
-                      className="p-4 text-red-500 bg-red-50 rounded-lg border border-red-200 dark:bg-red-950/50"
-                    >
-                      Error updating document: {String(part.output.error)}
-                    </div>
-                  );
-                }
-
-                return (
-                  <div key={toolCallId} className="relative">
-                    <DocumentPreview
-                      isReadonly={isReadonly}
-                      result={part.output}
-                      args={part.output}
-                      workspaceId={workspaceId}
-                    />
-                  </div>
                 );
               }
 

@@ -64,7 +64,6 @@ export async function GET(
         ? {
             id: r.latestVersion.id,
             content: r.latestVersion.content,
-            versionNumber: r.latestVersion.versionNumber,
             createdAt: r.latestVersion.createdAt,
             metadata: r.latestVersion.metadata,
           }

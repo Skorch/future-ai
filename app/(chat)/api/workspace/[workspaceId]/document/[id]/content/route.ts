@@ -18,7 +18,7 @@ export async function PATCH(
 
   try {
     const body = await request.json();
-    const { content, chatId, metadata } = body;
+    const { content, metadata } = body;
 
     if (!content || typeof content !== 'string') {
       return Response.json(
@@ -30,13 +30,11 @@ export async function PATCH(
     logger.debug('Updating objective document content:', {
       documentId: id,
       workspaceId,
-      hasChatId: !!chatId,
     });
 
-    // Create new version (chatId can be null for direct edits)
+    // Create new version
     const newVersion = await updateObjectiveDocumentContent(
       id,
-      chatId || '', // Empty string for direct edits (not from chat)
       userId,
       content,
       metadata,
@@ -44,7 +42,7 @@ export async function PATCH(
 
     logger.debug('Document content updated:', {
       documentId: id,
-      versionNumber: newVersion.versionNumber,
+      versionId: newVersion.id,
     });
 
     return Response.json({

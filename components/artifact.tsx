@@ -218,15 +218,11 @@ function PureArtifact({
 
         logger.debug('Content changed, saving...');
 
-        // PHASE 4 REFACTORING: Using chatId from draft - artifact actions will be refactored
-        const chatId = docWithVersions?.currentDraft?.chatId || undefined;
-
         // Save to server (this also revalidates Next.js pages)
-        // PHASE 4 REFACTORING: Artifact save actions will be updated
+        // PHASE 1: autoSaveDocumentDraftAction stub - will be implemented in future phases
         const result = await autoSaveDocumentDraftAction(
           artifact.documentId,
           updatedContent,
-          chatId,
         );
 
         logger.debug('Save result:', result);

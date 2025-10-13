@@ -128,7 +128,6 @@ export async function saveGeneratedDocument(
       // Create new version for existing document (for updates)
       const version = await createDocumentVersion(
         props.id, // Use existing document ID
-        '', // chatId not needed for updates
         props.session.user.id,
         {
           content,

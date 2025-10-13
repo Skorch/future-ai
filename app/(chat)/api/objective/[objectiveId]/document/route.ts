@@ -65,7 +65,7 @@ export async function PUT(
 
   try {
     const body = await request.json();
-    const { title, content, chatId, metadata } = body;
+    const { title, content, metadata } = body;
 
     // Verify user owns objective
     const objective = await getObjectiveById(objectiveId, userId);
@@ -85,7 +85,7 @@ export async function PUT(
         objectiveId,
         objective.workspaceId,
         userId,
-        { title, content, chatId },
+        { title, content },
       );
       return NextResponse.json({
         document: created.document,
@@ -93,15 +93,10 @@ export async function PUT(
       });
     } else {
       // Create new version
-      await createDocumentVersion(
-        existingDoc.document.id,
-        chatId || null,
-        userId,
-        {
-          content,
-          metadata,
-        },
-      );
+      await createDocumentVersion(existingDoc.document.id, userId, {
+        content,
+        metadata,
+      });
       // Re-fetch to get latest version
       const updated = await getDocumentByObjectiveId(objectiveId);
       return NextResponse.json({

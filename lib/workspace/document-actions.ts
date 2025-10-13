@@ -33,7 +33,6 @@ export async function updatePublishedDocumentAction(
 export async function autoSaveDocumentDraftAction(
   _documentId: string,
   _content: string,
-  _chatId?: string,
 ): Promise<void> {
   throw new Error(
     'STUB: Phase 1 - autoSaveDocumentDraftAction not implemented',
