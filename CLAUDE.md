@@ -10,8 +10,6 @@ This is a Next.js AI chatbot application built with the AI SDK, featuring modern
 
 ### Core Development
 - `pnpm dev` - Start development server with Turbo
-- `pnpm build` - Run database migrations and build for production
-- `pnpm start` - Start production server
 
 ### Code Quality
 - `pnpm lint` - Run Next.js ESLint and Biome linter with auto-fix
@@ -31,9 +29,6 @@ This is a Next.js AI chatbot application built with the AI SDK, featuring modern
 - always have an expectation of what the auto-generated migration SHOULD contain
 - always compare the auto-generated migration with your expectations then analyze when they don't match
 - always consider how drizzle is aware or manages migrations when making manual edits or removing via the drizzle `meta` folder
-
-### Testing
-- `pnpm test` - Run Playwright end-to-end tests
 
 ## Architecture
 
@@ -64,31 +59,11 @@ This is a Next.js AI chatbot application built with the AI SDK, featuring modern
   - `Chat` - Chat conversations with visibility settings
   - `Message` - Messages with parts and attachments
   - `Vote` - Message voting system
-  - **`DocumentEnvelope`** - Document metadata (title, type, searchability)
-  - **`DocumentVersion`** - Versioned document content with draft/publish flags
   - `Document` (deprecated) - Old single-table document storage
   - `Suggestion` - Document editing suggestions
   - `Stream` - Chat streaming metadata
   - `Workspace` - Multi-tenant isolation with domain support
   - `Playbook` / `PlaybookStep` - Workflow guidance system
-
-### Document Lifecycle (Phase 1 Complete)
-**Draft/Publish Workflow** - Documents use version control with explicit publish:
-- **Flag-Based Active Tracking**: `isActiveDraft` and `isActivePublished` flags on versions
-- **No Circular FKs**: Simplified schema using boolean flags instead of pointer columns
-- **Partial Unique Indexes**: Database-level enforcement (only one active draft/published per envelope)
-- **Defensive Cascade**: Message deletion sets `messageId = NULL` (preserves versions)
-- **Orphan Cleanup**: Explicit `cleanOrphanedVersions()` method (Phase 3)
-- **Clear-Then-Set Pattern**: Moving active flags uses transaction-safe two-step update
-
-**Key Schema Points:**
-- `DocumentEnvelope`: Header/metadata without version pointers
-- `DocumentVersion`: Stores content, has `workspaceId` for cleanup, no `chatId` (redundant)
-- Query active versions: `WHERE isActiveDraft = true` or `WHERE isActivePublished = true`
-
-### File Storage
-- **Vercel Blob** for file uploads and attachments
-- **Redis** for session and caching
 
 ### Directory Structure
 ```
@@ -118,16 +93,6 @@ tests/                # Playwright test files
 - **Biome** configuration optimized for Vercel standards
 - ESLint with Next.js, import resolver, and Tailwind plugins
 - TypeScript with strict mode and path mapping (@/* alias)
-- Playwright for E2E testing with custom configuration
-
-### Environment Requirements
-```
-AUTH_SECRET=            # Authentication secret
-ANTHROPIC_API_KEY=      # Anthropic API key for Claude models
-BLOB_READ_WRITE_TOKEN=  # Vercel Blob storage
-POSTGRES_URL=           # Database connection
-REDIS_URL=              # Redis instance
-```
 
 ## Development Guidelines
 
@@ -149,7 +114,6 @@ Always run `pnpm db:migrate` before building to ensure schema is up-to-date. The
 
 ### Authentication Flow
 - Middleware handles route protection automatically
-- Guest users are supported via email pattern matching
 - Authenticated routes redirect to login when needed
 
 ## AI SDK v5 Integration Guide
@@ -174,58 +138,6 @@ The AI SDK v5 is the foundation for all LLM interactions in this project. When w
 - **convertToModelMessages()** - Transforms UI messages to model format
 - **convertToUIMessages()** - Transforms database messages to UI format
 - Always preserve message structure when implementing custom transformations
-
-### Building AI Tools
-
-Tools extend the LLM's capabilities. To create a new tool:
-
-1. **Tool Structure** - Tools are functions returning specific contracts:
-```typescript
-// Example structure in lib/ai/tools/your-tool.ts
-export const yourTool = ({ session, dataStream }: ToolContext) => ({
-  parameters: z.object({
-    // Zod schema for tool parameters
-  }),
-  execute: async (params) => {
-    // Tool logic here
-    // Can interact with database, external APIs, etc.
-    // Use dataStream for real-time updates to UI
-    return result;
-  }
-});
-```
-
-2. **Tool Registration** - Add to streamText() call:
-   - See `app/(chat)/api/chat/route.ts` lines ~169-177 for pattern
-   - Tools object maps tool names to implementations
-   - Use `experimental_activeTools` to conditionally enable
-
-3. **Documentation References**:
-   - Tools Guide: https://ai-sdk.dev/docs/ai-sdk-core/tools-and-tool-calling
-   - Use WebFetch to explore tool patterns and options
-
-### RAG (Retrieval-Augmented Generation) Integration
-
-To implement RAG sources:
-
-1. **Embedding Generation**:
-   - Use `embedMany()` or `embed()` from AI SDK
-   - Docs: https://ai-sdk.dev/docs/reference/ai-sdk-core/embed
-   - Store embeddings in PostgreSQL with pgvector or similar
-
-2. **Retrieval Pattern**:
-   - Create a tool that queries your vector store
-   - Return relevant context in the tool response
-   - The model will use this context in its generation
-
-3. **System Prompt Enhancement**:
-   - Inject retrieved context into system prompts
-   - See `lib/ai/prompts.ts` for system prompt patterns
-
-4. **Key Considerations**:
-   - Chunking strategy for documents
-   - Similarity threshold tuning
-   - Context window management
 
 ### Stream Transformations & Middleware
 
@@ -265,16 +177,6 @@ When implementing new AI features, always:
 
 ## Architectural Decision Framework
 
-### When to Use the Pragmatic Subagent
-
-Invoke the `code-quality-pragmatist` subagent when:
-- Planning implementations with 3+ new files
-- Creating new abstraction layers
-- Proposing factory patterns or registries
-- Designing "extensible" solutions for undefined future needs
-
-The pragmatist will evaluate your plan against YAGNI (You Aren't Gonna Need It) and suggest simpler alternatives.
-
 ### When Abstraction is Appropriate
 
 Create abstractions when:
@@ -308,10 +210,6 @@ Avoid abstractions when:
 - Factory patterns for straightforward object creation  
 - Multiple abstraction layers over SDK functions
 - Separate files for each provider when 10 lines would suffice
-
-### The 40-Line Rule
-
-If your architectural plan adds >40 lines of code for what could be done in <10, question the complexity. This codebase achieved multi-LLM support with ~40 lines across 3 files instead of 500+ lines across 13 files.
 
 ### Decision Process
 
@@ -352,6 +250,7 @@ Any time you need to work on your Agent prompts or tool descriptions you ALWAYS 
 
 # General Rules
 
+- ALWAYS wrap full paths in `"` because most paths have `(route)` in them
 - Never propose 'backward compatibility' solutions unless the User explicitly requests - always plan to roll forward with changes
 
 # Markdown and Specs
