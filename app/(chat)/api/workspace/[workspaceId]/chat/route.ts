@@ -23,12 +23,12 @@ import {
   db,
 } from '@/lib/db/queries';
 import { getOrCreateActiveObjective } from '@/lib/db/objective';
-import { workspace } from '@/lib/db/schema';
+import { initializeVersionForChat } from '@/lib/db/objective-document';
+import { workspace, chat as chatTable } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { convertToUIMessages, generateUUID } from '@/lib/utils';
 import { generateTitleFromUserMessage } from '@/app/(chat)/actions';
-import { createDocument } from '@/lib/ai/tools/create-document';
-import { updateDocument } from '@/lib/ai/tools/update-document';
+import { generateDocumentVersion } from '@/lib/ai/tools/generate-document-version';
 import { queryRAG } from '@/lib/ai/tools/query-rag';
 import { listDocuments } from '@/lib/ai/tools/list-documents';
 import { loadDocument } from '@/lib/ai/tools/load-document';
@@ -162,16 +162,46 @@ export async function POST(
         providedObjectiveId ||
         (await getOrCreateActiveObjective(workspaceId, userId));
 
+      // Initialize version for new chat (creates document if needed)
+      const { versionId } = await initializeVersionForChat(
+        id,
+        chatObjectiveId,
+        userId,
+        workspaceId,
+      );
+
       await saveChat({
         id,
         userId: userId,
         title,
         visibility: selectedVisibilityType,
         objectiveId: chatObjectiveId,
+        objectiveDocumentVersionId: versionId,
       });
+
+      logger.debug('Created chat with version', { chatId: id, versionId });
     } else {
       // Chat already exists, use its objectiveId
       chatObjectiveId = chat.objectiveId;
+
+      // Ensure chat has version (backfill for old chats)
+      if (!chat.objectiveDocumentVersionId) {
+        logger.warn('Existing chat missing version, initializing', {
+          chatId: id,
+        });
+        const { versionId } = await initializeVersionForChat(
+          id,
+          chatObjectiveId,
+          userId,
+          workspaceId,
+        );
+
+        // Update chat with version
+        await db
+          .update(chatTable)
+          .set({ objectiveDocumentVersionId: versionId })
+          .where(eq(chatTable.id, id));
+      }
     }
 
     // === MODE SYSTEM INTEGRATION ===
@@ -307,8 +337,7 @@ export async function POST(
           const activeTools = shouldDisableTools
             ? []
             : [
-                'createDocument',
-                'updateDocument',
+                'generateDocumentVersion',
                 'queryRAG',
                 'listDocuments',
                 'loadDocument',
@@ -456,19 +485,15 @@ export async function POST(
                   setMode: setMode({ chatId: id, dataStream }),
                   setComplete: setComplete({ chatId: id, dataStream }),
 
-                  // Existing tools (domain-filtered)
-                  createDocument: await createDocument({
+                  // Document generation tool (replaces create/update)
+                  generateDocumentVersion: generateDocumentVersion({
                     session,
                     dataStream,
                     workspaceId,
-                    domainId,
-                    objectiveId: chatObjectiveId,
+                    chatId: id,
                   }),
-                  updateDocument: updateDocument({
-                    session,
-                    dataStream,
-                    workspaceId,
-                  }),
+
+                  // Query and load tools
                   queryRAG: queryRAG({
                     session,
                     dataStream,
