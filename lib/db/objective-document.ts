@@ -1,8 +1,9 @@
 import 'server-only';
 
-import { and, desc, eq, isNull, max } from 'drizzle-orm';
+import { and, desc, eq, isNull } from 'drizzle-orm';
 import { db } from './queries';
 import {
+  chat,
   objective,
   objectiveDocument,
   objectiveDocumentVersion,
@@ -27,7 +28,7 @@ export async function createObjectiveDocument(
   objectiveId: string,
   workspaceId: string,
   userId: string,
-  data: { title: string; content: string; chatId?: string },
+  data: { title: string; content: string },
 ): Promise<{ document: ObjectiveDocument; version: ObjectiveDocumentVersion }> {
   try {
     // Use transaction to ensure all 3 steps succeed or rollback
@@ -47,9 +48,7 @@ export async function createObjectiveDocument(
         .insert(objectiveDocumentVersion)
         .values({
           documentId: document.id,
-          chatId: data.chatId,
           content: data.content,
-          versionNumber: 1,
           createdByUserId: userId,
         })
         .returning();
@@ -74,28 +73,30 @@ export async function createObjectiveDocument(
 
 export async function createDocumentVersion(
   documentId: string,
-  chatId: string,
   userId: string,
-  data: { content: string; metadata?: Record<string, unknown> },
+  data: {
+    content: string;
+    punchlist?: string;
+    metadata?: Record<string, unknown>;
+  },
 ): Promise<ObjectiveDocumentVersion> {
   try {
-    // Get current max version number
-    const [maxVersionResult] = await db
-      .select({ maxVersion: max(objectiveDocumentVersion.versionNumber) })
+    // Get latest version to copy punchlist (if not provided in data)
+    const [latestVersion] = await db
+      .select({ punchlist: objectiveDocumentVersion.punchlist })
       .from(objectiveDocumentVersion)
-      .where(eq(objectiveDocumentVersion.documentId, documentId));
-
-    const nextVersionNumber = (maxVersionResult?.maxVersion || 0) + 1;
+      .where(eq(objectiveDocumentVersion.documentId, documentId))
+      .orderBy(desc(objectiveDocumentVersion.createdAt))
+      .limit(1);
 
     // Create new version
     const [version] = await db
       .insert(objectiveDocumentVersion)
       .values({
         documentId,
-        chatId,
         content: data.content,
+        punchlist: data.punchlist ?? latestVersion?.punchlist ?? null,
         metadata: data.metadata,
-        versionNumber: nextVersionNumber,
         createdByUserId: userId,
       })
       .returning();
@@ -180,19 +181,6 @@ export async function getLatestVersion(
     throw new ChatSDKError(
       'bad_request:database',
       'Failed to get latest version',
-    );
-  }
-}
-
-export async function deleteVersionsByChatId(chatId: string): Promise<void> {
-  try {
-    await db
-      .delete(objectiveDocumentVersion)
-      .where(eq(objectiveDocumentVersion.chatId, chatId));
-  } catch (error) {
-    throw new ChatSDKError(
-      'bad_request:database',
-      'Failed to delete versions by chat',
     );
   }
 }
@@ -319,7 +307,6 @@ export async function getObjectiveDocumentById(
  */
 export async function updateObjectiveDocumentContent(
   documentId: string,
-  chatId: string,
   userId: string,
   content: string,
   metadata?: Record<string, unknown>,
@@ -335,7 +322,7 @@ export async function updateObjectiveDocumentContent(
     }
 
     // Create new version using existing function
-    const newVersion = await createDocumentVersion(documentId, chatId, userId, {
+    const newVersion = await createDocumentVersion(documentId, userId, {
       content,
       metadata,
     });
@@ -407,6 +394,97 @@ export async function deleteObjectiveDocument(
     throw new ChatSDKError(
       'bad_request:database',
       'Failed to delete objective document',
+    );
+  }
+}
+
+/**
+ * Initialize a new version for a chat within an objective
+ * Implements "one chat = one version" rule
+ * Returns versionId, documentId, and whether this is the first version
+ */
+export async function initializeVersionForChat(
+  chatId: string,
+  objectiveId: string,
+  userId: string,
+  workspaceId: string,
+): Promise<{ versionId: string; documentId: string; isFirstVersion: boolean }> {
+  try {
+    return await db.transaction(async (tx) => {
+      // 1. Get objective's documentId
+      const [obj] = await tx
+        .select({ objectiveDocumentId: objective.objectiveDocumentId })
+        .from(objective)
+        .where(eq(objective.id, objectiveId))
+        .limit(1);
+
+      let documentId = obj?.objectiveDocumentId;
+      let versionId: string;
+      let isFirstVersion = false;
+
+      // 2. Create document if none exists
+      if (!documentId) {
+        const result = await createObjectiveDocument(
+          objectiveId,
+          workspaceId,
+          userId,
+          {
+            title: 'Draft Document',
+            content: '',
+          },
+        );
+        documentId = result.document.id;
+        versionId = result.version.id;
+        isFirstVersion = true;
+      } else {
+        // 3. Create new version (copies punchlist from latest)
+        const newVersion = await createDocumentVersion(documentId, userId, {
+          content: '',
+        });
+        versionId = newVersion.id;
+      }
+
+      // 4. Link version to chat
+      await tx
+        .update(chat)
+        .set({ objectiveDocumentVersionId: versionId })
+        .where(eq(chat.id, chatId));
+
+      return { versionId, documentId, isFirstVersion };
+    });
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to initialize version for chat',
+    );
+  }
+}
+
+/**
+ * Get version by chatId (for tool context)
+ * Uses the new FK relationship where chat references version
+ */
+export async function getVersionByChatId(
+  chatId: string,
+): Promise<ObjectiveDocumentVersion | null> {
+  try {
+    const [result] = await db
+      .select({
+        version: objectiveDocumentVersion,
+      })
+      .from(chat)
+      .innerJoin(
+        objectiveDocumentVersion,
+        eq(chat.objectiveDocumentVersionId, objectiveDocumentVersion.id),
+      )
+      .where(eq(chat.id, chatId))
+      .limit(1);
+
+    return result?.version || null;
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get version by chat',
     );
   }
 }

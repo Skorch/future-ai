@@ -26,7 +26,6 @@ import {
 } from './schema';
 import type { VisibilityType } from '@/components/visibility-selector';
 import { ChatSDKError } from '../errors';
-import { deleteVersionsByChatId } from './objective-document';
 
 // Optionally, if not using email/pass login, you can
 // use the Drizzle adapter for Auth.js / NextAuth
@@ -110,12 +109,14 @@ export async function saveChat({
   title,
   visibility,
   objectiveId,
+  objectiveDocumentVersionId,
 }: {
   id: string;
   userId: string;
   title: string;
   visibility: VisibilityType;
   objectiveId: string;
+  objectiveDocumentVersionId?: string;
 }) {
   try {
     return await db.insert(chat).values({
@@ -125,6 +126,7 @@ export async function saveChat({
       title,
       visibility,
       objectiveId,
+      objectiveDocumentVersionId,
     });
   } catch (error) {
     throw new ChatSDKError('bad_request:database', 'Failed to save chat');
@@ -152,10 +154,7 @@ export async function deleteChatById({
     await db.delete(message).where(eq(message.chatId, id));
     await db.delete(stream).where(eq(stream.chatId, id));
 
-    // Manual cleanup: delete document versions linked to this chat
-    await deleteVersionsByChatId(id);
-
-    // Delete chat
+    // Delete chat (FK on Chat.objectiveDocumentVersionId handles SET NULL)
     const [chatsDeleted] = await db
       .delete(chat)
       .where(eq(chat.id, id))
