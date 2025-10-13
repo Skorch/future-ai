@@ -25,7 +25,6 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { toggleObjectivePublishAction } from '@/lib/objective/actions';
 import type { Objective } from '@/lib/db/objective';
-import { UploadTranscriptButton } from '@/components/upload-transcript-button';
 import { AddKnowledgeModal } from '@/components/objective/add-knowledge-modal';
 import { DocumentViewer } from '@/components/document-viewer';
 import {
@@ -89,7 +88,6 @@ export function ObjectiveDetailClient({
   );
   const [isToggling, setIsToggling] = useState(false);
   const [isAddKnowledgeOpen, setIsAddKnowledgeOpen] = useState(false);
-  const [initialContent, setInitialContent] = useState<string>('');
   const [isVersionHistoryOpen, setIsVersionHistoryOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('objective');
 
@@ -217,15 +215,6 @@ export function ObjectiveDetailClient({
               </Link>
             </Button>
 
-            <UploadTranscriptButton
-              workspaceId={workspaceId}
-              objectiveId={objectiveId}
-              onFileSelected={(content) => {
-                setInitialContent(content);
-                setIsAddKnowledgeOpen(true);
-              }}
-            />
-
             <Button
               variant="outline"
               className="flex items-center gap-2 rounded-full hover:bg-muted/50 transition-all"
@@ -243,14 +232,7 @@ export function ObjectiveDetailClient({
         workspaceId={workspaceId}
         objectiveId={objectiveId}
         open={isAddKnowledgeOpen}
-        onOpenChange={(open) => {
-          setIsAddKnowledgeOpen(open);
-          if (!open) {
-            // Clear initial content when modal closes
-            setInitialContent('');
-          }
-        }}
-        initialContent={initialContent}
+        onOpenChange={setIsAddKnowledgeOpen}
         onSuccess={() => {
           // Modal handles toast, just refresh
           router.refresh();

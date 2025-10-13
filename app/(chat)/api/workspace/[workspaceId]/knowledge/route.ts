@@ -9,6 +9,7 @@ import { getLogger } from '@/lib/logger';
 import { ChatSDKError } from '@/lib/errors';
 import { generateDocumentMetadata } from '@/lib/ai/generate-document-metadata';
 import { revalidatePath } from 'next/cache';
+import { getOrCreateActiveObjective } from '@/lib/db/objective';
 
 const logger = getLogger('WorkspaceKnowledgeAPI');
 
@@ -79,7 +80,7 @@ export async function POST(
 
     const body = await request.json();
     const {
-      objectiveId,
+      objectiveId: providedObjectiveId,
       title: userTitle,
       content,
       category,
@@ -95,9 +96,22 @@ export async function POST(
       );
     }
 
+    // Validate content is not whitespace-only
+    if (content.trim().length === 0) {
+      return NextResponse.json(
+        { error: 'Content cannot be empty or whitespace only' },
+        { status: 400 },
+      );
+    }
+
     if (!['knowledge', 'raw'].includes(category)) {
       return NextResponse.json({ error: 'Invalid category' }, { status: 400 });
     }
+
+    // Option B: Make objectiveId optional with fallback to active objective
+    const objectiveId =
+      providedObjectiveId ||
+      (await getOrCreateActiveObjective(workspaceId, userId));
 
     // Generate AI metadata if title or documentType not provided
     let title = userTitle;
@@ -150,9 +164,12 @@ export async function POST(
       );
     }
 
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 },
-    );
+    // Provide more context for unexpected errors
+    const errorMessage =
+      error instanceof Error
+        ? `Failed to create document: ${error.message}`
+        : 'Internal server error';
+
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

@@ -4,10 +4,14 @@ import { revalidatePath } from 'next/cache';
 
 import { auth } from '@clerk/nextjs/server';
 import { createKnowledgeDocument } from '@/lib/db/knowledge-document';
-import { generateDocumentMetadata } from '@/lib/ai/generate-document-metadata';
+import {
+  generateDocumentMetadata,
+  type DocumentMetadata,
+} from '@/lib/ai/generate-document-metadata';
 import { getActiveWorkspace } from '@/lib/workspace/context';
 import { getLogger } from '@/lib/logger';
 import { revalidateDocumentPaths } from '@/lib/cache/document-cache.server';
+import { getOrCreateActiveObjective } from '@/lib/db/objective';
 
 const logger = getLogger('FileUploadAPI');
 
@@ -38,17 +42,10 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData();
     const file = formData.get('file') as Blob;
-    const objectiveId = formData.get('objectiveId') as string | null;
+    const providedObjectiveId = formData.get('objectiveId') as string | null;
 
     if (!file) {
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
-    }
-
-    if (!objectiveId) {
-      return NextResponse.json(
-        { error: 'objectiveId is required' },
-        { status: 400 },
-      );
     }
 
     // Get filename from formData since Blob doesn't have name property
@@ -86,6 +83,11 @@ export async function POST(request: Request) {
     // Get workspace from cookie/context
     const workspaceId = await getActiveWorkspace(userId);
 
+    // Option B: Make objectiveId optional with fallback to active objective
+    const objectiveId =
+      providedObjectiveId ||
+      (await getOrCreateActiveObjective(workspaceId, userId));
+
     // Generate AI metadata (title, type, summary) from Phase 1
     logger.debug('Generating AI metadata for transcript', {
       fileName: filename,
@@ -93,16 +95,28 @@ export async function POST(request: Request) {
       userId: userId,
     });
 
-    const metadata = await generateDocumentMetadata({
-      content,
-      fileName: filename,
-    });
+    let metadata: DocumentMetadata;
+    let usedFallback = false;
+    try {
+      metadata = await generateDocumentMetadata({
+        content,
+        fileName: filename,
+      });
 
-    logger.debug('AI metadata generated', {
-      title: metadata.title,
-      documentType: metadata.documentType,
-      hasSummary: !!metadata.summary,
-    });
+      logger.debug('AI metadata generated', {
+        title: metadata.title,
+        documentType: metadata.documentType,
+        hasSummary: !!metadata.summary,
+      });
+    } catch (error) {
+      logger.error('AI metadata generation failed, using fallback', error);
+      usedFallback = true;
+      metadata = {
+        title: filename.replace(/\.[^/.]+$/, '').slice(0, 80),
+        documentType: 'other' as const,
+        summary: undefined,
+      };
+    }
 
     // Create transcript as KnowledgeDocument (immutable, searchable)
     const doc = await createKnowledgeDocument(workspaceId, userId, {
@@ -141,6 +155,10 @@ export async function POST(request: Request) {
       fileName: filename,
       title: metadata.title,
       documentType: metadata.documentType,
+      // Include warning if AI analysis failed and fallback was used
+      ...(usedFallback && {
+        warning: 'AI analysis unavailable - using basic classification',
+      }),
       // This message appears in the chat and triggers AI processing
       message: `TRANSCRIPT_DOCUMENT: ${doc.id}\nFILENAME: ${filename}`,
     });

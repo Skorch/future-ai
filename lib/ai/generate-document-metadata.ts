@@ -6,6 +6,7 @@ import {
   RawDocumentTypeSchema,
   type RawDocumentType,
 } from '@/lib/db/types/document-types';
+import { logger } from '@/lib/logger';
 
 /**
  * AI-generated metadata for raw documents
@@ -92,9 +93,12 @@ ${content}${fileName ? `\n\nOriginal filename: ${fileName}` : ''}`,
 
     return object;
   } catch (error) {
-    // AI metadata generation failed - using fallback defaults
-    // Production monitoring should track these failures via error boundary
-    // Error details: error instanceof Error ? error.message : 'Unknown error'
+    // Log error for production monitoring
+    logger.error('AI metadata generation failed:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      contentLength: content.length,
+      hasFileName: !!fileName,
+    });
 
     // Return safe defaults
     return {
