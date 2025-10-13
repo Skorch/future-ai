@@ -13,8 +13,7 @@ export const buildMode: ModeConfig = {
     'listDocuments',
     'loadDocument',
     'loadDocuments',
-    'createDocument',
-    'updateDocument',
+    'generateDocumentVersion', // Single tool for all document generation
     'getPlaybook', // Retrieve structured playbook workflows
     'setMode',
     'setComplete', // Allow marking task complete in any mode

@@ -1,6 +1,5 @@
 import { z } from 'zod';
-import type { createDocument } from './ai/tools/create-document';
-import type { updateDocument } from './ai/tools/update-document';
+import type { generateDocumentVersion } from './ai/tools/generate-document-version';
 import type { setMode } from './ai/tools/set-mode';
 import type { askUser } from './ai/tools/ask-user';
 import type { InferUITool, UIMessage } from 'ai';
@@ -15,16 +14,14 @@ export const messageMetadataSchema = z.object({
 
 export type MessageMetadata = z.infer<typeof messageMetadataSchema>;
 
-type createDocumentTool = InferUITool<
-  Awaited<ReturnType<typeof createDocument>>
+type generateDocumentVersionTool = InferUITool<
+  ReturnType<typeof generateDocumentVersion>
 >;
-type updateDocumentTool = InferUITool<ReturnType<typeof updateDocument>>;
 type setModeTool = InferUITool<ReturnType<typeof setMode>>;
 type askUserTool = InferUITool<ReturnType<typeof askUser>>;
 
 export type ChatTools = {
-  createDocument: createDocumentTool;
-  updateDocument: updateDocumentTool;
+  generateDocumentVersion: generateDocumentVersionTool;
   setMode: setModeTool;
   askUser: askUserTool;
 };
