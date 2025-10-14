@@ -7,30 +7,17 @@ export const DOMAINS = {
     id: 'project' as const,
     label: 'Project',
     description: 'Project & meeting management',
-    defaultDocumentType: 'prd' as const,
+    defaultDocumentType: 'business-requirements' as const,
     prompt: MEETING_INTELLIGENCE_PROMPT,
-    // All types EXCEPT sales-analysis
-    allowedTypes: [
-      'meeting-analysis',
-      'meeting-agenda',
-      'meeting-minutes',
-      'text',
-      'use-case',
-      'business-requirements',
-    ] as DocumentType[],
+    allowedTypes: ['business-requirements'] as DocumentType[],
   },
   sales: {
     id: 'sales' as const,
     label: 'Sales',
     description: 'Sales call summaries & strategy',
-    defaultDocumentType: 'proposal' as const,
+    defaultDocumentType: 'sales-strategy' as const,
     prompt: SALES_INTELLIGENCE_PROMPT,
-    // ONLY sales-call-summary, sales-strategy + text
-    allowedTypes: [
-      'sales-call-summary',
-      'sales-strategy',
-      'text',
-    ] as DocumentType[],
+    allowedTypes: ['sales-strategy'] as DocumentType[],
   },
 } as const;
 
