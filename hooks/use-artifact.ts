@@ -6,6 +6,7 @@ import { useCallback, useMemo } from 'react';
 
 export const initialArtifactData: UIArtifact = {
   documentId: 'init',
+  versionId: undefined,
   content: '',
   kind: 'text',
   title: '',

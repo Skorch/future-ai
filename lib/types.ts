@@ -33,6 +33,7 @@ export type CustomUIDataTypes = {
   codeDelta: string;
   appendMessage: string;
   id: string;
+  versionId: string;
   title: string;
   kind: ArtifactKind;
   clear: null;
