@@ -27,7 +27,7 @@ export async function GET(
   }
 
   try {
-    const document = await getKnowledgeDocumentById(id, userId);
+    const document = await getKnowledgeDocumentById(id);
 
     if (!document) {
       return NextResponse.json(
@@ -36,7 +36,9 @@ export async function GET(
       );
     }
 
-    return NextResponse.json({ document });
+    // Return as array to match artifact component expectations (like document route)
+    // Knowledge documents don't have versions, so return single-item array
+    return NextResponse.json([document]);
   } catch (error) {
     logger.error('Failed to get knowledge document:', error);
 
@@ -74,7 +76,7 @@ export async function PATCH(
     const body = await request.json();
     const { title, content, metadata, isSearchable } = body;
 
-    const document = await updateKnowledgeDocument(id, userId, {
+    const document = await updateKnowledgeDocument(id, {
       title,
       content,
       metadata,
@@ -116,7 +118,7 @@ export async function DELETE(
   }
 
   try {
-    await deleteKnowledgeDocument(id, userId);
+    await deleteKnowledgeDocument(id);
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
     logger.error('Failed to delete knowledge document:', error);

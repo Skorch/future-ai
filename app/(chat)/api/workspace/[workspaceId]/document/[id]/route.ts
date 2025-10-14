@@ -6,13 +6,20 @@ import { getLogger } from '@/lib/logger';
 const logger = getLogger('DocumentAPI');
 
 export async function GET(
-  _request: Request,
+  request: Request,
   props: { params: Promise<{ workspaceId: string; id: string }> },
 ) {
   const params = await props.params;
   const { workspaceId, id } = params;
 
-  logger.debug('GET request for objective document:', id);
+  // Parse query params
+  const { searchParams } = new URL(request.url);
+  const versionId = searchParams.get('versionId');
+
+  logger.debug('GET request for objective document:', {
+    documentId: id,
+    versionId: versionId || 'latest',
+  });
 
   const { userId } = await auth();
 
@@ -22,31 +29,44 @@ export async function GET(
   }
 
   try {
-    const docWithVersions = await getObjectiveDocumentById(id, userId);
+    const docWithVersions = await getObjectiveDocumentById(id);
 
     if (
       !docWithVersions ||
       docWithVersions.document.workspaceId !== workspaceId
     ) {
-      logger.error('Document not found or access denied');
+      logger.error('Objective document not found or access denied');
       return new ChatSDKError('not_found:document').toResponse();
     }
 
-    logger.debug('Objective document fetched:', {
+    // If specific version requested, filter to that version
+    if (versionId) {
+      const version = docWithVersions.versions.find((v) => v.id === versionId);
+
+      if (!version) {
+        logger.error('Version not found', { versionId, documentId: id });
+        return new ChatSDKError(
+          'not_found:document',
+          'Requested document version not found',
+        ).toResponse();
+      }
+
+      logger.debug('Returning specific version:', {
+        documentId: id,
+        versionId,
+      });
+
+      return Response.json([version], { status: 200 });
+    }
+
+    // No versionId: return all versions (current behavior)
+    logger.debug('Returning all versions:', {
       documentId: id,
       versionCount: docWithVersions.versions.length,
       hasLatest: !!docWithVersions.latestVersion,
     });
 
-    // Return in format expected by components
-    return Response.json(
-      {
-        document: docWithVersions.document,
-        versions: docWithVersions.versions,
-        latestVersion: docWithVersions.latestVersion,
-      },
-      { status: 200 },
-    );
+    return Response.json(docWithVersions.versions, { status: 200 });
   } catch (error) {
     logger.error('Failed to get objective document:', error);
     return new ChatSDKError(

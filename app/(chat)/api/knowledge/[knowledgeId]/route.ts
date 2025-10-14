@@ -22,7 +22,7 @@ export async function GET(
   }
 
   try {
-    const document = await getKnowledgeDocumentById(knowledgeId, userId);
+    const document = await getKnowledgeDocumentById(knowledgeId);
 
     if (!document) {
       return NextResponse.json(
@@ -57,14 +57,14 @@ export async function PUT(
     const body = await request.json();
     const { title, content, metadata, isSearchable } = body;
 
-    await updateKnowledgeDocument(knowledgeId, userId, {
+    await updateKnowledgeDocument(knowledgeId, {
       title,
       content,
       metadata,
       isSearchable,
     });
 
-    const updated = await getKnowledgeDocumentById(knowledgeId, userId);
+    const updated = await getKnowledgeDocumentById(knowledgeId);
     return NextResponse.json(updated);
   } catch (error) {
     logger.error('Failed to update knowledge document:', error);
@@ -88,7 +88,7 @@ export async function DELETE(
   }
 
   try {
-    await deleteKnowledgeDocument(knowledgeId, userId);
+    await deleteKnowledgeDocument(knowledgeId);
     return NextResponse.json({ success: true });
   } catch (error) {
     logger.error('Failed to delete knowledge document:', error);

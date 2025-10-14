@@ -33,7 +33,7 @@ export async function PATCH(
       );
     }
 
-    const document = await updateKnowledgeDocument(id, userId, {
+    const document = await updateKnowledgeDocument(id, {
       isSearchable,
     });
 
