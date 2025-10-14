@@ -61,12 +61,13 @@ type DocumentMetadata = {
  * Properties needed to save a document
  */
 export interface SaveDocumentProps {
-  id: string;
+  id: string; // Document envelope ID (legacy, for backward compatibility)
+  versionId?: string; // Version ID to update (for "one chat = one version" pattern)
   title: string;
   kind: ArtifactKind;
   session: { user?: { id: string } } | undefined;
   workspaceId: string;
-  objectiveId?: string;
+  objectiveId?: string; // For creating new documents (deprecated in chat contexts)
   metadata?: DocumentMetadata;
 }
 
@@ -102,7 +103,10 @@ export async function processStream(
 
 /**
  * Save generated document content to the database
- * Returns the created document with version ID for message linking
+ * Returns the document envelope ID and version ID for message linking
+ *
+ * IMPORTANT: In chat contexts, always provide versionId to UPDATE the existing version.
+ * Creating new documents/versions should only happen during chat initialization.
  */
 export async function saveGeneratedDocument(
   content: string,
@@ -110,10 +114,23 @@ export async function saveGeneratedDocument(
 ): Promise<{ envelopeId: string; versionId: string } | null> {
   if (props.session?.user?.id) {
     // Import here to avoid circular dependencies
-    const { createObjectiveDocument, createDocumentVersion } = await import(
-      '@/lib/db/objective-document'
-    );
+    const {
+      createObjectiveDocument,
+      createDocumentVersion,
+      updateVersionContent,
+    } = await import('@/lib/db/objective-document');
 
+    // PREFERRED PATH: Update existing version (one chat = one version)
+    if (props.versionId) {
+      await updateVersionContent(props.versionId, content, props.metadata);
+
+      return {
+        envelopeId: props.id, // Document envelope ID
+        versionId: props.versionId,
+      };
+    }
+
+    // LEGACY PATH: Create new document (deprecated in chat contexts)
     if (props.objectiveId) {
       // Create new ObjectiveDocument with initial version (for new documents)
       const result = await createObjectiveDocument(
@@ -123,7 +140,6 @@ export async function saveGeneratedDocument(
         {
           title: props.title,
           content,
-          // chatId is optional - can be linked later if needed
         },
       );
 
@@ -131,22 +147,22 @@ export async function saveGeneratedDocument(
         envelopeId: result.document.id,
         versionId: result.version.id,
       };
-    } else {
-      // Create new version for existing document (for updates)
-      const version = await createDocumentVersion(
-        props.id, // Use existing document ID
-        props.session.user.id,
-        {
-          content,
-          metadata: props.metadata,
-        },
-      );
-
-      return {
-        envelopeId: props.id,
-        versionId: version.id,
-      };
     }
+
+    // LEGACY PATH: Create new version (deprecated - use versionId instead)
+    const version = await createDocumentVersion(
+      props.id, // Use existing document ID
+      props.session.user.id,
+      {
+        content,
+        metadata: props.metadata,
+      },
+    );
+
+    return {
+      envelopeId: props.id,
+      versionId: version.id,
+    };
   }
   return null;
 }
@@ -335,4 +351,154 @@ export function buildStreamConfig({
   }
 
   return config;
+}
+
+/**
+ * Global punchlist template for consistent formatting
+ * Defines the standard structure for all punchlist types
+ */
+export const GLOBAL_PUNCHLIST_TEMPLATE = `
+## Punchlist Format Rules
+
+Your punchlist must follow this exact structure:
+
+# Punchlist - Version [auto-increment based on current version]
+
+## 🚨 Risks (count)
+- [R1] Risk description → STATUS (Knowledge: "Document Title (YYYY-MM-DD)")
+- [R2] Another risk
+
+## ❓ Unknowns (count)
+- [U1] Unknown description → STATUS (Knowledge: "Document Title (YYYY-MM-DD)")
+
+## 🚧 Blockers (count)
+- [B1] Blocker description → STATUS (Knowledge: "Document Title (YYYY-MM-DD)")
+
+## ⚡ Gaps (count)
+- [G1] Gap description → STATUS (Knowledge: "Document Title (YYYY-MM-DD)")
+
+## ⚠️ Contradictions (count)
+- [C1] Contradiction description → STATUS (Knowledge: "Document Title (YYYY-MM-DD)")
+
+---
+
+## Changes from Knowledge
+Brief summary of what changed in this update
+
+## Item Status Codes
+- **RESOLVED ✓**: Knowledge fully addresses this item
+- **MODIFIED**: Knowledge partially addresses or updates this item
+- **NEW**: New item discovered from this knowledge
+- No status: Item unchanged from previous version
+
+## Attribution Format
+Always attribute changes to specific knowledge with full title and date:
+- Good: (Knowledge: "Sales Call Summary - Mozilla Meeting (2024-12-15)")
+- Good: (Knowledge: "Requirements Meeting - Tech Review (2024-12-16)")
+- Bad: (Knowledge #3)
+- Bad: (Meeting notes)
+`;
+
+/**
+ * Properties for generating punchlist content
+ */
+export interface GeneratePunchlistProps {
+  currentPunchlist: string | null;
+  currentContent: string;
+  knowledgeSummaries: string;
+  documentSpecificPrompt: string;
+  globalPunchlistTemplate: string;
+  dataStream: UIMessageStreamWriter<ChatMessage>;
+}
+
+/**
+ * Fetch and format knowledge documents with full attribution
+ * Returns formatted text with titles and dates for LLM context
+ */
+export async function fetchKnowledgeDocuments(
+  knowledgeDocIds: string[],
+): Promise<string> {
+  if (!knowledgeDocIds.length) {
+    return '';
+  }
+
+  // Fetch all knowledge documents
+  const docs = await Promise.all(
+    knowledgeDocIds.map((id) => getKnowledgeDocumentById(id)),
+  );
+
+  // Filter out null/undefined and format with attribution
+  const validDocs = docs.filter(
+    (doc): doc is NonNullable<typeof doc> => doc !== null,
+  );
+
+  if (validDocs.length === 0) {
+    return '';
+  }
+
+  // Format with full attribution including dates
+  return validDocs
+    .map((doc) => {
+      const date = doc.sourceDate
+        ? new Date(doc.sourceDate).toISOString().split('T')[0]
+        : 'Unknown date';
+      return `## ${doc.title} (${date})\n\n${doc.content}`;
+    })
+    .join('\n\n---\n\n');
+}
+
+/**
+ * Generate punchlist content from document state and new knowledge
+ * Combines document-specific tracking goals with global formatting rules
+ */
+export async function generatePunchlist({
+  currentPunchlist,
+  currentContent,
+  knowledgeSummaries,
+  documentSpecificPrompt,
+  globalPunchlistTemplate,
+  dataStream,
+}: GeneratePunchlistProps): Promise<string> {
+  // Build comprehensive system prompt
+  const systemPrompt = `${documentSpecificPrompt}
+
+${globalPunchlistTemplate}
+
+## Current Context
+
+### Current Document Content
+${currentContent}
+
+### Current Punchlist
+${currentPunchlist || 'No punchlist yet - this is the first knowledge input. Generate an initial punchlist based on the current document content and new knowledge.'}
+
+### New Knowledge to Process
+${knowledgeSummaries}
+
+## Your Task
+Analyze the new knowledge and update the punchlist to show:
+1. Which items are now RESOLVED (knowledge fully addresses them)
+2. Which items are MODIFIED (knowledge partially addresses or updates them)
+3. NEW items discovered from the knowledge
+4. Items that remain unchanged
+
+Always use the full knowledge document title and date for attribution.
+At the end, summarize what changed in the "Changes from Knowledge" section.`;
+
+  // Build configuration for punchlist generation
+  const config = buildStreamConfig({
+    model: (await import('@/lib/ai/providers')).myProvider.languageModel(
+      'claude-sonnet-4',
+    ),
+    system: systemPrompt,
+    prompt:
+      'Generate the updated punchlist showing how the new knowledge affects each item.',
+    maxOutputTokens: 4000, // Punchlists can be comprehensive
+    temperature: 0.4, // Lower for consistency
+  });
+
+  // Stream the punchlist generation
+  const content = await processStream(config, dataStream);
+
+  return content;
 }
