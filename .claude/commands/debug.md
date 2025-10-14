@@ -2,6 +2,15 @@
 
 The `/debug` command provides intelligent debugging assistance with root cause analysis, systematic troubleshooting, performance profiling, and automated fix generation for various programming languages and frameworks.
 
+You will ALWAYS use first principles debugging to theorize on a root cause based on real code evidence
+You will use ULTRATHINK when reasoning on your first principled root cause theory
+You will ALWAYS challenge your theory and look for evidence which DISPROOVES
+You will ALWAYS ask me to review yoru proposed fix and justification
+
+AFTER I provide my specific approval, you will leverage the following subagents:
+1. 'build-fixer' - and provide it SPECIFIC details on what you changed
+2. 'commit-orchestrator' - provide it the same guidance
+
 ## Usage
 
 ```
