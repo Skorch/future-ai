@@ -3,7 +3,8 @@ import { cookies } from 'next/headers';
 import { auth } from '@clerk/nextjs/server';
 import { getWorkspaceById } from '@/lib/workspace/queries';
 import { AppSidebar } from '@/components/app-sidebar';
-import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
+import { SidebarProvider } from '@/components/ui/sidebar';
+import { SidebarInsetWithTrigger } from '@/components/sidebar-inset-with-trigger';
 import type { ReactNode } from 'react';
 
 export default async function WorkspaceLayout({
@@ -36,7 +37,7 @@ export default async function WorkspaceLayout({
   return (
     <SidebarProvider defaultOpen={!isCollapsed}>
       <AppSidebar workspaceId={workspaceId} />
-      <SidebarInset>{children}</SidebarInset>
+      <SidebarInsetWithTrigger>{children}</SidebarInsetWithTrigger>
     </SidebarProvider>
   );
 }
