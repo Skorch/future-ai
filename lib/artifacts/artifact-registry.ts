@@ -10,7 +10,7 @@
  * extensible and maintainable.
  */
 
-import { textArtifact } from './document-types/text/client';
+import { textArtifact } from './text-artifact';
 import type { Artifact } from '@/components/create-artifact';
 
 /**
