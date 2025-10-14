@@ -28,6 +28,7 @@ export const useCaseHandler: DocumentHandler<'text'> = {
   metadata,
   onCreateDocument: async ({
     id,
+    versionId,
     title,
     dataStream,
     metadata: docMetadata,
@@ -94,6 +95,7 @@ ${transcript}`;
     // Save the generated document
     const result = await saveGeneratedDocument(content, {
       id,
+      versionId,
       title: documentTitle,
       kind: 'text',
       session,

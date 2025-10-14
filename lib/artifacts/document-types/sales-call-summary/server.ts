@@ -20,6 +20,7 @@ export const salesCallSummaryHandler: DocumentHandler<'text'> = {
 
   onCreateDocument: async ({
     id,
+    versionId,
     title,
     dataStream,
     metadata: docMetadata,
@@ -120,6 +121,7 @@ ${transcript}
 
     const result = await saveGeneratedDocument(content, {
       id,
+      versionId,
       title,
       kind: 'text',
       session,

@@ -20,6 +20,7 @@ export const meetingAgendaHandler: DocumentHandler<'text'> = {
   metadata,
   onCreateDocument: async ({
     id,
+    versionId,
     title,
     dataStream,
     metadata: docMetadata,
@@ -61,6 +62,7 @@ ${title !== meetingTitle ? `Additional context: ${title}` : ''}`;
     // Save the generated document
     const result = await saveGeneratedDocument(content, {
       id,
+      versionId,
       title: meetingTitle,
       kind: 'text',
       session,

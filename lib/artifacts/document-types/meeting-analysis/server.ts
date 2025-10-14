@@ -29,6 +29,7 @@ export const meetingSummaryHandler: DocumentHandler<'text'> = {
   metadata,
   onCreateDocument: async ({
     id,
+    versionId,
     title,
     dataStream,
     metadata: docMetadata,
@@ -136,6 +137,7 @@ Participants: ${participants.join(', ')}`;
     // Save the generated document
     const result = await saveGeneratedDocument(content, {
       id,
+      versionId,
       title,
       kind: 'text',
       session,

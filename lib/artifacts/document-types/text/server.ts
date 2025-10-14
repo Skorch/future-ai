@@ -17,6 +17,7 @@ export const textDocumentHandler: DocumentHandler<'text'> = {
   kind: 'text',
   onCreateDocument: async ({
     id,
+    versionId,
     title,
     dataStream,
     metadata,
@@ -51,6 +52,7 @@ export const textDocumentHandler: DocumentHandler<'text'> = {
     // Save the generated document
     const result = await saveGeneratedDocument(content, {
       id,
+      versionId,
       title,
       kind: 'text',
       session,

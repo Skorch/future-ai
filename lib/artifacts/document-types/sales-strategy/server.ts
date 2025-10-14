@@ -1,11 +1,21 @@
-import type { DocumentHandler } from '@/lib/artifacts/server';
+import type {
+  DocumentHandler,
+  GeneratePunchlistCallbackProps,
+} from '@/lib/artifacts/server';
 import { metadata } from './metadata';
-import { SALES_STRATEGY_PROMPT, SALES_STRATEGY_TEMPLATE } from './prompts';
+import {
+  SALES_STRATEGY_PROMPT,
+  SALES_STRATEGY_TEMPLATE,
+  SALES_STRATEGY_PUNCHLIST_PROMPT,
+} from './prompts';
 import {
   fetchSourceDocuments,
   buildStreamConfig,
   processStream,
   saveGeneratedDocument,
+  generatePunchlist,
+  fetchKnowledgeDocuments,
+  GLOBAL_PUNCHLIST_TEMPLATE,
 } from '@/lib/artifacts/document-types/base-handler';
 import { OutputSize } from '@/lib/artifacts/types';
 import { updateDocumentPrompt } from '@/lib/ai/prompts';
@@ -17,6 +27,7 @@ export const salesStrategyHandler: DocumentHandler<'text'> = {
 
   onCreateDocument: async ({
     id,
+    versionId,
     title,
     dataStream,
     metadata: docMetadata,
@@ -117,6 +128,7 @@ ${analyses}
 
     const result = await saveGeneratedDocument(content, {
       id,
+      versionId,
       title,
       kind: 'text',
       session,
@@ -164,5 +176,40 @@ ${analyses}
       workspaceId,
       objectiveId: undefined,
     });
+  },
+  onGeneratePunchlist: async ({
+    currentVersion,
+    knowledgeDocIds,
+    instruction,
+    dataStream,
+    workspaceId,
+    session,
+  }: GeneratePunchlistCallbackProps) => {
+    // Fetch knowledge documents with full attribution
+    const knowledgeSummaries = await fetchKnowledgeDocuments(knowledgeDocIds);
+
+    if (!knowledgeSummaries) {
+      throw new Error(
+        'No valid knowledge documents found for punchlist generation',
+      );
+    }
+
+    // Generate punchlist with Sales Strategy-specific tracking goals
+    const punchlistContent = await generatePunchlist({
+      currentPunchlist: currentVersion.punchlist,
+      currentContent: currentVersion.content,
+      knowledgeSummaries,
+      documentSpecificPrompt: SALES_STRATEGY_PUNCHLIST_PROMPT,
+      globalPunchlistTemplate: GLOBAL_PUNCHLIST_TEMPLATE,
+      dataStream,
+    });
+
+    // Save punchlist to database
+    const { updateVersionPunchlist } = await import(
+      '@/lib/db/objective-document'
+    );
+    await updateVersionPunchlist(currentVersion.id, punchlistContent);
+
+    return punchlistContent;
   },
 };
