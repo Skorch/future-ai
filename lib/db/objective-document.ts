@@ -75,26 +75,29 @@ export async function createDocumentVersion(
   documentId: string,
   userId: string,
   data: {
-    content: string;
+    content?: string;
     punchlist?: string;
     metadata?: Record<string, unknown>;
   },
 ): Promise<ObjectiveDocumentVersion> {
   try {
-    // Get latest version to copy punchlist (if not provided in data)
+    // Get latest version to copy content and punchlist (if not provided in data)
     const [latestVersion] = await db
-      .select({ punchlist: objectiveDocumentVersion.punchlist })
+      .select({
+        content: objectiveDocumentVersion.content,
+        punchlist: objectiveDocumentVersion.punchlist,
+      })
       .from(objectiveDocumentVersion)
       .where(eq(objectiveDocumentVersion.documentId, documentId))
       .orderBy(desc(objectiveDocumentVersion.createdAt))
       .limit(1);
 
-    // Create new version
+    // Create new version - copy content and punchlist from latest if not provided
     const [version] = await db
       .insert(objectiveDocumentVersion)
       .values({
         documentId,
-        content: data.content,
+        content: data.content ?? latestVersion?.content ?? '',
         punchlist: data.punchlist ?? latestVersion?.punchlist ?? null,
         metadata: data.metadata,
         createdByUserId: userId,
@@ -450,10 +453,8 @@ export async function initializeVersionForChat(
         versionId = result.version.id;
         isFirstVersion = true;
       } else {
-        // 3. Create new version (copies punchlist from latest)
-        const newVersion = await createDocumentVersion(documentId, userId, {
-          content: '',
-        });
+        // 3. Create new version (copies both content and punchlist from latest)
+        const newVersion = await createDocumentVersion(documentId, userId, {});
         versionId = newVersion.id;
       }
 
@@ -498,6 +499,71 @@ export async function getVersionByChatId(
     throw new ChatSDKError(
       'bad_request:database',
       'Failed to get version by chat',
+    );
+  }
+}
+
+/**
+ * Update the punchlist field of an existing version
+ * Used by punchlist generation to update tracking without creating a new version
+ */
+export async function updateVersionPunchlist(
+  versionId: string,
+  punchlist: string,
+): Promise<void> {
+  try {
+    await db
+      .update(objectiveDocumentVersion)
+      .set({ punchlist })
+      .where(eq(objectiveDocumentVersion.id, versionId));
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to update version punchlist',
+    );
+  }
+}
+
+/**
+ * Update the content field of an existing version
+ * Used by document generation to update content without creating a new version
+ * Implements "one chat = one version" pattern
+ */
+export async function updateVersionContent(
+  versionId: string,
+  content: string,
+  metadata?: Record<string, unknown>,
+): Promise<void> {
+  try {
+    await db.transaction(async (tx) => {
+      // 1. Update version content
+      await tx
+        .update(objectiveDocumentVersion)
+        .set({
+          content,
+          metadata: metadata ?? undefined,
+        })
+        .where(eq(objectiveDocumentVersion.id, versionId));
+
+      // 2. Get documentId to update document timestamp
+      const [version] = await tx
+        .select({ documentId: objectiveDocumentVersion.documentId })
+        .from(objectiveDocumentVersion)
+        .where(eq(objectiveDocumentVersion.id, versionId))
+        .limit(1);
+
+      if (version) {
+        // 3. Update document's updatedAt timestamp
+        await tx
+          .update(objectiveDocument)
+          .set({ updatedAt: new Date() })
+          .where(eq(objectiveDocument.id, version.documentId));
+      }
+    });
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to update version content',
     );
   }
 }
