@@ -1,8 +1,8 @@
 import 'server-only';
 
-import { and, desc, eq, isNull } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import { db } from './queries';
-import { knowledgeDocument, workspace } from './schema';
+import { knowledgeDocument } from './schema';
 import type { KnowledgeDocument } from './schema';
 import { ChatSDKError } from '@/lib/errors';
 
@@ -19,10 +19,18 @@ export async function createKnowledgeDocument(
     category: KnowledgeCategory;
     documentType: string;
     metadata?: Record<string, unknown>;
+    // Phase 3: Source metadata fields
+    sourceType?: 'transcript' | 'email' | 'slack' | 'note';
+    sourceDate?: Date;
+    participants?: Array<{
+      email?: string;
+      displayName: string;
+    }>;
+    sourceKnowledgeDocumentId?: string;
   },
 ): Promise<KnowledgeDocument> {
   try {
-    const [document] = await db
+    const result = await db
       .insert(knowledgeDocument)
       .values({
         workspaceId,
@@ -33,9 +41,20 @@ export async function createKnowledgeDocument(
         documentType: data.documentType,
         isSearchable: true, // Default to searchable
         metadata: data.metadata,
+        // Phase 3: Set source metadata
+        sourceType: data.sourceType,
+        sourceDate: data.sourceDate,
+        participants: data.participants,
+        sourceKnowledgeDocumentId: data.sourceKnowledgeDocumentId,
         createdByUserId: userId,
       })
       .returning();
+
+    const [document] = result as KnowledgeDocument[];
+
+    if (!document) {
+      throw new Error('No document returned from insert');
+    }
 
     return document;
   } catch (error) {
@@ -50,11 +69,11 @@ export async function getKnowledgeByObjectiveId(
   objectiveId: string,
 ): Promise<KnowledgeDocument[]> {
   try {
-    const documents = await db
+    const documents = (await db
       .select()
       .from(knowledgeDocument)
       .where(eq(knowledgeDocument.objectiveId, objectiveId))
-      .orderBy(desc(knowledgeDocument.createdAt));
+      .orderBy(desc(knowledgeDocument.createdAt))) as KnowledgeDocument[];
 
     return documents;
   } catch (error) {
@@ -68,6 +87,7 @@ export async function getKnowledgeByObjectiveId(
 export async function getKnowledgeByWorkspaceId(
   workspaceId: string,
   category?: KnowledgeCategory,
+  filterObjectiveId?: string,
 ): Promise<KnowledgeDocument[]> {
   try {
     const conditions = [eq(knowledgeDocument.workspaceId, workspaceId)];
@@ -76,11 +96,15 @@ export async function getKnowledgeByWorkspaceId(
       conditions.push(eq(knowledgeDocument.category, category));
     }
 
-    const documents = await db
+    if (filterObjectiveId) {
+      conditions.push(eq(knowledgeDocument.objectiveId, filterObjectiveId));
+    }
+
+    const documents = (await db
       .select()
       .from(knowledgeDocument)
       .where(and(...conditions))
-      .orderBy(desc(knowledgeDocument.createdAt));
+      .orderBy(desc(knowledgeDocument.createdAt))) as KnowledgeDocument[];
 
     return documents;
   } catch (error) {
@@ -93,24 +117,15 @@ export async function getKnowledgeByWorkspaceId(
 
 export async function getKnowledgeDocumentById(
   id: string,
-  userId: string,
 ): Promise<KnowledgeDocument | null> {
   try {
-    // Verify ownership via workspace
     const [doc] = await db
-      .select({ knowledgeDocument })
+      .select()
       .from(knowledgeDocument)
-      .innerJoin(workspace, eq(knowledgeDocument.workspaceId, workspace.id))
-      .where(
-        and(
-          eq(knowledgeDocument.id, id),
-          eq(workspace.userId, userId),
-          isNull(workspace.deletedAt),
-        ),
-      )
+      .where(eq(knowledgeDocument.id, id))
       .limit(1);
 
-    return doc?.knowledgeDocument || null;
+    return (doc as KnowledgeDocument) || null;
   } catch (error) {
     throw new ChatSDKError(
       'bad_request:database',
@@ -121,7 +136,6 @@ export async function getKnowledgeDocumentById(
 
 export async function updateKnowledgeDocument(
   id: string,
-  userId: string,
   data: {
     title?: string;
     content?: string;
@@ -130,20 +144,20 @@ export async function updateKnowledgeDocument(
   },
 ): Promise<KnowledgeDocument> {
   try {
-    // Verify ownership first
-    const existing = await getKnowledgeDocumentById(id, userId);
-    if (!existing) {
-      throw new ChatSDKError(
-        'not_found:database',
-        'Knowledge document not found or access denied',
-      );
-    }
-
-    const [updated] = await db
+    const result = await db
       .update(knowledgeDocument)
       .set(data)
       .where(eq(knowledgeDocument.id, id))
       .returning();
+
+    const [updated] = result as KnowledgeDocument[];
+
+    if (!updated) {
+      throw new ChatSDKError(
+        'not_found:database',
+        'Knowledge document not found',
+      );
+    }
 
     return updated;
   } catch (error) {
@@ -159,33 +173,19 @@ export async function updateKnowledgeDocument(
 
 export async function deleteKnowledgeDocument(
   knowledgeId: string,
-  userId: string,
 ): Promise<void> {
   try {
-    // Verify ownership via workspace
-    const [doc] = await db
-      .select({ knowledgeDocument })
-      .from(knowledgeDocument)
-      .innerJoin(workspace, eq(knowledgeDocument.workspaceId, workspace.id))
-      .where(
-        and(
-          eq(knowledgeDocument.id, knowledgeId),
-          eq(workspace.userId, userId),
-          isNull(workspace.deletedAt),
-        ),
-      )
-      .limit(1);
+    const result = await db
+      .delete(knowledgeDocument)
+      .where(eq(knowledgeDocument.id, knowledgeId))
+      .returning();
 
-    if (!doc) {
+    if (!result.length) {
       throw new ChatSDKError(
         'not_found:database',
-        'Knowledge document not found or access denied',
+        'Knowledge document not found',
       );
     }
-
-    await db
-      .delete(knowledgeDocument)
-      .where(eq(knowledgeDocument.id, knowledgeId));
   } catch (error) {
     if (error instanceof ChatSDKError) {
       throw error;

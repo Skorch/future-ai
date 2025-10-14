@@ -187,10 +187,12 @@ export async function getLatestVersion(
 
 /**
  * Get all objective documents in workspace with their latest versions
+ * Optionally filter by objectiveId
  */
 export async function getAllObjectiveDocumentsByWorkspaceId(
   workspaceId: string,
   userId: string,
+  filterObjectiveId?: string,
 ): Promise<
   Array<{
     document: ObjectiveDocument;
@@ -199,34 +201,63 @@ export async function getAllObjectiveDocumentsByWorkspaceId(
   }>
 > {
   try {
+    // Get all objectives that match the filter (if provided)
+    const objectiveWhere = filterObjectiveId
+      ? and(
+          eq(objective.workspaceId, workspaceId),
+          eq(objective.id, filterObjectiveId),
+        )
+      : eq(objective.workspaceId, workspaceId);
+
+    const objectives = await db.select().from(objective).where(objectiveWhere);
+
+    // Get only document IDs linked to filtered objectives
+    const filteredDocumentIds = new Set(
+      objectives
+        .map((obj) => obj.objectiveDocumentId)
+        .filter((id): id is string => id !== null),
+    );
+
+    // If filtering by objective and no documents found, return empty
+    if (filterObjectiveId && filteredDocumentIds.size === 0) {
+      return [];
+    }
+
     // Get all documents in workspace with ownership verification
+    const documentWhere = filterObjectiveId
+      ? and(
+          eq(objectiveDocument.workspaceId, workspaceId),
+          eq(workspace.userId, userId),
+          isNull(workspace.deletedAt),
+        )
+      : and(
+          eq(objectiveDocument.workspaceId, workspaceId),
+          eq(workspace.userId, userId),
+          isNull(workspace.deletedAt),
+        );
+
     const documents = await db
       .select({ objectiveDocument })
       .from(objectiveDocument)
       .innerJoin(workspace, eq(objectiveDocument.workspaceId, workspace.id))
-      .where(
-        and(
-          eq(objectiveDocument.workspaceId, workspaceId),
-          eq(workspace.userId, userId),
-          isNull(workspace.deletedAt),
-        ),
-      )
+      .where(documentWhere)
       .orderBy(desc(objectiveDocument.updatedAt));
-
-    // Get all objectives that reference these documents
-    const objectives = await db
-      .select()
-      .from(objective)
-      .where(eq(objective.workspaceId, workspaceId));
 
     // Create objective lookup map
     const objectiveMap = new Map(
       objectives.map((obj) => [obj.objectiveDocumentId, obj]),
     );
 
+    // Filter documents to only those linked to filtered objectives (if filtering)
+    const filteredDocuments = filterObjectiveId
+      ? documents.filter(({ objectiveDocument: doc }) =>
+          filteredDocumentIds.has(doc.id),
+        )
+      : documents;
+
     // For each document, get its latest version
     const results = await Promise.all(
-      documents.map(async ({ objectiveDocument: doc }) => {
+      filteredDocuments.map(async ({ objectiveDocument: doc }) => {
         const [latestVersion] = await db
           .select()
           .from(objectiveDocumentVersion)
@@ -254,28 +285,19 @@ export async function getAllObjectiveDocumentsByWorkspaceId(
 }
 
 /**
- * Get a single objective document by ID with ownership verification
+ * Get a single objective document by ID
  */
 export async function getObjectiveDocumentById(
   documentId: string,
-  userId: string,
 ): Promise<ObjectiveDocumentWithVersions | null> {
   try {
-    // Verify ownership via workspace
-    const [doc] = await db
-      .select({ objectiveDocument })
+    const [document] = await db
+      .select()
       .from(objectiveDocument)
-      .innerJoin(workspace, eq(objectiveDocument.workspaceId, workspace.id))
-      .where(
-        and(
-          eq(objectiveDocument.id, documentId),
-          eq(workspace.userId, userId),
-          isNull(workspace.deletedAt),
-        ),
-      )
+      .where(eq(objectiveDocument.id, documentId))
       .limit(1);
 
-    if (!doc) {
+    if (!document) {
       return null;
     }
 
@@ -289,7 +311,7 @@ export async function getObjectiveDocumentById(
     const latestVersion = versions[0];
 
     return {
-      document: doc.objectiveDocument,
+      document,
       versions,
       latestVersion,
     };
@@ -312,16 +334,7 @@ export async function updateObjectiveDocumentContent(
   metadata?: Record<string, unknown>,
 ): Promise<ObjectiveDocumentVersion> {
   try {
-    // Verify ownership first
-    const existing = await getObjectiveDocumentById(documentId, userId);
-    if (!existing) {
-      throw new ChatSDKError(
-        'not_found:database',
-        'Objective document not found or access denied',
-      );
-    }
-
-    // Create new version using existing function
+    // Create new version
     const newVersion = await createDocumentVersion(documentId, userId, {
       content,
       metadata,
