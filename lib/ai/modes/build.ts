@@ -14,6 +14,7 @@ export const buildMode: ModeConfig = {
     'loadDocument',
     'loadDocuments',
     'generateDocumentVersion', // Single tool for all document generation
+    'updatePunchlist', // Phase 4: Update punchlist from knowledge
     'getPlaybook', // Retrieve structured playbook workflows
     'setMode',
     'setComplete', // Allow marking task complete in any mode

@@ -13,6 +13,7 @@ export const discoveryMode: ModeConfig = {
     'listDocuments',
     'loadDocument',
     'saveKnowledge', // Phase 3: Knowledge processing
+    'updatePunchlist', // Phase 4: Update punchlist from knowledge
     'getPlaybook', // Retrieve structured playbook workflows
     'setMode',
     'setComplete', // Allow marking task complete in any mode
