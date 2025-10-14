@@ -22,7 +22,10 @@ import {
   saveMessages,
   db,
 } from '@/lib/db/queries';
-import { getOrCreateActiveObjective } from '@/lib/db/objective';
+import {
+  getOrCreateActiveObjective,
+  getObjectiveById,
+} from '@/lib/db/objective';
 import { initializeVersionForChat } from '@/lib/db/objective-document';
 import { workspace, chat as chatTable } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
@@ -151,8 +154,9 @@ export async function POST(
       userId,
     });
 
-    // Determine the final objectiveId for this chat
+    // Determine the final objectiveId and documentType for this chat
     let chatObjectiveId: string;
+    let chatDocumentType: string;
 
     if (!chat) {
       const title = await generateTitleFromUserMessage({
@@ -164,13 +168,17 @@ export async function POST(
         providedObjectiveId ||
         (await getOrCreateActiveObjective(workspaceId, userId));
 
-      // Initialize version for new chat (creates document if needed)
-      const { versionId } = await initializeVersionForChat(
-        id,
-        chatObjectiveId,
-        userId,
-        workspaceId,
-      );
+      // Initialize version for new chat (creates document if needed, returns metadata)
+      const { versionId, documentType, objectiveId } =
+        await initializeVersionForChat(
+          id,
+          chatObjectiveId,
+          userId,
+          workspaceId,
+        );
+
+      chatDocumentType = documentType;
+      chatObjectiveId = objectiveId;
 
       await saveChat({
         id,
@@ -181,28 +189,41 @@ export async function POST(
         objectiveDocumentVersionId: versionId,
       });
 
-      logger.debug('Created chat with version', { chatId: id, versionId });
+      logger.debug('Created chat with version', {
+        chatId: id,
+        versionId,
+        documentType,
+      });
     } else {
       // Chat already exists, use its objectiveId
       chatObjectiveId = chat.objectiveId;
 
-      // Ensure chat has version (backfill for old chats)
+      // Initialize version if missing (also gets documentType)
       if (!chat.objectiveDocumentVersionId) {
         logger.warn('Existing chat missing version, initializing', {
           chatId: id,
         });
-        const { versionId } = await initializeVersionForChat(
+        const { versionId, documentType } = await initializeVersionForChat(
           id,
           chatObjectiveId,
           userId,
           workspaceId,
         );
 
+        chatDocumentType = documentType;
+
         // Update chat with version
         await db
           .update(chatTable)
           .set({ objectiveDocumentVersionId: versionId })
           .where(eq(chatTable.id, id));
+      } else {
+        // Chat has version, just get documentType from objective
+        const objective = await getObjectiveById(chatObjectiveId, userId);
+        if (!objective) {
+          throw new ChatSDKError('not_found:database', 'Objective not found');
+        }
+        chatDocumentType = objective.documentType;
       }
     }
 
@@ -495,6 +516,8 @@ export async function POST(
                     dataStream,
                     workspaceId,
                     chatId: id,
+                    objectiveId: chatObjectiveId,
+                    documentType: chatDocumentType,
                   }),
 
                   // Punchlist update tool (Phase 4)

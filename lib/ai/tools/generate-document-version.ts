@@ -1,12 +1,9 @@
 import { tool } from 'ai';
 import type { UIMessageStreamWriter } from 'ai';
 import { z } from 'zod';
-import { getDocumentTypeDefinition, documentTypes } from '@/lib/artifacts';
+import { getDocumentTypeDefinition } from '@/lib/artifacts';
 import { fetchSourceDocuments } from '@/lib/artifacts/document-types/base-handler';
 import { getVersionByChatId } from '@/lib/db/objective-document';
-import { db } from '@/lib/db/queries';
-import { chat as chatTable } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
 import { getLogger } from '@/lib/logger';
 import type { ChatMessage } from '@/lib/types';
 
@@ -17,6 +14,8 @@ interface ToolContext {
   dataStream: UIMessageStreamWriter<ChatMessage>;
   workspaceId: string;
   chatId: string;
+  objectiveId: string;
+  documentType: string;
 }
 
 export const generateDocumentVersion = ({
@@ -24,15 +23,24 @@ export const generateDocumentVersion = ({
   dataStream,
   workspaceId,
   chatId,
+  objectiveId,
+  documentType,
 }: ToolContext) =>
   tool({
-    description:
-      "Generate document content for the current chat's version. Use this to create or update document content.",
+    description: `Generate or update document content for the current chat's version.
+
+IMPORTANT: The document type is ALREADY DETERMINED by the objective this chat belongs to.
+You do not need to specify the document type - it's automatically retrieved from the objective.
+
+Use this tool when the user asks to:
+- "Create a draft"
+- "Generate the document"
+- "Update the document with new information"
+- "Regenerate based on new sources"
+
+The tool will use the objective's document type automatically.`,
 
     inputSchema: z.object({
-      documentType: z
-        .enum(documentTypes as [string, ...string[]])
-        .describe('Document type for the objective deliverable'),
       instruction: z
         .string()
         .describe(
@@ -50,7 +58,6 @@ export const generateDocumentVersion = ({
     }),
 
     execute: async ({
-      documentType,
       instruction,
       primarySourceDocumentId,
       referenceDocumentIds,
@@ -67,22 +74,7 @@ export const generateDocumentVersion = ({
           };
         }
 
-        // 2. Get objectiveId from chat
-        const [chatRecord] = await db
-          .select({ objectiveId: chatTable.objectiveId })
-          .from(chatTable)
-          .where(eq(chatTable.id, chatId))
-          .limit(1);
-
-        const objectiveId = chatRecord?.objectiveId;
-        if (!objectiveId) {
-          return {
-            success: false,
-            error: 'Could not find objective for this chat',
-          };
-        }
-
-        // 3. Get document handler (documentType is enum-validated at runtime)
+        // 2. Get document handler (documentType provided by tool context)
         const documentDef = await getDocumentTypeDefinition(
           documentType as Parameters<typeof getDocumentTypeDefinition>[0],
         );
@@ -93,7 +85,7 @@ export const generateDocumentVersion = ({
           };
         }
 
-        // 4. Combine source document IDs
+        // 3. Combine source document IDs
         const sourceDocumentIds = [
           ...(primarySourceDocumentId ? [primarySourceDocumentId] : []),
           ...(referenceDocumentIds || []),
@@ -102,12 +94,13 @@ export const generateDocumentVersion = ({
         logger.info('Starting document generation', {
           versionId: version.id,
           documentType,
+          objectiveId,
           sourceCount: sourceDocumentIds.length,
           sourceIds: sourceDocumentIds,
           hasInstruction: !!instruction,
         });
 
-        // 5. Load source documents ONCE (if provided)
+        // 4. Load source documents ONCE (if provided)
         let sourceContent = '';
         if (sourceDocumentIds.length > 0) {
           logger.info('Loading source documents', {
@@ -131,11 +124,16 @@ export const generateDocumentVersion = ({
           });
         }
 
-        // 6. Initialize artifact stream
+        // 5. Initialize artifact stream
         dataStream.write({ type: 'data-kind', data: 'text', transient: true });
         dataStream.write({
           type: 'data-id',
           data: version.documentId, // Send document envelope ID for routing
+          transient: true,
+        });
+        dataStream.write({
+          type: 'data-versionId',
+          data: version.id, // Send specific version ID for this chat
           transient: true,
         });
         dataStream.write({
@@ -145,7 +143,7 @@ export const generateDocumentVersion = ({
         });
         dataStream.write({ type: 'data-clear', data: null, transient: true });
 
-        // 7. Generate content via handler
+        // 6. Generate content via handler
         logger.info('Calling handler', {
           handler: documentDef.metadata.type,
           hasSourceContent: !!sourceContent,
@@ -153,13 +151,11 @@ export const generateDocumentVersion = ({
         });
 
         await documentDef.handler.onCreateDocument({
-          id: version.documentId, // Document envelope ID
           versionId: version.id, // Version ID to update (one chat = one version)
           title: 'Document',
           dataStream,
           session,
           workspaceId,
-          objectiveId, // Still passed for context, but should not trigger document creation
           metadata: {
             documentType,
             sourceContent, // ← Pre-loaded text content
@@ -167,6 +163,8 @@ export const generateDocumentVersion = ({
             // Keep IDs for audit/metadata purposes only
             sourceDocumentIds,
             primarySourceDocumentId,
+            objectiveId, // Moved to metadata for context (no longer creates document)
+            documentId: version.documentId, // Document envelope ID for reference
           },
         });
 

@@ -62,6 +62,14 @@ export function DataStreamHandler() {
               status: 'streaming',
             };
 
+          case 'data-versionId':
+            logger.debug('[DataStreamHandler] Setting version ID:', delta.data);
+            return {
+              ...draftArtifact,
+              versionId: delta.data,
+              status: 'streaming',
+            };
+
           case 'data-title':
             logger.debug('[DataStreamHandler] Setting title:', delta.data);
             return {
