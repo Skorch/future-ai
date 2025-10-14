@@ -61,10 +61,7 @@ The tool returns an array of loaded documents with their content and metadata.`,
       const loadResults = await Promise.all(
         documentIds.map(async (id) => {
           // Try KnowledgeDocument first
-          const knowledgeDoc = await getKnowledgeDocumentById(
-            id,
-            session.user.id,
-          );
+          const knowledgeDoc = await getKnowledgeDocumentById(id);
           if (knowledgeDoc) {
             return {
               id: knowledgeDoc.id,
@@ -77,10 +74,7 @@ The tool returns an array of loaded documents with their content and metadata.`,
           }
 
           // Try ObjectiveDocument
-          const objectiveDoc = await getObjectiveDocumentById(
-            id,
-            session.user.id,
-          );
+          const objectiveDoc = await getObjectiveDocumentById(id);
           if (objectiveDoc?.latestVersion) {
             // Type metadata properly to avoid `any`
             const metadata = objectiveDoc.latestVersion.metadata as Record<

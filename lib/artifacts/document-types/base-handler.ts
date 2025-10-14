@@ -41,10 +41,17 @@ export interface StreamConfig {
 
 /**
  * Document metadata type
+ *
+ * sourceContent: Pre-loaded text content from all source documents (loaded by tool)
+ * instruction: Single instruction field for document generation
+ * sourceDocumentIds: Kept for audit/metadata purposes only (handlers should use sourceContent)
  */
 type DocumentMetadata = {
   documentType?: string;
-  sourceDocumentIds?: string[];
+  sourceContent?: string; // NEW: Pre-loaded source content
+  instruction?: string; // NEW: Single instruction field
+  sourceDocumentIds?: string[]; // Keep for audit/metadata
+  primarySourceDocumentId?: string;
   meetingDate?: string;
   participants?: string[];
   [key: string]: unknown;
@@ -189,7 +196,7 @@ export async function fetchSourceDocuments(
   const sourceDocuments = await Promise.all(
     docIdsToFetch.map(async (docId) => {
       // Try KnowledgeDocument first
-      const knowledgeDoc = await getKnowledgeDocumentById(docId, ''); // TODO: Need userId
+      const knowledgeDoc = await getKnowledgeDocumentById(docId);
       if (knowledgeDoc) {
         return {
           id: knowledgeDoc.id,
@@ -199,7 +206,7 @@ export async function fetchSourceDocuments(
       }
 
       // Try ObjectiveDocument
-      const objectiveDoc = await getObjectiveDocumentById(docId, ''); // TODO: Need userId
+      const objectiveDoc = await getObjectiveDocumentById(docId);
       if (objectiveDoc?.latestVersion) {
         return {
           id: objectiveDoc.document.id,

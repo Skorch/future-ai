@@ -24,12 +24,24 @@ export const textDocumentHandler: DocumentHandler<'text'> = {
     workspaceId,
     objectiveId,
   }: CreateDocumentCallbackProps) => {
-    // Build configuration for this document type
+    // Extract metadata fields
+    const sourceContent = (metadata?.sourceContent as string | undefined) || '';
+    const instruction = (metadata?.instruction as string | undefined) || title;
+
+    // Build prompt based on whether we have source material
+    const prompt = sourceContent
+      ? `${instruction}\n\n# Source Material\n\n${sourceContent}`
+      : instruction;
+
+    const systemPrompt = sourceContent
+      ? 'You are creating a document based on provided source material. Use markdown formatting with appropriate headings. Synthesize the source content according to the instructions.'
+      : 'Write about the given topic. Markdown is supported. Use headings wherever appropriate.';
+
+    // Build configuration
     const streamConfig = buildStreamConfig({
       model: myProvider.languageModel('artifact-model'),
-      system:
-        'Write about the given topic. Markdown is supported. Use headings wherever appropriate.',
-      prompt: title,
+      system: systemPrompt,
+      prompt,
       maxOutputTokens: artifactMetadata.outputSize ?? OutputSize.LARGE,
     });
 

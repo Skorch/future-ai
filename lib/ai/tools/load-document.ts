@@ -69,10 +69,7 @@ Reserve space for user messages, your responses, and other tool outputs.`,
       } | null = null;
 
       // Try KnowledgeDocument
-      const knowledgeDoc = await getKnowledgeDocumentById(
-        documentId,
-        session.user.id,
-      );
+      const knowledgeDoc = await getKnowledgeDocumentById(documentId);
       if (knowledgeDoc) {
         document = {
           id: knowledgeDoc.id,
@@ -84,10 +81,7 @@ Reserve space for user messages, your responses, and other tool outputs.`,
         };
       } else {
         // Try ObjectiveDocument
-        const objectiveDoc = await getObjectiveDocumentById(
-          documentId,
-          session.user.id,
-        );
+        const objectiveDoc = await getObjectiveDocumentById(documentId);
         if (objectiveDoc?.latestVersion) {
           // Type metadata properly to avoid `any`
           const metadata = objectiveDoc.latestVersion.metadata as Record<

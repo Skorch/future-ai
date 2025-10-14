@@ -1,7 +1,8 @@
 import { tool } from 'ai';
 import type { UIMessageStreamWriter } from 'ai';
 import { z } from 'zod';
-import { getDocumentTypeDefinition } from '@/lib/artifacts';
+import { getDocumentTypeDefinition, documentTypes } from '@/lib/artifacts';
+import { fetchSourceDocuments } from '@/lib/artifacts/document-types/base-handler';
 import { getVersionByChatId } from '@/lib/db/objective-document';
 import { db } from '@/lib/db/queries';
 import { chat as chatTable } from '@/lib/db/schema';
@@ -30,13 +31,13 @@ export const generateDocumentVersion = ({
 
     inputSchema: z.object({
       documentType: z
-        .string()
-        .describe(
-          'Document type (e.g., business-requirements, sales-proposal)',
-        ),
+        .enum(documentTypes as [string, ...string[]])
+        .describe('Document type for the objective deliverable'),
       instruction: z
         .string()
-        .describe('Instructions for what content to generate'),
+        .describe(
+          'Instructions for generating the document content from source materials',
+        ),
       primarySourceDocumentId: z
         .string()
         .uuid()
@@ -46,10 +47,6 @@ export const generateDocumentVersion = ({
         .array(z.string().uuid())
         .optional()
         .describe('Supporting documents for context'),
-      agentInstruction: z
-        .string()
-        .optional()
-        .describe('Custom generation instructions'),
     }),
 
     execute: async ({
@@ -57,7 +54,6 @@ export const generateDocumentVersion = ({
       instruction,
       primarySourceDocumentId,
       referenceDocumentIds,
-      agentInstruction,
     }) => {
       const startTime = Date.now();
 
@@ -71,7 +67,7 @@ export const generateDocumentVersion = ({
           };
         }
 
-        // 2. Get objectiveId from chat (simpler than joining through document!)
+        // 2. Get objectiveId from chat
         const [chatRecord] = await db
           .select({ objectiveId: chatTable.objectiveId })
           .from(chatTable)
@@ -86,11 +82,9 @@ export const generateDocumentVersion = ({
           };
         }
 
-        // 3. Get document handler
+        // 3. Get document handler (documentType is enum-validated at runtime)
         const documentDef = await getDocumentTypeDefinition(
-          (documentType || 'text') as Parameters<
-            typeof getDocumentTypeDefinition
-          >[0],
+          documentType as Parameters<typeof getDocumentTypeDefinition>[0],
         );
         if (!documentDef?.handler) {
           return {
@@ -99,23 +93,49 @@ export const generateDocumentVersion = ({
           };
         }
 
-        // 4. Combine source documents (same pattern as createDocument)
+        // 4. Combine source document IDs
         const sourceDocumentIds = [
           ...(primarySourceDocumentId ? [primarySourceDocumentId] : []),
           ...(referenceDocumentIds || []),
         ];
 
-        logger.debug('Generating content', {
+        logger.info('Starting document generation', {
           versionId: version.id,
           documentType,
           sourceCount: sourceDocumentIds.length,
+          sourceIds: sourceDocumentIds,
+          hasInstruction: !!instruction,
         });
 
-        // 5. Initialize artifact stream
+        // 5. Load source documents ONCE (if provided)
+        let sourceContent = '';
+        if (sourceDocumentIds.length > 0) {
+          logger.info('Loading source documents', {
+            count: sourceDocumentIds.length,
+          });
+
+          sourceContent = await fetchSourceDocuments(
+            sourceDocumentIds,
+            workspaceId,
+          );
+
+          logger.info('Source documents loaded', {
+            totalLength: sourceContent.length,
+            hasContent: !!sourceContent,
+            preview: sourceContent.substring(0, 200),
+          });
+        } else {
+          logger.warn('No source documents provided', {
+            documentType,
+            instruction: instruction.substring(0, 100),
+          });
+        }
+
+        // 6. Initialize artifact stream
         dataStream.write({ type: 'data-kind', data: 'text', transient: true });
         dataStream.write({
           type: 'data-id',
-          data: version.id,
+          data: version.documentId, // Send document envelope ID for routing
           transient: true,
         });
         dataStream.write({
@@ -125,7 +145,13 @@ export const generateDocumentVersion = ({
         });
         dataStream.write({ type: 'data-clear', data: null, transient: true });
 
-        // 6. Generate content via handler (reuse existing pattern)
+        // 7. Generate content via handler
+        logger.info('Calling handler', {
+          handler: documentDef.metadata.type,
+          hasSourceContent: !!sourceContent,
+          sourceContentLength: sourceContent.length,
+        });
+
         await documentDef.handler.onCreateDocument({
           id: version.id,
           title: 'Document',
@@ -134,23 +160,30 @@ export const generateDocumentVersion = ({
           workspaceId,
           objectiveId,
           metadata: {
+            documentType,
+            sourceContent, // ← Pre-loaded text content
+            instruction, // ← Single instruction field
+            // Keep IDs for audit/metadata purposes only
             sourceDocumentIds,
             primarySourceDocumentId,
-            agentInstruction: agentInstruction || instruction,
           },
         });
 
         dataStream.write({ type: 'data-finish', data: null, transient: true });
 
         const duration = Date.now() - startTime;
-        logger.debug('Content generated', { versionId: version.id, duration });
+        logger.info('Content generated successfully', {
+          documentId: version.documentId,
+          versionId: version.id,
+          duration,
+        });
 
         return {
-          id: version.id,
+          id: version.documentId, // Document envelope ID (for routing)
+          versionId: version.id, // Version ID (for tracking)
           title: 'Document',
           kind: 'text' as const,
           documentType: documentType || 'text',
-          versionId: version.id,
           success: true,
           message: `Document content has been generated and is displayed above. Use loadDocument to review the full content, then ask the user for feedback.`,
         };
