@@ -22,7 +22,12 @@ import { artifactRegistry } from '@/lib/artifacts/artifact-registry';
 
 interface DocumentPreviewProps {
   isReadonly: boolean;
-  result?: { id: string; title: string; kind: ArtifactKind };
+  result?: {
+    id: string;
+    title: string;
+    kind: ArtifactKind;
+    versionId?: string;
+  };
   args?: { title: string; kind: ArtifactKind };
   workspaceId?: string;
 }
@@ -162,7 +167,7 @@ const PureHitboxLayer = ({
   setArtifact,
 }: {
   hitboxRef: React.RefObject<HTMLDivElement>;
-  result: { id: string; title: string; kind: ArtifactKind };
+  result: { id: string; title: string; kind: ArtifactKind; versionId?: string };
   setArtifact: (
     updaterFn: UIArtifact | ((currentArtifact: UIArtifact) => UIArtifact),
   ) => void;
@@ -178,6 +183,7 @@ const PureHitboxLayer = ({
               ...artifact,
               title: result.title,
               documentId: result.id,
+              versionId: result.versionId, // Pass versionId from tool result (if present)
               kind: result.kind as ArtifactKind,
               isVisible: true,
               boundingBox: {
