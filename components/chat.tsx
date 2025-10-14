@@ -137,19 +137,28 @@ export function Chat({
     },
   });
 
-  // Use ref to prevent duplicate auto-submit (avoids React 18 double-render issue)
-  const hasAutoSubmittedRef = useRef(false);
+  // Track which chat+query combo has been auto-submitted to prevent duplicates
+  const autoSubmitKeyRef = useRef<string>('');
 
-  // Clear dataStream and reset auto-submit flag when chat id changes
+  // Clear dataStream when chat id changes
   useEffect(() => {
     setDataStream([]);
-    hasAutoSubmittedRef.current = false;
   }, [id, setDataStream]);
 
-  // Auto-submit query when explicitly requested (only once)
+  // Auto-submit query when explicitly requested (only once per unique chat+query)
   useEffect(() => {
-    if (initialQuery && shouldAutoSubmit && !hasAutoSubmittedRef.current) {
-      hasAutoSubmittedRef.current = true;
+    // Create unique key for this auto-submit scenario
+    const currentKey = shouldAutoSubmit ? `${id}-${initialQuery}` : '';
+
+    // Only auto-submit if:
+    // 1. All required props are present
+    // 2. This specific chat+query combo hasn't been submitted yet
+    if (
+      initialQuery &&
+      shouldAutoSubmit &&
+      currentKey !== autoSubmitKeyRef.current
+    ) {
+      autoSubmitKeyRef.current = currentKey;
 
       sendMessage({
         role: 'user' as const,
