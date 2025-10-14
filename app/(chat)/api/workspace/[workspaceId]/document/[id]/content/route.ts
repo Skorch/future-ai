@@ -1,5 +1,8 @@
 import { auth } from '@clerk/nextjs/server';
-import { updateObjectiveDocumentContent } from '@/lib/db/objective-document';
+import {
+  updateVersionContent,
+  getLatestVersion,
+} from '@/lib/db/objective-document';
 import { ChatSDKError } from '@/lib/errors';
 import { getLogger } from '@/lib/logger';
 
@@ -18,7 +21,7 @@ export async function PATCH(
 
   try {
     const body = await request.json();
-    const { content, metadata } = body;
+    const { content, metadata, versionId } = body;
 
     if (!content || typeof content !== 'string') {
       return Response.json(
@@ -30,23 +33,32 @@ export async function PATCH(
     logger.debug('Updating objective document content:', {
       documentId: id,
       workspaceId,
+      versionId: versionId || 'using latest',
     });
 
-    // Create new version
-    const newVersion = await updateObjectiveDocumentContent(
-      id,
-      userId,
-      content,
-      metadata,
-    );
+    // Use provided versionId, or fall back to latest version
+    let targetVersionId = versionId;
+    if (!targetVersionId) {
+      const latestVersion = await getLatestVersion(id);
+      if (!latestVersion) {
+        return Response.json(
+          { error: 'No version found for this document' },
+          { status: 404 },
+        );
+      }
+      targetVersionId = latestVersion.id;
+    }
+
+    // Update version content (in-place update, maintains "one chat = one version")
+    await updateVersionContent(targetVersionId, content, metadata);
 
     logger.debug('Document content updated:', {
       documentId: id,
-      versionId: newVersion.id,
+      versionId: targetVersionId,
     });
 
     return Response.json({
-      version: newVersion,
+      versionId: targetVersionId,
       success: true,
     });
   } catch (error) {
