@@ -31,7 +31,7 @@ export default async function WorkspaceLayout({
 
   // Get sidebar state from cookies
   const cookieStore = await cookies();
-  const isCollapsed = cookieStore.get('sidebar:state')?.value !== 'true';
+  const isCollapsed = cookieStore.get('sidebar:state')?.value === 'false';
 
   return (
     <SidebarProvider defaultOpen={!isCollapsed}>
