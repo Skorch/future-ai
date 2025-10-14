@@ -21,7 +21,7 @@ const getActionText = (
 
 interface DocumentToolResultProps {
   type: 'create' | 'update';
-  result: { id: string; title: string; kind: 'text' };
+  result: { id: string; title: string; kind: ArtifactKind };
   isReadonly: boolean;
 }
 
@@ -83,7 +83,7 @@ export const DocumentToolResult = memo(PureDocumentToolResult, () => true);
 interface DocumentToolCallProps {
   type: 'create' | 'update';
   args:
-    | { title: string; kind: 'text' } // for create
+    | { title: string; kind: ArtifactKind } // for create
     | { id: string; description: string }; // for update
   isReadonly: boolean;
 }

@@ -18,12 +18,12 @@ import { Editor } from './text-editor';
 import { DocumentToolCall, DocumentToolResult } from './document';
 import { useArtifact } from '@/hooks/use-artifact';
 import equal from 'fast-deep-equal';
-import { QuickPublishButton } from './quick-publish-button';
+import { artifactRegistry } from '@/lib/artifacts/artifact-registry';
 
 interface DocumentPreviewProps {
   isReadonly: boolean;
-  result?: { id: string; title: string; kind: 'text' };
-  args?: { title: string; kind: 'text' };
+  result?: { id: string; title: string; kind: ArtifactKind };
+  args?: { title: string; kind: ArtifactKind };
   workspaceId?: string;
 }
 
@@ -39,7 +39,7 @@ export function DocumentPreview({
     Array<Document>
   >(
     result && workspaceId
-      ? `/api/workspace/${workspaceId}/document/${result.id}`
+      ? artifactRegistry.getGetUrl(result.kind, workspaceId, result.id)
       : null,
     fetcher,
   );
@@ -126,24 +126,18 @@ export function DocumentPreview({
       <DocumentHeader
         title={document.title}
         // biome-ignore lint/suspicious/noExplicitAny: Document schema transitioning in Phase 4
-        kind={(document as any).kind as 'text'}
+        kind={(document as any).kind as ArtifactKind}
         isStreaming={artifact.status === 'streaming'}
         documentId={document.id}
         workspaceId={workspaceId}
       />
       {/* biome-ignore lint/suspicious/noExplicitAny: Document schema transitioning in Phase 4 */}
       <DocumentContent document={document as any} />
-      {result && workspaceId && !isReadonly && (
-        <QuickPublishButton
-          documentEnvelopeId={result.id}
-          workspaceId={workspaceId}
-        />
-      )}
     </div>
   );
 }
 
-const LoadingSkeleton = ({ artifactKind }: { artifactKind: 'text' }) => (
+const LoadingSkeleton = ({ artifactKind }: { artifactKind: ArtifactKind }) => (
   <div className="w-full">
     <div className="p-4 border rounded-t-2xl flex flex-row gap-2 items-center justify-between dark:bg-muted h-[57px] dark:border-zinc-700 border-b-0">
       <div className="flex flex-row items-center gap-3">
@@ -168,7 +162,7 @@ const PureHitboxLayer = ({
   setArtifact,
 }: {
   hitboxRef: React.RefObject<HTMLDivElement>;
-  result: { id: string; title: string; kind: 'text' };
+  result: { id: string; title: string; kind: ArtifactKind };
   setArtifact: (
     updaterFn: UIArtifact | ((currentArtifact: UIArtifact) => UIArtifact),
   ) => void;
@@ -228,7 +222,7 @@ const PureDocumentHeader = ({
   workspaceId,
 }: {
   title: string;
-  kind: 'text';
+  kind: ArtifactKind;
   isStreaming: boolean;
   documentId: string;
   workspaceId?: string;

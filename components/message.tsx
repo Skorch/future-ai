@@ -578,6 +578,40 @@ const PurePreviewMessage = ({
                 );
               }
 
+              if ((type as string) === 'tool-saveKnowledge') {
+                const toolPart = part as {
+                  toolCallId: string;
+                  output?: unknown;
+                };
+                const { toolCallId } = toolPart;
+
+                if (
+                  toolPart.output &&
+                  typeof toolPart.output === 'object' &&
+                  'error' in toolPart.output
+                ) {
+                  return (
+                    <div
+                      key={toolCallId}
+                      className="p-4 text-red-500 bg-red-50 rounded-lg border border-red-200 dark:bg-red-950/50"
+                    >
+                      Error saving knowledge:{' '}
+                      {String((toolPart.output as { error: unknown }).error)}
+                    </div>
+                  );
+                }
+
+                return (
+                  <DocumentPreview
+                    key={toolCallId}
+                    isReadonly={isReadonly}
+                    // biome-ignore lint/suspicious/noExplicitAny: Tool type not yet in type system
+                    result={toolPart.output as any}
+                    workspaceId={workspaceId}
+                  />
+                );
+              }
+
               if (type === 'tool-setMode') {
                 const { toolCallId, state } = part;
 
