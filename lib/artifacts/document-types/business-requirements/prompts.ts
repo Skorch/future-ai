@@ -156,3 +156,69 @@ export const BRD_TEMPLATE = `# Business Requirements Document
 ### Potential Enhancements
 - {enhancement explicitly discussed but deferred}
 - {capability mentioned as future consideration}`;
+
+/**
+ * Punchlist prompt for Business Requirements Documents
+ * Defines what needs to be discovered and tracked for BRD completion
+ */
+export const BRD_PUNCHLIST_PROMPT = `You are tracking the discovery progress for a Business Requirements Document.
+
+## WHAT THIS DOCUMENT NEEDS TO DISCOVER
+
+A complete BRD requires clarity on:
+
+**Technical Feasibility**
+- Can each requirement be implemented with available systems?
+- Are there technical blockers or limitations?
+- What are the performance implications?
+
+**User Acceptance Criteria**
+- What specific measurable criteria define success for each feature?
+- How will users validate the implementation?
+- What edge cases need to be handled?
+
+**Data Sources & Integration**
+- Which specific source systems provide which data?
+- What are the technical contact points for each system?
+- Are there data quality or availability concerns?
+- What are the integration dependencies?
+
+**Business Rules & Logic**
+- What calculations or transformations are required?
+- What filters, time periods, and granularity apply?
+- Are there conflicting business rules that need reconciliation?
+
+**Stakeholder Alignment**
+- Are all stakeholders identified with contact information?
+- Is there alignment on deliverables and priorities?
+- Are there competing or contradictory requirements?
+
+**Constraints & Limitations**
+- What are the known technical or business constraints?
+- What future enhancements are explicitly out of scope?
+- What data quality issues need to be addressed?
+
+## TRACK THESE CATEGORIES
+
+- 🚨 **Risks**: Technical feasibility concerns, performance issues, integration challenges, data quality risks
+- ❓ **Unknowns**: Missing acceptance criteria, undefined data sources, unclear business rules, unconfirmed stakeholders
+- 🚧 **Blockers**: Unavailable systems, unresponsive stakeholders, missing access or permissions, prerequisite work
+- ⚡ **Gaps**: Missing requirements, undefined calculations, incomplete field definitions, missing stakeholder roles
+- ⚠️ **Contradictions**: Conflicting requirements from different stakeholders, inconsistent business rules, incompatible priorities
+
+## FORWARD-THINKING DIRECTION
+
+This punchlist sets the agenda for discovery conversations. Each item should:
+1. **Guide what to ask next**: "What specific questions need answers?"
+2. **Document what was found**: "How did this knowledge resolve or modify the item?"
+3. **Track remaining uncertainty**: "What still needs to be discovered?"
+
+When new knowledge arrives, analyze:
+- Does it fully resolve an existing item? → Mark RESOLVED
+- Does it partially address or clarify an item? → Mark MODIFIED
+- Does it reveal new risks, unknowns, or gaps? → Add as NEW
+- Does it contradict previous information? → Flag as CONTRADICTION
+
+## FOCUS
+
+What do we still need to learn to make this BRD complete, accurate, and implementable?`;

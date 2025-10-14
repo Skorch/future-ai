@@ -285,3 +285,73 @@ export const SALES_STRATEGY_TEMPLATE = `# Sales Strategy Recommendation
 - [Additional Analysis: Date if multiple calls]
 
 *Next Strategy Review:* [Date to reassess based on upcoming milestones]`;
+
+/**
+ * Punchlist prompt for Sales Strategy Documents
+ * Defines what needs to be discovered and tracked for deal progression
+ */
+export const SALES_STRATEGY_PUNCHLIST_PROMPT = `You are tracking the discovery progress for a Sales Strategy document.
+
+## WHAT THIS DOCUMENT NEEDS TO DISCOVER
+
+A complete Sales Strategy requires clarity on:
+
+**BANT-C Qualification**
+- Budget: What's their budget? Is it allocated? Who controls it?
+- Authority: Who's the economic buyer? What's the approval process?
+- Need: How urgent is the problem? What's the cost of inaction?
+- Timeline: When do they need to decide? What drives the timeline?
+- Competition: What alternatives are they considering? Why?
+
+**Champion Development**
+- Who is our champion? How strong is their influence?
+- Are they using internal language? Are they selling for us?
+- Do they have budget authority or access to the economic buyer?
+- What do they need from us to be more effective?
+
+**Competitive Landscape**
+- Which competitors are in play? What's their positioning?
+- Are they considering internal build? Why?
+- What's our differentiation story? Is it resonating?
+- What objections are surfacing? How do we address them?
+
+**Deal Structure & Risk**
+- What could kill this deal? How likely are those scenarios?
+- What's the procurement process? Any political dynamics?
+- Are there technical integration concerns?
+- What proof points do they need to see?
+
+**Progression Path**
+- What milestones must occur for this deal to close?
+- Who are the stakeholders we haven't engaged yet?
+- What's blocking forward momentum right now?
+- What would accelerate the timeline?
+
+## TRACK THESE CATEGORIES
+
+- 🚨 **Risks**: Budget unknown, weak champion, competitive threat, timeline delays, procurement complexity, stakeholder misalignment
+- ❓ **Unknowns**: Economic buyer unidentified, approval process unclear, competing priorities undefined, technical requirements vague
+- 🚧 **Blockers**: Key stakeholder unresponsive, budget not allocated, competitive eval in progress, technical validation pending
+- ⚡ **Gaps**: Missing proof points, undefined ROI, no champion access to economic buyer, value proposition not quantified
+- ⚠️ **Contradictions**: Conflicting timeline information, inconsistent budget signals, champion strength vs. BANT status mismatch
+
+## FORWARD-THINKING DIRECTION
+
+This punchlist sets the agenda for sales conversations. Each item should:
+1. **Guide what to ask next**: "What qualification questions need answers?"
+2. **Document what was found**: "How did this call advance BANT or reduce risk?"
+3. **Track remaining uncertainty**: "What still needs to be discovered to close?"
+
+When new knowledge arrives (sales call summaries, analysis), analyze:
+- Does it fully qualify a BANT dimension? → Mark RESOLVED
+- Does it partially advance qualification? → Mark MODIFIED
+- Does it reveal new risks or blockers? → Add as NEW
+- Does it contradict previous qualification? → Flag as CONTRADICTION
+
+## FOCUS
+
+What do we still need to learn to:
+1. Accurately assess deal probability?
+2. Identify and mitigate critical risks?
+3. Build a credible path to close?
+4. Strengthen our competitive position?`;
