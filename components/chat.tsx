@@ -92,6 +92,7 @@ export function Chat({
     },
     onError: (error) => {
       logger.error('Error received:', error);
+      logger.error(error);
 
       // Check for prompt length errors
       const errorMessage =

@@ -29,6 +29,7 @@ import { eq } from 'drizzle-orm';
 import { convertToUIMessages, generateUUID } from '@/lib/utils';
 import { generateTitleFromUserMessage } from '@/app/(chat)/actions';
 import { generateDocumentVersion } from '@/lib/ai/tools/generate-document-version';
+import { updatePunchlist } from '@/lib/ai/tools/update-punchlist';
 import { saveKnowledge } from '@/lib/ai/tools/save-knowledge';
 import { queryRAG } from '@/lib/ai/tools/query-rag';
 import { listDocuments } from '@/lib/ai/tools/list-documents';
@@ -339,6 +340,7 @@ export async function POST(
             ? []
             : [
                 'generateDocumentVersion',
+                'updatePunchlist',
                 'saveKnowledge',
                 'queryRAG',
                 'listDocuments',
@@ -489,6 +491,14 @@ export async function POST(
 
                   // Document generation tool (replaces create/update)
                   generateDocumentVersion: generateDocumentVersion({
+                    session,
+                    dataStream,
+                    workspaceId,
+                    chatId: id,
+                  }),
+
+                  // Punchlist update tool (Phase 4)
+                  updatePunchlist: updatePunchlist({
                     session,
                     dataStream,
                     workspaceId,
