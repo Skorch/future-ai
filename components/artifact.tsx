@@ -43,6 +43,7 @@ export type { ArtifactKind };
 export interface UIArtifact {
   title: string;
   documentId: string;
+  versionId?: string; // Specific version ID for this chat (optional for backward compat)
   kind: ArtifactKind;
   content: string;
   isVisible: boolean;
@@ -102,14 +103,28 @@ function PureArtifact({
 
   const shouldFetchDocument =
     artifact.documentId !== 'init' && artifact.status !== 'streaming';
-  const fetchUrl =
-    shouldFetchDocument && workspaceId
-      ? artifactRegistry.getGetUrl(
-          artifact.kind,
-          workspaceId,
-          artifact.documentId,
-        )
-      : null;
+  const fetchUrl = useMemo(() => {
+    if (!shouldFetchDocument || !workspaceId) return null;
+
+    const baseUrl = artifactRegistry.getGetUrl(
+      artifact.kind,
+      workspaceId,
+      artifact.documentId,
+    );
+
+    // If versionId is present, append it as query param to fetch specific version
+    if (artifact.versionId && baseUrl) {
+      return `${baseUrl}?versionId=${artifact.versionId}`;
+    }
+
+    return baseUrl;
+  }, [
+    shouldFetchDocument,
+    workspaceId,
+    artifact.kind,
+    artifact.documentId,
+    artifact.versionId,
+  ]);
 
   logger.debug('Document fetch conditions:', {
     shouldFetchDocument,
@@ -231,9 +246,14 @@ function PureArtifact({
         }
 
         const method = 'PATCH';
-        const body: Record<string, unknown> = { content: updatedContent };
+        const body: Record<string, unknown> = {
+          content: updatedContent,
+          versionId: artifact.versionId, // Send specific version ID to update
+        };
 
-        logger.debug('Saving to:', saveUrl);
+        logger.debug('Saving to:', saveUrl, {
+          versionId: artifact.versionId,
+        });
 
         const response = await fetch(saveUrl, {
           method,
