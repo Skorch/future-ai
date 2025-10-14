@@ -1,10 +1,11 @@
 import { Button } from './ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
-import { artifactDefinitions, type UIArtifact } from './artifact';
+import type { UIArtifact } from './artifact';
 import { type Dispatch, memo, type SetStateAction, useState } from 'react';
 import type { ArtifactActionContext } from './create-artifact';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { artifactRegistry } from '@/lib/artifacts/artifact-registry';
 
 interface ArtifactActionsProps {
   artifact: UIArtifact;
@@ -27,29 +28,26 @@ function PureArtifactActions({
 }: ArtifactActionsProps) {
   const [isLoading, setIsLoading] = useState(false);
 
-  const artifactDefinition = artifactDefinitions.find(
-    (definition) => definition.kind === artifact.kind,
-  );
+  const artifactComponent = artifactRegistry.getComponent(artifact.kind);
 
-  if (!artifactDefinition) {
-    throw new Error('Artifact definition not found!');
+  if (!artifactComponent) {
+    throw new Error(`Artifact component not found for kind: ${artifact.kind}`);
   }
 
-  const actionContext: ArtifactActionContext = {
+  // biome-ignore lint/suspicious/noExplicitAny: Action context must support various metadata types from registry
+  const actionContext: ArtifactActionContext<any> = {
     content: artifact.content,
     handleVersionChange,
     currentVersionIndex,
     isCurrentVersion,
     mode,
-    metadata: metadata as Record<string, unknown>,
-    setMetadata: setMetadata as Dispatch<
-      SetStateAction<Record<string, unknown>>
-    >,
+    metadata,
+    setMetadata,
   };
 
   return (
     <div className="flex flex-row gap-1">
-      {artifactDefinition.actions.map((action) => (
+      {artifactComponent.actions.map((action) => (
         <Tooltip key={action.description}>
           <TooltipTrigger asChild>
             <Button

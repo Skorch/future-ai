@@ -12,7 +12,7 @@ import {
 } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 import { useDebounceCallback, useWindowSize } from 'usehooks-ts';
-import type { Document, Vote, DocumentWithVersions } from '@/lib/db/schema';
+import type { Document, Vote } from '@/lib/db/schema';
 import { fetcher } from '@/lib/utils';
 import { MultimodalInput } from './multimodal-input';
 import { Toolbar } from './toolbar';
@@ -22,23 +22,23 @@ import { ArtifactCloseButton } from './artifact-close-button';
 import { ArtifactMessages } from './artifact-messages';
 import { useSidebar } from './ui/sidebar';
 import { useArtifact } from '@/hooks/use-artifact';
-import { textArtifact } from '@/lib/artifacts/document-types/text/client';
 import equal from 'fast-deep-equal';
-import { autoSaveDocumentDraftAction } from '@/lib/workspace/document-actions';
 import { createDocumentCacheMutator } from '@/lib/cache/document-cache';
 
 const logger = getLogger('Artifact');
 import type { UseChatHelpers } from '@ai-sdk/react';
 import type { VisibilityType } from './visibility-selector';
 import type { Attachment, ChatMessage } from '@/lib/types';
+import {
+  artifactRegistry,
+  type ArtifactKind,
+} from '@/lib/artifacts/artifact-registry';
 
-// Client artifact registry - maps to UI components
-const clientArtifactRegistry = {
-  text: textArtifact,
-} as const;
-
-export const artifactDefinitions = Object.values(clientArtifactRegistry);
-export type ArtifactKind = keyof typeof clientArtifactRegistry;
+// Export artifact definitions for compatibility
+export const artifactDefinitions = artifactRegistry
+  .getAllConfigs()
+  .map((config) => config.component);
+export type { ArtifactKind };
 
 export interface UIArtifact {
   title: string;
@@ -104,7 +104,11 @@ function PureArtifact({
     artifact.documentId !== 'init' && artifact.status !== 'streaming';
   const fetchUrl =
     shouldFetchDocument && workspaceId
-      ? `/api/workspace/${workspaceId}/document/${artifact.documentId}`
+      ? artifactRegistry.getGetUrl(
+          artifact.kind,
+          workspaceId,
+          artifact.documentId,
+        )
       : null;
 
   logger.debug('Document fetch conditions:', {
@@ -119,14 +123,6 @@ function PureArtifact({
     isLoading: isDocumentsFetching,
     mutate: mutateDocuments,
   } = useSWR<Array<Document>>(fetchUrl, fetcher);
-
-  // Fetch document envelope for publish state
-  const envelopeFetchUrl =
-    artifact.documentId !== 'init' && workspaceId
-      ? `/api/workspace/${workspaceId}/document-envelope/${artifact.documentId}`
-      : null;
-  const { data: docWithVersions, mutate: mutateEnvelope } =
-    useSWR<DocumentWithVersions | null>(envelopeFetchUrl, fetcher);
 
   const [mode, setMode] = useState<'edit' | 'diff'>('edit');
   const [document, setDocument] = useState<Document | null>(null);
@@ -218,13 +214,38 @@ function PureArtifact({
 
         logger.debug('Content changed, saving...');
 
-        // Save to server (this also revalidates Next.js pages)
-        // PHASE 1: autoSaveDocumentDraftAction stub - will be implemented in future phases
-        const result = await autoSaveDocumentDraftAction(
+        // Get save URL from registry
+        const saveUrl = artifactRegistry.getSaveUrl(
+          artifact.kind,
+          workspaceId,
           artifact.documentId,
-          updatedContent,
         );
 
+        if (!saveUrl) {
+          logger.error(
+            'No save route configured for artifact kind:',
+            artifact.kind,
+          );
+          setIsContentDirty(false);
+          return;
+        }
+
+        const method = 'PATCH';
+        const body: Record<string, unknown> = { content: updatedContent };
+
+        logger.debug('Saving to:', saveUrl);
+
+        const response = await fetch(saveUrl, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Save failed: ${response.statusText}`);
+        }
+
+        const result = await response.json();
         logger.debug('Save result:', result);
 
         // Refresh ALL caches (SWR client-side caches)
@@ -238,7 +259,7 @@ function PureArtifact({
         setIsContentDirty(false);
       }
     },
-    [artifact, workspaceId, documents, docWithVersions, cacheMutator],
+    [artifact, workspaceId, documents, cacheMutator],
   );
 
   const debouncedHandleContentChange = useDebounceCallback(
@@ -320,25 +341,22 @@ function PureArtifact({
   const { width: windowWidth, height: windowHeight } = useWindowSize();
   const isMobile = windowWidth ? windowWidth < 768 : false;
 
-  const artifactDefinition =
-    clientArtifactRegistry[
-      artifact.kind as keyof typeof clientArtifactRegistry
-    ];
+  const artifactComponent = artifactRegistry.getComponent(artifact.kind);
 
-  if (!artifactDefinition) {
-    throw new Error(`Artifact definition not found for kind: ${artifact.kind}`);
+  if (!artifactComponent) {
+    throw new Error(`Artifact component not found for kind: ${artifact.kind}`);
   }
 
   useEffect(() => {
     if (artifact.documentId !== 'init') {
-      if (artifactDefinition.initialize) {
-        artifactDefinition.initialize({
+      if (artifactComponent.initialize) {
+        artifactComponent.initialize({
           documentId: artifact.documentId,
           setMetadata,
         });
       }
     }
-  }, [artifact.documentId, artifactDefinition, setMetadata]);
+  }, [artifact.documentId, artifactComponent, setMetadata]);
 
   // Save on page close/navigation
   useEffect(() => {
@@ -557,7 +575,7 @@ function PureArtifact({
             </div>
 
             <div className="dark:bg-muted bg-background h-full overflow-y-scroll !max-w-full items-center">
-              <artifactDefinition.content
+              <artifactComponent.content
                 title={artifact.title}
                 content={
                   isCurrentVersion
@@ -587,16 +605,9 @@ function PureArtifact({
                     setMessages={setMessages}
                     artifactKind={artifact.kind}
                     documentEnvelopeId={artifact.documentId}
-                    isPublished={
-                      docWithVersions
-                        ? !!docWithVersions.currentPublished
-                        : false
-                    }
                     workspaceId={workspaceId}
                     isReadonly={isReadonly}
-                    versionId={docWithVersions?.currentDraft?.id}
                     mutateDocuments={mutateDocuments}
-                    mutateEnvelope={mutateEnvelope}
                   />
                 )}
               </AnimatePresence>
