@@ -1,5 +1,5 @@
 import type { ArtifactKind } from '@/components/artifact';
-import type { Document } from '../db/schema';
+import type { Document, ObjectiveDocumentVersion } from '../db/schema';
 import type { UIMessageStreamWriter } from 'ai';
 import type { ChatMessage } from '../types';
 import type { ArtifactMetadata } from './types';
@@ -13,12 +13,13 @@ export interface SaveDocumentProps {
 }
 
 export interface CreateDocumentCallbackProps {
-  id: string;
+  id: string; // Document envelope ID
+  versionId?: string; // Version ID to update (for "one chat = one version" pattern)
   title: string;
   dataStream: UIMessageStreamWriter<ChatMessage>;
   session: { user: { id: string } };
   workspaceId: string;
-  objectiveId: string;
+  objectiveId?: string; // For context only (should not trigger new document creation)
   metadata?: Record<string, unknown> & {
     sourceDocumentIds?: string[];
     agentInstruction?: string;
@@ -34,6 +35,15 @@ export interface UpdateDocumentCallbackProps {
   workspaceId: string;
 }
 
+export interface GeneratePunchlistCallbackProps {
+  currentVersion: ObjectiveDocumentVersion;
+  knowledgeDocIds: string[];
+  instruction: string;
+  dataStream: UIMessageStreamWriter<ChatMessage>;
+  workspaceId: string;
+  session: { user: { id: string } };
+}
+
 export interface DocumentHandler<T = ArtifactKind> {
   kind: T;
   metadata?: ArtifactMetadata;
@@ -41,6 +51,9 @@ export interface DocumentHandler<T = ArtifactKind> {
     args: CreateDocumentCallbackProps,
   ) => Promise<{ versionId: string } | undefined>;
   onUpdateDocument: (args: UpdateDocumentCallbackProps) => Promise<void>;
+  onGeneratePunchlist?: (
+    args: GeneratePunchlistCallbackProps,
+  ) => Promise<string>;
 }
 
 export const artifactKinds = ['text'] as const;

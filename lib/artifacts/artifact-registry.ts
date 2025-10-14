@@ -91,7 +91,6 @@ class ArtifactRegistry {
   ): string | null {
     const config = this.registry.get(kind);
     if (!config) {
-      console.warn(`[ArtifactRegistry] No config found for kind: ${kind}`);
       return null;
     }
     return config.routes.get(workspaceId, documentId);
@@ -107,7 +106,6 @@ class ArtifactRegistry {
   ): string | null {
     const config = this.registry.get(kind);
     if (!config) {
-      console.warn(`[ArtifactRegistry] No config found for kind: ${kind}`);
       return null;
     }
     return config.routes.save(workspaceId, documentId);

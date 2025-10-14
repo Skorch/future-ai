@@ -153,12 +153,13 @@ export const generateDocumentVersion = ({
         });
 
         await documentDef.handler.onCreateDocument({
-          id: version.id,
+          id: version.documentId, // Document envelope ID
+          versionId: version.id, // Version ID to update (one chat = one version)
           title: 'Document',
           dataStream,
           session,
           workspaceId,
-          objectiveId,
+          objectiveId, // Still passed for context, but should not trigger document creation
           metadata: {
             documentType,
             sourceContent, // ← Pre-loaded text content
