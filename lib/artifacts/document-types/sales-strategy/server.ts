@@ -18,7 +18,6 @@ import {
   GLOBAL_PUNCHLIST_TEMPLATE,
 } from '@/lib/artifacts/document-types/base-handler';
 import { OutputSize } from '@/lib/artifacts/types';
-import { updateDocumentPrompt } from '@/lib/ai/prompts';
 import { myProvider } from '@/lib/ai/providers';
 
 export const salesStrategyHandler: DocumentHandler<'text'> = {
@@ -26,14 +25,12 @@ export const salesStrategyHandler: DocumentHandler<'text'> = {
   metadata,
 
   onCreateDocument: async ({
-    id,
     versionId,
     title,
     dataStream,
     metadata: docMetadata,
     workspaceId,
     session,
-    objectiveId,
   }) => {
     const typedMetadata = docMetadata as {
       sourceDocumentIds?: string[];
@@ -126,56 +123,19 @@ ${analyses}
     // Process stream and save
     const content = await processStream(streamConfig, dataStream);
 
-    const result = await saveGeneratedDocument(content, {
-      id,
-      versionId,
-      title,
-      kind: 'text',
-      session,
-      workspaceId,
-      objectiveId,
-      metadata: {
-        ...docMetadata,
-        documentType: 'sales-strategy',
-        sourceDocumentIds: typedMetadata?.sourceDocumentIds || [],
-      },
+    await saveGeneratedDocument(versionId, content, {
+      documentType: 'sales-strategy',
+      sourceDocumentIds: typedMetadata?.sourceDocumentIds || [],
     });
 
-    return result ? { versionId: result.versionId } : undefined;
+    return { versionId };
   },
 
-  onUpdateDocument: async ({
-    document,
-    description,
-    dataStream,
-    session,
-    workspaceId,
-  }) => {
-    // PHASE 4 REFACTORING: Document handlers will be refactored to use version content
-    // @ts-ignore - Document structure will be updated in Phase 4
-    const documentContent = document.content || '';
-
-    // Standard update using prediction feature
-    const streamConfig = buildStreamConfig({
-      model: myProvider.languageModel('artifact-model'),
-      system: updateDocumentPrompt(documentContent, 'text'),
-      prompt: description,
-      maxOutputTokens: metadata.outputSize ?? OutputSize.MEDIUM,
-      thinkingBudget: metadata.thinkingBudget,
-      temperature: metadata.temperature,
-      prediction: documentContent || undefined,
-    });
-
-    const content = await processStream(streamConfig, dataStream);
-
-    await saveGeneratedDocument(content, {
-      id: document.id,
-      title: document.title,
-      kind: 'text',
-      session,
-      workspaceId,
-      objectiveId: undefined,
-    });
+  onUpdateDocument: async () => {
+    // Legacy - not used in current architecture
+    throw new Error(
+      'onUpdateDocument is deprecated - use onCreateDocument to update version',
+    );
   },
   onGeneratePunchlist: async ({
     currentVersion,

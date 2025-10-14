@@ -327,35 +327,6 @@ export async function getObjectiveDocumentById(
 }
 
 /**
- * Update objective document content by creating a new version
- * This is the primary way to edit objective documents (creates version history)
- */
-export async function updateObjectiveDocumentContent(
-  documentId: string,
-  userId: string,
-  content: string,
-  metadata?: Record<string, unknown>,
-): Promise<ObjectiveDocumentVersion> {
-  try {
-    // Create new version
-    const newVersion = await createDocumentVersion(documentId, userId, {
-      content,
-      metadata,
-    });
-
-    return newVersion;
-  } catch (error) {
-    if (error instanceof ChatSDKError) {
-      throw error;
-    }
-    throw new ChatSDKError(
-      'bad_request:database',
-      'Failed to update objective document content',
-    );
-  }
-}
-
-/**
  * Delete an objective document and all its versions
  * Also nulls out the objectiveDocumentId on any linked objectives
  */
@@ -417,24 +388,37 @@ export async function deleteObjectiveDocument(
 /**
  * Initialize a new version for a chat within an objective
  * Implements "one chat = one version" rule
- * Returns versionId, documentId, and whether this is the first version
+ * Returns versionId, documentId, documentType, objectiveId, and whether this is the first version
  */
 export async function initializeVersionForChat(
   chatId: string,
   objectiveId: string,
   userId: string,
   workspaceId: string,
-): Promise<{ versionId: string; documentId: string; isFirstVersion: boolean }> {
+): Promise<{
+  versionId: string;
+  documentId: string;
+  isFirstVersion: boolean;
+  documentType: string;
+  objectiveId: string;
+}> {
   try {
     return await db.transaction(async (tx) => {
-      // 1. Get objective's documentId
+      // 1. Get objective's documentId and documentType
       const [obj] = await tx
-        .select({ objectiveDocumentId: objective.objectiveDocumentId })
+        .select({
+          objectiveDocumentId: objective.objectiveDocumentId,
+          documentType: objective.documentType,
+        })
         .from(objective)
         .where(eq(objective.id, objectiveId))
         .limit(1);
 
-      let documentId = obj?.objectiveDocumentId;
+      if (!obj) {
+        throw new ChatSDKError('not_found:database', 'Objective not found');
+      }
+
+      let documentId = obj.objectiveDocumentId;
       let versionId: string;
       let isFirstVersion = false;
 
@@ -464,7 +448,13 @@ export async function initializeVersionForChat(
         .set({ objectiveDocumentVersionId: versionId })
         .where(eq(chat.id, chatId));
 
-      return { versionId, documentId, isFirstVersion };
+      return {
+        versionId,
+        documentId,
+        isFirstVersion,
+        documentType: obj.documentType,
+        objectiveId,
+      };
     });
   } catch (error) {
     throw new ChatSDKError(

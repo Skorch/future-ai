@@ -15,7 +15,6 @@ import {
 import type {
   DocumentHandler,
   CreateDocumentCallbackProps,
-  UpdateDocumentCallbackProps,
   GeneratePunchlistCallbackProps,
 } from '@/lib/artifacts/server';
 
@@ -30,14 +29,12 @@ export const businessRequirementsHandler: DocumentHandler<'text'> = {
   kind: 'text',
   metadata,
   onCreateDocument: async ({
-    id,
     versionId,
     title,
     dataStream,
     metadata: docMetadata,
     workspaceId,
     session,
-    objectiveId,
   }: CreateDocumentCallbackProps) => {
     // Cast metadata to our expected type
     const typedMetadata = docMetadata as BRDMetadata | undefined;
@@ -94,58 +91,18 @@ ${transcripts}`;
     const content = await processStream(streamConfig, dataStream);
 
     // Save the generated document
-    const result = await saveGeneratedDocument(content, {
-      id,
-      versionId,
-      title: `BRD - ${projectName}`,
-      kind: 'text',
-      session,
-      workspaceId,
-      objectiveId,
-      metadata: {
-        ...docMetadata,
-        documentType: 'business-requirements',
-        sourceDocumentIds: typedMetadata?.sourceDocumentIds || [],
-      },
+    await saveGeneratedDocument(versionId, content, {
+      documentType: 'business-requirements',
+      sourceDocumentIds: typedMetadata?.sourceDocumentIds || [],
     });
 
-    return result ? { versionId: result.versionId } : undefined;
+    return { versionId };
   },
-  onUpdateDocument: async ({
-    document,
-    description,
-    dataStream,
-    session,
-    workspaceId,
-  }: UpdateDocumentCallbackProps) => {
-    // PHASE 4 REFACTORING: Document handlers will be refactored to use version content
-    // @ts-ignore - Document structure will be updated in Phase 4
-    const documentContent = document.content || '';
-
-    // Build configuration for updates
-    const streamConfig = buildStreamConfig({
-      model: myProvider.languageModel('artifact-model'),
-      system: `You are editing a Business Requirements Document. Maintain formal structure and comprehensive detail. Current content:\n${documentContent}`,
-      prompt: description,
-      maxOutputTokens: metadata.outputSize ?? OutputSize.LARGE,
-      thinkingBudget: metadata.thinkingBudget,
-      prediction: documentContent || undefined,
-    });
-
-    // Process the stream and collect content
-    const content = await processStream(streamConfig, dataStream);
-
-    // Save the updated document
-    await saveGeneratedDocument(content, {
-      id: document.id,
-      title: document.title,
-      kind: 'text',
-      session,
-      workspaceId,
-      objectiveId: undefined,
-    });
-
-    return;
+  onUpdateDocument: async () => {
+    // Legacy - not used in current architecture
+    throw new Error(
+      'onUpdateDocument is deprecated - use onCreateDocument to update version',
+    );
   },
   onGeneratePunchlist: async ({
     currentVersion,
