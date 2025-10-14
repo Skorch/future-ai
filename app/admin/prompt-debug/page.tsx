@@ -34,14 +34,10 @@ export default function PromptDebugPage() {
 
   const [docConfig, setDocConfig] = useState<DocConfig>({
     domain: 'sales',
-    documentType: 'sales-call-summary',
+    documentType: 'sales-strategy',
     agentInstruction: 'Focus on technical requirements and budget discussions',
     metadata: {
-      ...getDefaultMetadata('sales-call-summary'),
-      callDate: '2025-01-15',
-      participants: ['John', 'Sarah', 'Mike'],
-      dealName: 'Acme Corp Enterprise',
-      prospectCompany: 'Acme Corporation',
+      ...getDefaultMetadata('sales-strategy'),
     },
   });
 

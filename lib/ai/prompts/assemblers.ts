@@ -270,38 +270,20 @@ export async function assembleDocumentPrompt(params: {
     ? `## Agent Context\n${agentInstruction}\n\n`
     : undefined;
 
-  // Placeholder for primary document
-  const primaryDoc =
-    documentType === 'sales-call-summary'
-      ? '## Sales Call Transcript (Analyze This)\n[CONTENT FROM PRIMARY DOC]\n\n'
-      : documentType === 'meeting-analysis' ||
-          documentType === 'meeting-minutes'
-        ? '## Transcript to Analyze\n[CONTENT FROM PRIMARY DOC]\n\n'
-        : '';
+  // Placeholder for primary document (generic for all types)
+  const primaryDoc = '## Primary Document\n[CONTENT FROM PRIMARY DOC]\n\n';
 
-  // Placeholder for reference documents
+  // Placeholder for reference documents (generic for all types)
   const referenceDocs =
-    documentType === 'sales-call-summary'
-      ? '## Reference Documents (Previous Call Analyses)\n[CONTENT FROM REF DOC]\n\n**Citation Requirement:** When referencing information from these previous analyses, cite them using the format [Doc: "Document Title"].\n\n**Usage Guidance:** Leverage these reference documents to build the deal narrative timeline, track BANT progression, and identify momentum patterns.\n\n'
-      : documentType === 'meeting-analysis'
-        ? '## Reference Documents (Historical Meeting Analyses)\n[CONTENT FROM REF DOC]\n\n**Citation Requirement:** When referencing information from these historical documents, cite them using the format [Doc: "Document Title"].\n\n'
-        : undefined;
+    '## Reference Documents\n[CONTENT FROM REF DOC]\n\n**Citation Requirement:** When referencing information from these documents, cite them using the format [Doc: "Document Title"].\n\n';
 
-  // Build metadata section
-  let metadataSection = '';
-  if (documentType === 'sales-call-summary') {
-    metadataSection = `## Call Metadata
-- **Call Date:** ${userMetadata.callDate || 'Not specified'}
-- **Participants:** ${userMetadata.participants ? (userMetadata.participants as string[]).join(', ') : 'Not specified'}
-- **Deal/Prospect:** ${userMetadata.dealName || 'Not specified'} - ${userMetadata.prospectCompany || 'Not specified'}`;
-  } else if (
-    documentType === 'meeting-analysis' ||
-    documentType === 'meeting-minutes'
-  ) {
-    metadataSection = `## Meeting Metadata
-- **Meeting Date:** ${userMetadata.meetingDate || new Date().toISOString().split('T')[0]}
-- **Participants:** ${userMetadata.participants ? (userMetadata.participants as string[]).join(', ') : 'Not specified'}`;
-  }
+  // Build metadata section (generic - metadata varies by document type)
+  const metadataSection =
+    Object.keys(userMetadata).length > 0
+      ? `## Metadata\n${Object.entries(userMetadata)
+          .map(([key, value]) => `- **${key}:** ${value}`)
+          .join('\n')}`
+      : '';
 
   // Compose user prompt
   const userPromptParts = [
