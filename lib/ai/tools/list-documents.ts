@@ -12,6 +12,7 @@ interface ListDocumentsProps {
   session: { user: { id: string } };
   workspaceId: string;
   domainId: DomainId;
+  objectiveId: string; // Filter documents by current chat's objective
 }
 
 // Build dynamic tool description from registry
@@ -89,6 +90,7 @@ export const listDocuments = async ({
   session,
   workspaceId,
   domainId,
+  objectiveId,
 }: ListDocumentsProps) => {
   // Dynamically build description from registry (filtered by domain)
   const description = await buildToolDescription(domainId);
@@ -97,12 +99,20 @@ export const listDocuments = async ({
     description,
     inputSchema: z.object({}),
     execute: async () => {
-      logger.debug('[ListDocuments Tool] Executing list-documents tool call');
+      logger.debug('[ListDocuments Tool] Executing list-documents tool call', {
+        objectiveId,
+        workspaceId,
+      });
 
       // Query both ObjectiveDocuments and KnowledgeDocuments
+      // Filter by current objective to prevent cross-objective contamination
       const [objectiveDocs, knowledgeDocs] = await Promise.all([
-        getAllObjectiveDocumentsByWorkspaceId(workspaceId, session.user.id),
-        getKnowledgeByWorkspaceId(workspaceId),
+        getAllObjectiveDocumentsByWorkspaceId(
+          workspaceId,
+          session.user.id,
+          objectiveId,
+        ),
+        getKnowledgeByWorkspaceId(workspaceId, undefined, objectiveId),
       ]);
 
       // Transform ObjectiveDocuments to common format
