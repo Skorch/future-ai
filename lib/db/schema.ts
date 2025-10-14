@@ -25,6 +25,12 @@ export const knowledgeCategoryEnum = pgEnum('knowledge_category', [
   'knowledge',
   'raw',
 ]);
+export const sourceTypeEnum = pgEnum('source_type', [
+  'transcript',
+  'email',
+  'slack',
+  'note',
+]);
 
 // User table (Clerk-based authentication)
 export const user = pgTable('User', {
@@ -203,6 +209,17 @@ export const knowledgeDocument = pgTable(
     documentType: text('documentType').notNull(),
     isSearchable: boolean('isSearchable').notNull().default(true),
     metadata: json('metadata').$type<Record<string, unknown>>(),
+    // Source metadata (first-class columns for Phase 3)
+    sourceType: sourceTypeEnum('sourceType'),
+    sourceDate: timestamp('sourceDate'),
+    participants:
+      json('participants').$type<
+        Array<{
+          email?: string;
+          displayName: string;
+        }>
+      >(),
+    sourceKnowledgeDocumentId: uuid('sourceKnowledgeDocumentId'), // Self-reference without .references()
     createdAt: timestamp('createdAt').defaultNow().notNull(),
     createdByUserId: varchar('createdByUserId', { length: 255 })
       .references(() => user.id, { onDelete: 'cascade' })
@@ -213,6 +230,17 @@ export const knowledgeDocument = pgTable(
     workspaceIdx: index('idx_knowledge_workspace').on(table.workspaceId),
     categoryIdx: index('idx_knowledge_category').on(table.category),
     searchableIdx: index('idx_knowledge_searchable').on(table.isSearchable),
+    sourceIdx: index('idx_knowledge_source').on(
+      table.sourceKnowledgeDocumentId,
+    ),
+    sourceDateIdx: index('idx_knowledge_source_date').on(table.sourceDate),
+    sourceTypeIdx: index('idx_knowledge_source_type').on(table.sourceType),
+    // Add self-referencing FK constraint using foreignKey()
+    sourceFk: foreignKey({
+      columns: [table.sourceKnowledgeDocumentId],
+      foreignColumns: [table.id],
+      name: 'KnowledgeDocument_sourceKnowledgeDocumentId_fk',
+    }).onDelete('set null'),
   }),
 );
 
@@ -430,6 +458,10 @@ export const knowledgeDocumentRelations = relations(
     createdBy: one(user, {
       fields: [knowledgeDocument.createdByUserId],
       references: [user.id],
+    }),
+    sourceKnowledgeDocument: one(knowledgeDocument, {
+      fields: [knowledgeDocument.sourceKnowledgeDocumentId],
+      references: [knowledgeDocument.id],
     }),
   }),
 );
