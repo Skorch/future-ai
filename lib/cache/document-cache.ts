@@ -13,8 +13,6 @@ export function getDocumentCacheKeys(
   return {
     // Document versions list
     versions: `/api/workspace/${workspaceId}/document/${documentEnvelopeId}`,
-    // Document envelope (metadata + current draft/published pointers)
-    envelope: `/api/workspace/${workspaceId}/document-envelope/${documentEnvelopeId}`,
     // Document list (for sidebar, workspace pages)
     list: `/api/workspace/${workspaceId}/document`,
     // History/recent documents
@@ -44,7 +42,6 @@ export function createDocumentCacheMutator(
       await Promise.all([
         // Specific keys
         mutate(keys.versions),
-        mutate(keys.envelope),
         // Pattern matchers for lists
         mutate(
           (key: string) =>
@@ -59,13 +56,6 @@ export function createDocumentCacheMutator(
      */
     async invalidateVersions() {
       await mutate(keys.versions);
-    },
-
-    /**
-     * Invalidate just the document envelope (metadata, publish state)
-     */
-    async invalidateEnvelope() {
-      await mutate(keys.envelope);
     },
 
     /**

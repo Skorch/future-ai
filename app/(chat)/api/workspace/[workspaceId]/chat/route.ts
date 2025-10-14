@@ -29,6 +29,7 @@ import { eq } from 'drizzle-orm';
 import { convertToUIMessages, generateUUID } from '@/lib/utils';
 import { generateTitleFromUserMessage } from '@/app/(chat)/actions';
 import { generateDocumentVersion } from '@/lib/ai/tools/generate-document-version';
+import { saveKnowledge } from '@/lib/ai/tools/save-knowledge';
 import { queryRAG } from '@/lib/ai/tools/query-rag';
 import { listDocuments } from '@/lib/ai/tools/list-documents';
 import { loadDocument } from '@/lib/ai/tools/load-document';
@@ -338,6 +339,7 @@ export async function POST(
             ? []
             : [
                 'generateDocumentVersion',
+                'saveKnowledge',
                 'queryRAG',
                 'listDocuments',
                 'loadDocument',
@@ -493,6 +495,14 @@ export async function POST(
                     chatId: id,
                   }),
 
+                  // Knowledge processing tool (Phase 3)
+                  saveKnowledge: saveKnowledge({
+                    session,
+                    dataStream,
+                    workspaceId,
+                    objectiveId: chatObjectiveId,
+                  }),
+
                   // Query and load tools
                   queryRAG: queryRAG({
                     session,
@@ -504,6 +514,7 @@ export async function POST(
                     session,
                     workspaceId,
                     domainId,
+                    objectiveId: chatObjectiveId,
                   }),
                   loadDocument: loadDocument({ session, workspaceId }),
                   loadDocuments: loadDocuments({ session, workspaceId }),

@@ -117,12 +117,28 @@ export async function POST(
     let title = userTitle;
     let documentType = userDocumentType;
     let aiSummary: string | undefined;
+    let usedFallback = false;
 
     if (!title || !documentType) {
-      const aiMetadata = await generateDocumentMetadata({ content });
-      title = userTitle || aiMetadata.title;
-      documentType = userDocumentType || aiMetadata.documentType;
-      aiSummary = aiMetadata.summary;
+      try {
+        const aiMetadata = await generateDocumentMetadata({ content });
+        title = userTitle || aiMetadata.title;
+        documentType = userDocumentType || aiMetadata.documentType;
+        aiSummary = aiMetadata.summary;
+
+        logger.debug('AI metadata generated', {
+          title,
+          documentType,
+          hasSummary: !!aiSummary,
+        });
+      } catch (error) {
+        logger.error('AI metadata generation failed, using fallback', error);
+        usedFallback = true;
+        // Use content preview as title (first 80 chars, no newlines)
+        const contentPreview = content.trim().replace(/\s+/g, ' ').slice(0, 80);
+        title = userTitle || contentPreview || 'Untitled Document';
+        documentType = userDocumentType || 'other';
+      }
     }
 
     const document = await createKnowledgeDocument(workspaceId, userId, {
@@ -151,6 +167,10 @@ export async function POST(
       {
         document,
         shouldCreateSummary: request.headers.get('X-Create-Summary') === 'true',
+        // Include warning if AI analysis failed and fallback was used
+        ...(usedFallback && {
+          warning: 'AI analysis unavailable - using basic classification',
+        }),
       },
       { status: 201 },
     );
