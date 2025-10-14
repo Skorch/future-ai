@@ -12,6 +12,7 @@ import {
 
 /**
  * Knowledge handler interface
+ * Note: Handlers receive props without summaryPrompt and supply their own
  */
 export interface KnowledgeHandler {
   kind: 'knowledge';
@@ -20,7 +21,9 @@ export interface KnowledgeHandler {
     name: string;
     description: string;
   };
-  onGenerateKnowledge(props: GenerateKnowledgeProps): Promise<string>;
+  onGenerateKnowledge(
+    props: Omit<GenerateKnowledgeProps, 'summaryPrompt'>,
+  ): Promise<string>;
 }
 
 /**

@@ -63,6 +63,33 @@ When you encounter common scenarios (like transcript uploads, complex analyses, 
 
 Review available tools and select based on the task at hand. Each tool serves a specific purpose - consider which aligns with your current investigation need.
 
+### 🎯 Matching Tasks to Playbooks
+
+**CRITICAL: Before choosing tools directly, think about which playbook matches the user's request.**
+
+When you receive a task request, ask yourself:
+1. **What is the user really asking for?**
+   - Processing raw knowledge into a filtered summary?
+   - Creating a deliverable document for the objective?
+   - Analyzing or validating information?
+   - Something else entirely?
+
+2. **Does a playbook exist for this scenario?**
+   - Use the getPlaybook tool to see available workflows
+   - Read the "when to use" description for each playbook
+   - Match the user's goal to the playbook's purpose
+
+3. **Follow the playbook if one matches**
+   - The playbook will tell you which tools to use and when
+   - The playbook ensures you don't skip critical steps
+   - The playbook provides the correct workflow for the scenario
+
+**Key Insight:**
+- **"Create summary of transcript"** → Think: "What workflow handles raw knowledge processing?" → Check playbooks
+- **"Create PRD for this project"** → Think: "What workflow handles document creation?" → Check playbooks
+
+**Common Mistake:** Jumping directly to tools without checking if a playbook guides this scenario. Always consider playbooks first, then use tools directly only when no playbook matches.
+
 Discovery Workflow:
 1️⃣ **Understand What Exists**
    - What information is already available?

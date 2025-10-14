@@ -1,5 +1,6 @@
 // Export all AI tools for easy import
 export { generateDocumentVersion } from './generate-document-version';
+export { saveKnowledge } from './save-knowledge';
 export { queryRAG } from './query-rag';
 export { listDocuments } from './list-documents';
 export { loadDocument } from './load-document';

@@ -12,6 +12,7 @@ export const discoveryMode: ModeConfig = {
     'queryRAG',
     'listDocuments',
     'loadDocument',
+    'saveKnowledge', // Phase 3: Knowledge processing
     'getPlaybook', // Retrieve structured playbook workflows
     'setMode',
     'setComplete', // Allow marking task complete in any mode
