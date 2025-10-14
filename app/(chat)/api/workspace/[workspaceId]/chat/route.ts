@@ -221,7 +221,7 @@ export async function POST(
         // Chat has version, just get documentType from objective
         const objective = await getObjectiveById(chatObjectiveId, userId);
         if (!objective) {
-          throw new ChatSDKError('not_found:database', 'Objective not found');
+          throw new ChatSDKError('not_found:chat', 'Objective not found');
         }
         chatDocumentType = objective.documentType;
       }

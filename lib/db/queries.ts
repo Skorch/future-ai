@@ -119,6 +119,14 @@ export async function saveChat({
   objectiveDocumentVersionId?: string;
 }) {
   try {
+    logger.debug('Attempting to save chat', {
+      id,
+      userId,
+      objectiveId,
+      objectiveDocumentVersionId,
+      hasVersionId: !!objectiveDocumentVersionId,
+    });
+
     return await db.insert(chat).values({
       id,
       createdAt: new Date(),
@@ -129,6 +137,15 @@ export async function saveChat({
       objectiveDocumentVersionId,
     });
   } catch (error) {
+    logger.error('Database error in saveChat:', error);
+    logger.error('Failed with values:', {
+      id,
+      userId,
+      objectiveId,
+      objectiveDocumentVersionId,
+      title,
+      visibility,
+    });
     throw new ChatSDKError('bad_request:database', 'Failed to save chat');
   }
 }

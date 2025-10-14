@@ -404,25 +404,34 @@ export async function initializeVersionForChat(
 }> {
   try {
     return await db.transaction(async (tx) => {
-      // 1. Get objective's documentId and documentType
+      // 1. Get objective's documentId, documentType, and workspaceId for validation
       const [obj] = await tx
         .select({
           objectiveDocumentId: objective.objectiveDocumentId,
           documentType: objective.documentType,
+          workspaceId: objective.workspaceId,
         })
         .from(objective)
         .where(eq(objective.id, objectiveId))
         .limit(1);
 
       if (!obj) {
-        throw new ChatSDKError('not_found:database', 'Objective not found');
+        throw new ChatSDKError('not_found:chat', 'Objective not found');
+      }
+
+      // 2. Validate objective belongs to the workspace (security check)
+      if (obj.workspaceId !== workspaceId) {
+        throw new ChatSDKError(
+          'forbidden:chat',
+          'Objective belongs to different workspace',
+        );
       }
 
       let documentId = obj.objectiveDocumentId;
       let versionId: string;
       let isFirstVersion = false;
 
-      // 2. Create document if none exists
+      // 3. Create document if none exists
       if (!documentId) {
         const result = await createObjectiveDocument(
           objectiveId,
@@ -437,12 +446,12 @@ export async function initializeVersionForChat(
         versionId = result.version.id;
         isFirstVersion = true;
       } else {
-        // 3. Create new version (copies both content and punchlist from latest)
+        // 4. Create new version (copies both content and punchlist from latest)
         const newVersion = await createDocumentVersion(documentId, userId, {});
         versionId = newVersion.id;
       }
 
-      // 4. Link version to chat
+      // 5. Link version to chat
       await tx
         .update(chat)
         .set({ objectiveDocumentVersionId: versionId })
@@ -457,8 +466,14 @@ export async function initializeVersionForChat(
       };
     });
   } catch (error) {
+    // Re-throw ChatSDKErrors (already have proper surface)
+    if (error instanceof ChatSDKError) {
+      throw error;
+    }
+
+    // Database errors (connections, constraints, etc.) stay as database surface
     throw new ChatSDKError(
-      'bad_request:database',
+      'internal_server_error:database',
       'Failed to initialize version for chat',
     );
   }
