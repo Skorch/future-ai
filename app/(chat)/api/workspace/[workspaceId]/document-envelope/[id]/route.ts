@@ -13,7 +13,7 @@ export async function GET(
   }
 
   try {
-    const doc = await getObjectiveDocumentById(id, userId);
+    const doc = await getObjectiveDocumentById(id);
 
     if (!doc || doc.document.workspaceId !== workspaceId) {
       return Response.json({ error: 'Not found' }, { status: 404 });

@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/tooltip';
 
 import { ArrowUpIcon, StopIcon, SummarizeIcon } from './icons';
-import { artifactDefinitions, type ArtifactKind } from './artifact';
+import type { ArtifactKind } from './artifact';
 import type { ArtifactToolbarItem } from './create-artifact';
 import type { UseChatHelpers } from '@ai-sdk/react';
 import type { ChatMessage } from '@/lib/types';
@@ -35,6 +35,7 @@ import {
   unpublishDocumentAction,
 } from '@/lib/workspace/document-actions';
 import { toast } from 'sonner';
+import { artifactRegistry } from '@/lib/artifacts/artifact-registry';
 
 type ToolProps = {
   description: string;
@@ -359,11 +360,8 @@ export const Tools = ({
   setIsToolbarVisible,
   tools,
   documentEnvelopeId,
-  isPublished,
   workspaceId,
-  versionId,
   mutateDocuments,
-  mutateEnvelope,
   isReadonly,
 }: {
   isToolbarVisible: boolean;
@@ -374,11 +372,8 @@ export const Tools = ({
   setIsToolbarVisible: Dispatch<SetStateAction<boolean>>;
   tools: Array<ArtifactToolbarItem>;
   documentEnvelopeId: string;
-  isPublished: boolean;
   workspaceId: string | undefined;
-  versionId: string | undefined;
   mutateDocuments: () => void;
-  mutateEnvelope: () => void;
   isReadonly: boolean;
 }) => {
   const [primaryTool, ...secondaryTools] = tools;
@@ -418,18 +413,7 @@ export const Tools = ({
         onClick={primaryTool.onClick}
       />
 
-      {/* Publish/Unpublish button - always visible alongside primary tool */}
-      {!isReadonly && workspaceId && documentEnvelopeId !== 'init' && (
-        <PublishButton
-          isPublished={isPublished}
-          isAnimating={isAnimating}
-          documentEnvelopeId={documentEnvelopeId}
-          workspaceId={workspaceId}
-          versionId={versionId}
-          mutateDocuments={mutateDocuments}
-          mutateEnvelope={mutateEnvelope}
-        />
-      )}
+      {/* Phase 4: Publish button removed - publishing managed at objective level */}
     </motion.div>
   );
 };
@@ -443,12 +427,9 @@ const PureToolbar = ({
   setMessages,
   artifactKind,
   documentEnvelopeId,
-  isPublished,
   workspaceId,
   isReadonly,
-  versionId,
   mutateDocuments,
-  mutateEnvelope,
 }: {
   isToolbarVisible: boolean;
   setIsToolbarVisible: Dispatch<SetStateAction<boolean>>;
@@ -458,12 +439,9 @@ const PureToolbar = ({
   setMessages: UseChatHelpers<ChatMessage>['setMessages'];
   artifactKind: ArtifactKind;
   documentEnvelopeId: string;
-  isPublished: boolean;
   workspaceId: string | undefined;
   isReadonly: boolean;
-  versionId: string | undefined;
   mutateDocuments: () => void;
-  mutateEnvelope: () => void;
 }) => {
   const toolbarRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
@@ -507,15 +485,13 @@ const PureToolbar = ({
     }
   }, [status, setIsToolbarVisible]);
 
-  const artifactDefinition = artifactDefinitions.find(
-    (definition) => definition.kind === artifactKind,
-  );
+  const artifactComponent = artifactRegistry.getComponent(artifactKind);
 
-  if (!artifactDefinition) {
-    throw new Error('Artifact definition not found!');
+  if (!artifactComponent) {
+    throw new Error(`Artifact component not found for kind: ${artifactKind}`);
   }
 
-  const toolsByArtifactKind = artifactDefinition.toolbar;
+  const toolsByArtifactKind = artifactComponent.toolbar;
 
   if (toolsByArtifactKind.length === 0) {
     return null;
@@ -598,11 +574,8 @@ const PureToolbar = ({
             setSelectedTool={setSelectedTool}
             tools={toolsByArtifactKind}
             documentEnvelopeId={documentEnvelopeId}
-            isPublished={isPublished}
             workspaceId={workspaceId}
-            versionId={versionId}
             mutateDocuments={mutateDocuments}
-            mutateEnvelope={mutateEnvelope}
             isReadonly={isReadonly}
           />
         )}
@@ -615,7 +588,6 @@ export const Toolbar = memo(PureToolbar, (prevProps, nextProps) => {
   if (prevProps.status !== nextProps.status) return false;
   if (prevProps.isToolbarVisible !== nextProps.isToolbarVisible) return false;
   if (prevProps.artifactKind !== nextProps.artifactKind) return false;
-  if (prevProps.isPublished !== nextProps.isPublished) return false;
   if (prevProps.documentEnvelopeId !== nextProps.documentEnvelopeId)
     return false;
 

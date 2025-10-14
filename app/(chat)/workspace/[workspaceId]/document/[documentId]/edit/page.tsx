@@ -15,7 +15,7 @@ export default async function DocumentEditPage({
     redirect('/login');
   }
 
-  const docWithVersions = await getObjectiveDocumentById(documentId, userId);
+  const docWithVersions = await getObjectiveDocumentById(documentId);
 
   if (
     !docWithVersions ||
