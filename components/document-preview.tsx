@@ -40,14 +40,27 @@ export function DocumentPreview({
 }: DocumentPreviewProps) {
   const { artifact, setArtifact } = useArtifact();
 
+  // Construct fetch URL with versionId if available
+  const fetchUrl = useMemo(() => {
+    if (!result || !workspaceId) return null;
+
+    const baseUrl = artifactRegistry.getGetUrl(
+      result.kind,
+      workspaceId,
+      result.id,
+    );
+
+    // If versionId is present, append it as query param to fetch specific version
+    if (result.versionId && baseUrl) {
+      return `${baseUrl}?versionId=${result.versionId}`;
+    }
+
+    return baseUrl;
+  }, [result, workspaceId]);
+
   const { data: documents, isLoading: isDocumentsFetching } = useSWR<
     Array<Document>
-  >(
-    result && workspaceId
-      ? artifactRegistry.getGetUrl(result.kind, workspaceId, result.id)
-      : null,
-    fetcher,
-  );
+  >(fetchUrl, fetcher);
 
   // Use the most recent document (last in array) to match artifact behavior
   const previewDocument = useMemo(
