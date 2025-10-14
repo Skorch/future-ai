@@ -9,7 +9,6 @@ import { getKnowledgeDocumentById } from '@/lib/db/knowledge-document';
 import { getObjectiveDocumentById } from '@/lib/db/objective-document';
 import type { LanguageModel, UIMessageStreamWriter } from 'ai';
 import type { ChatMessage } from '@/lib/types';
-import type { ArtifactKind } from '@/components/artifact';
 import type { AnthropicProviderOptions } from '@ai-sdk/anthropic';
 import { getSystemPromptHeader } from '@/lib/ai/prompts/system';
 
@@ -58,20 +57,6 @@ type DocumentMetadata = {
 };
 
 /**
- * Properties needed to save a document
- */
-export interface SaveDocumentProps {
-  id: string; // Document envelope ID (legacy, for backward compatibility)
-  versionId?: string; // Version ID to update (for "one chat = one version" pattern)
-  title: string;
-  kind: ArtifactKind;
-  session: { user?: { id: string } } | undefined;
-  workspaceId: string;
-  objectiveId?: string; // For creating new documents (deprecated in chat contexts)
-  metadata?: DocumentMetadata;
-}
-
-/**
  * Process a stream of text from the AI model and write deltas to the data stream
  * Returns the complete accumulated content
  */
@@ -103,68 +88,15 @@ export async function processStream(
 
 /**
  * Save generated document content to the database
- * Returns the document envelope ID and version ID for message linking
- *
- * IMPORTANT: In chat contexts, always provide versionId to UPDATE the existing version.
- * Creating new documents/versions should only happen during chat initialization.
+ * Updates existing version content (one chat = one version pattern)
  */
 export async function saveGeneratedDocument(
+  versionId: string,
   content: string,
-  props: SaveDocumentProps,
-): Promise<{ envelopeId: string; versionId: string } | null> {
-  if (props.session?.user?.id) {
-    // Import here to avoid circular dependencies
-    const {
-      createObjectiveDocument,
-      createDocumentVersion,
-      updateVersionContent,
-    } = await import('@/lib/db/objective-document');
-
-    // PREFERRED PATH: Update existing version (one chat = one version)
-    if (props.versionId) {
-      await updateVersionContent(props.versionId, content, props.metadata);
-
-      return {
-        envelopeId: props.id, // Document envelope ID
-        versionId: props.versionId,
-      };
-    }
-
-    // LEGACY PATH: Create new document (deprecated in chat contexts)
-    if (props.objectiveId) {
-      // Create new ObjectiveDocument with initial version (for new documents)
-      const result = await createObjectiveDocument(
-        props.objectiveId,
-        props.workspaceId,
-        props.session.user.id,
-        {
-          title: props.title,
-          content,
-        },
-      );
-
-      return {
-        envelopeId: result.document.id,
-        versionId: result.version.id,
-      };
-    }
-
-    // LEGACY PATH: Create new version (deprecated - use versionId instead)
-    const version = await createDocumentVersion(
-      props.id, // Use existing document ID
-      props.session.user.id,
-      {
-        content,
-        metadata: props.metadata,
-      },
-    );
-
-    return {
-      envelopeId: props.id,
-      versionId: version.id,
-    };
-  }
-  return null;
+  metadata?: Record<string, unknown>,
+): Promise<void> {
+  const { updateVersionContent } = await import('@/lib/db/objective-document');
+  await updateVersionContent(versionId, content, metadata);
 }
 
 /**

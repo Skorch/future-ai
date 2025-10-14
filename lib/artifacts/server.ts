@@ -13,13 +13,11 @@ export interface SaveDocumentProps {
 }
 
 export interface CreateDocumentCallbackProps {
-  id: string; // Document envelope ID
-  versionId?: string; // Version ID to update (for "one chat = one version" pattern)
+  versionId: string; // Version ID to update (one chat = one version pattern)
   title: string;
   dataStream: UIMessageStreamWriter<ChatMessage>;
   session: { user: { id: string } };
   workspaceId: string;
-  objectiveId?: string; // For context only (should not trigger new document creation)
   metadata?: Record<string, unknown> & {
     sourceDocumentIds?: string[];
     agentInstruction?: string;
