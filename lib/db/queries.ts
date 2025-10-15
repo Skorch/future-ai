@@ -24,7 +24,6 @@ import {
   playbookStep,
   objective,
 } from './schema';
-import type { VisibilityType } from '@/components/visibility-selector';
 import { ChatSDKError } from '../errors';
 
 // Optionally, if not using email/pass login, you can
@@ -107,14 +106,12 @@ export async function saveChat({
   id,
   userId,
   title,
-  visibility,
   objectiveId,
   objectiveDocumentVersionId,
 }: {
   id: string;
   userId: string;
   title: string;
-  visibility: VisibilityType;
   objectiveId: string;
   objectiveDocumentVersionId?: string;
 }) {
@@ -132,7 +129,6 @@ export async function saveChat({
       createdAt: new Date(),
       userId,
       title,
-      visibility,
       objectiveId,
       objectiveDocumentVersionId,
     });
@@ -144,7 +140,6 @@ export async function saveChat({
       objectiveId,
       objectiveDocumentVersionId,
       title,
-      visibility,
     });
     throw new ChatSDKError('bad_request:database', 'Failed to save chat');
   }
@@ -321,7 +316,6 @@ export async function getChatsByObjectiveId(
         createdAt: chat.createdAt,
         userId: chat.userId,
         objectiveId: chat.objectiveId,
-        visibility: chat.visibility,
         mode: chat.mode,
         complete: chat.complete,
         messageCount: count(message.id),
@@ -335,7 +329,6 @@ export async function getChatsByObjectiveId(
         chat.createdAt,
         chat.userId,
         chat.objectiveId,
-        chat.visibility,
         chat.mode,
         chat.complete,
       )
@@ -464,23 +457,6 @@ export async function deleteMessagesByChatIdAfterTimestamp({
     throw new ChatSDKError(
       'bad_request:database',
       'Failed to delete messages by chat id after timestamp',
-    );
-  }
-}
-
-export async function updateChatVisiblityById({
-  chatId,
-  visibility,
-}: {
-  chatId: string;
-  visibility: 'private' | 'public';
-}) {
-  try {
-    return await db.update(chat).set({ visibility }).where(eq(chat.id, chatId));
-  } catch (error) {
-    throw new ChatSDKError(
-      'bad_request:database',
-      'Failed to update chat visibility by id',
     );
   }
 }

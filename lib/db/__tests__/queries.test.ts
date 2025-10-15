@@ -51,7 +51,6 @@ describe('Query Helper Functions', () => {
         userId: 'user-456',
         objectiveId: 'obj-789',
         title: 'Test Chat',
-        visibility: 'private' as const,
         createdAt: new Date(),
         mode: 'discovery',
         modeSetAt: new Date(),
