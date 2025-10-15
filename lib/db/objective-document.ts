@@ -15,6 +15,8 @@ import type {
   Objective,
 } from './schema';
 import { ChatSDKError } from '@/lib/errors';
+import { generateTitle } from '@/lib/ai/utils/generate-title';
+import { OBJECTIVE_DOCUMENT_TITLE_SYSTEM_PROMPT } from '@/lib/ai/prompts/title-metadata-generation';
 
 export type { ObjectiveDocument, ObjectiveDocumentVersion };
 
@@ -404,12 +406,13 @@ export async function initializeVersionForChat(
 }> {
   try {
     return await db.transaction(async (tx) => {
-      // 1. Get objective's documentId, documentType, and workspaceId for validation
+      // 1. Get objective's documentId, documentType, title, and workspaceId for validation
       const [obj] = await tx
         .select({
           objectiveDocumentId: objective.objectiveDocumentId,
           documentType: objective.documentType,
           workspaceId: objective.workspaceId,
+          title: objective.title,
         })
         .from(objective)
         .where(eq(objective.id, objectiveId))
@@ -433,12 +436,24 @@ export async function initializeVersionForChat(
 
       // 3. Create document if none exists
       if (!documentId) {
+        // Generate AI-powered document title based on objective context
+        const documentTitle = await generateTitle({
+          context: {
+            objectiveTitle: obj.title,
+            documentType: obj.documentType,
+          },
+          systemPrompt: OBJECTIVE_DOCUMENT_TITLE_SYSTEM_PROMPT,
+          userPrompt:
+            'Objective: {objectiveTitle}\nDocument Type: {documentType}',
+          maxLength: 100,
+        });
+
         const result = await createObjectiveDocument(
           objectiveId,
           workspaceId,
           userId,
           {
-            title: 'Draft Document',
+            title: documentTitle,
             content: '',
           },
         );
