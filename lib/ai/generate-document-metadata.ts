@@ -7,6 +7,7 @@ import {
   type RawDocumentType,
 } from '@/lib/db/types/document-types';
 import { logger } from '@/lib/logger';
+import { KNOWLEDGE_DOCUMENT_METADATA_SYSTEM_PROMPT } from '@/lib/ai/prompts/title-metadata-generation';
 
 /**
  * AI-generated metadata for raw documents
@@ -57,37 +58,10 @@ export async function generateDocumentMetadata({
       model: myProvider.languageModel('title-model'), // claude-3-5-haiku-latest
       mode: 'json',
       schema: DocumentMetadataSchema,
-
-      system: `You are a document classification assistant. Analyze the provided content and generate:
-1. A concise, descriptive title (max ${maxTitleLength} characters)
-2. The most appropriate document type from the available categories
-3. An optional brief summary (max 200 characters) for substantial content
-
-**Document Type Classification Rules:**
-
-- **transcript**: Meeting recordings, call transcripts, interview transcripts, video captions, verbatim conversations with timestamps or speaker labels
-- **email**: Email messages, email threads, correspondence, messages with To/From/Subject headers
-- **slack**: Slack messages, DMs, channel conversations, team chat, informal messaging threads
-- **meeting_notes**: Written meeting notes, agenda items, action items, structured notes (not verbatim transcripts)
-- **research**: Research documents, articles, reports, whitepapers, analysis, studies, technical papers
-- **other**: Anything that doesn't clearly fit the above categories
-
-**Title Guidelines:**
-- Be specific and descriptive about the content
-- Exclude file extensions (.txt, .md, etc.)
-- Use sentence case (capitalize first word only)
-- Focus on the content topic, not the document format
-- Extract key subject matter or purpose
-
-**Summary Guidelines (if content is substantial):**
-- One sentence capturing the main topic or purpose
-- Max 200 characters
-- Omit if content is too short to meaningfully summarize`,
-
+      system: KNOWLEDGE_DOCUMENT_METADATA_SYSTEM_PROMPT(maxTitleLength),
       prompt: `Analyze this document and provide metadata:
 
 ${content}${fileName ? `\n\nOriginal filename: ${fileName}` : ''}`,
-
       temperature: 0.3, // Low temperature for consistent classification
     });
 
@@ -100,11 +74,16 @@ ${content}${fileName ? `\n\nOriginal filename: ${fileName}` : ''}`,
       hasFileName: !!fileName,
     });
 
-    // Return safe defaults
+    // Return safe defaults following [date] - [type] - [purpose] format
+    const fallbackTitle = fileName
+      ? `undated - other - ${fileName.replace(/\.[^/.]+$/, '')}`.slice(
+          0,
+          maxTitleLength,
+        )
+      : 'undated - other - document';
+
     return {
-      title: fileName
-        ? fileName.replace(/\.[^/.]+$/, '').slice(0, maxTitleLength)
-        : 'Untitled Document',
+      title: fallbackTitle,
       documentType: RAW_DOCUMENT_TYPES.OTHER,
       summary: undefined,
     };
