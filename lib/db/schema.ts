@@ -143,9 +143,6 @@ export const chat = pgTable(
       () => objectiveDocumentVersion.id,
       { onDelete: 'set null' },
     ), // FK to version (one chat = one version)
-    visibility: varchar('visibility', { enum: ['public', 'private'] })
-      .notNull()
-      .default('private'),
     // Mode system fields
     mode: text('mode').default('discovery'),
     modeSetAt: timestamp('modeSetAt').defaultNow(),
