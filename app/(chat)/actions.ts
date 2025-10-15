@@ -1,31 +1,82 @@
 'use server';
 
-import { generateText, type UIMessage } from 'ai';
+import type { UIMessage } from 'ai';
 import {
   deleteMessagesByChatIdAfterTimestamp,
   getMessageById,
 } from '@/lib/db/queries';
-import { myProvider } from '@/lib/ai/providers';
+import { generateTitle } from '@/lib/ai/utils/generate-title';
 import { getLogger } from '@/lib/logger';
+import {
+  AI_TEXT_GENERATION_SYSTEM_PROMPT,
+  CHAT_TITLE_GENERATION_SYSTEM_PROMPT,
+} from '@/lib/ai/prompts/title-metadata-generation';
 
 const logger = getLogger('ChatActions');
+
+/**
+ * Generate AI-assisted text with anti-hallucination guardrails
+ *
+ * Server action for AIAssistedTextInput component
+ * System prompt is hardcoded here to enforce guardrails
+ *
+ * @param instruction - What kind of text to generate
+ * @param context - Available context data
+ * @returns Generated text
+ */
+export async function generateAIText(
+  instruction: string,
+  context: Record<string, string | number | boolean | string[]>,
+): Promise<string> {
+  try {
+    // Build user prompt from instruction and context
+    const contextStr = Object.entries(context)
+      .filter(([_, value]) => value !== undefined && value !== null)
+      .map(([key, value]) => `${key}: ${value}`)
+      .join('\n');
+
+    const userPrompt = contextStr
+      ? `${instruction}\n\nContext:\n${contextStr}\n\nIMPORTANT: Match output detail to input detail. Do NOT invent details not provided in context.`
+      : `${instruction}\n\nIMPORTANT: No context provided. Keep output generic and helpful.`;
+
+    logger.debug('Generating AI text', {
+      instruction,
+      contextKeys: Object.keys(context),
+      promptLength: userPrompt.length,
+    });
+
+    const text = await generateTitle({
+      context: {},
+      systemPrompt: AI_TEXT_GENERATION_SYSTEM_PROMPT,
+      userPrompt,
+      maxLength: 500,
+      temperature: 0.3,
+    });
+
+    logger.info('AI text generated', {
+      outputLength: text.length,
+    });
+
+    return text;
+  } catch (error) {
+    logger.error('AI text generation failed', error);
+    throw new Error('Failed to generate text');
+  }
+}
 
 export async function generateTitleFromUserMessage({
   message,
 }: {
   message: UIMessage;
 }) {
-  const { text: title } = await generateText({
-    model: myProvider.languageModel('title-model'),
-    system: `\n
-    - you will generate a short title based on the first message a user begins a conversation with
-    - ensure it is not more than 80 characters long
-    - the title should be a summary of the user's message
-    - do not use quotes or colons`,
-    prompt: JSON.stringify(message),
+  return generateTitle({
+    context: {
+      message: JSON.stringify(message),
+    },
+    systemPrompt: CHAT_TITLE_GENERATION_SYSTEM_PROMPT,
+    userPrompt: '{message}',
+    maxLength: 80,
   });
-
-  return title;
 }
 
 export async function deleteTrailingMessages({ id }: { id: string }) {
