@@ -41,7 +41,6 @@ export default async function ObjectiveDetailPage(props: {
     title: chat.title,
     createdAt: chat.createdAt,
     messageCount: chat.messageCount || 0,
-    visibility: chat.visibility,
   }));
 
   // Filter knowledge documents by category

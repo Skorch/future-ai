@@ -4,9 +4,7 @@ import { generateText, type UIMessage } from 'ai';
 import {
   deleteMessagesByChatIdAfterTimestamp,
   getMessageById,
-  updateChatVisiblityById,
 } from '@/lib/db/queries';
-import type { VisibilityType } from '@/components/visibility-selector';
 import { myProvider } from '@/lib/ai/providers';
 import { getLogger } from '@/lib/logger';
 
@@ -54,14 +52,4 @@ export async function deleteTrailingMessages({ id }: { id: string }) {
   // if (chatRecord) {
   //   await cleanOrphanedVersions(chatRecord.workspaceId);
   // }
-}
-
-export async function updateChatVisibility({
-  chatId,
-  visibility,
-}: {
-  chatId: string;
-  visibility: VisibilityType;
-}) {
-  await updateChatVisiblityById({ chatId, visibility });
 }

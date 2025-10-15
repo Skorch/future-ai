@@ -27,12 +27,6 @@ export default async function Page(props: {
     notFound();
   }
 
-  if (chat.visibility === 'private') {
-    if (userId !== chat.userId) {
-      return notFound();
-    }
-  }
-
   const messagesFromDb = await getMessagesByChatId({
     id,
   });
@@ -45,7 +39,6 @@ export default async function Page(props: {
         id={chat.id}
         workspaceId={workspaceId}
         initialMessages={uiMessages}
-        initialVisibilityType={chat.visibility}
         isReadonly={userId !== chat.userId}
         autoResume={true}
         chat={chat}

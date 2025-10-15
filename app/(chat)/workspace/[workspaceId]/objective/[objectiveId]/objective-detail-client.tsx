@@ -45,7 +45,6 @@ interface Chat {
   title: string;
   createdAt: Date;
   messageCount: number;
-  visibility: 'public' | 'private';
 }
 
 interface Document {

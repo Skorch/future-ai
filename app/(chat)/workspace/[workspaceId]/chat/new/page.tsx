@@ -32,7 +32,6 @@ export default async function NewChatPage({
         id={chatId}
         workspaceId={workspaceId}
         initialMessages={[]}
-        initialVisibilityType="private"
         isReadonly={false}
         autoResume={false}
         chat={null}
