@@ -57,7 +57,6 @@ import { DEFAULT_CHAT_MODEL } from '@/lib/ai/models';
 import type { ChatMode, ModeContext, Todo, TodoList } from '@/lib/db/schema';
 import { getModeConfig } from '@/lib/ai/modes';
 import { createPrepareStep } from '@/lib/ai/modes/prepare-step';
-import type { VisibilityType } from '@/components/visibility-selector';
 import { processMessageFiles } from '@/lib/ai/utils/file-processor';
 import { setComplete } from '@/lib/ai/tools/set-complete';
 import { getLogger } from '@/lib/logger';
@@ -106,12 +105,10 @@ export async function POST(
     const {
       id,
       message,
-      selectedVisibilityType,
       objectiveId: providedObjectiveId,
     }: {
       id: string;
       message: ChatMessage;
-      selectedVisibilityType: VisibilityType;
       objectiveId?: string;
     } = requestBody;
 
@@ -184,7 +181,6 @@ export async function POST(
         id,
         userId: userId,
         title,
-        visibility: selectedVisibilityType,
         objectiveId: chatObjectiveId,
         objectiveDocumentVersionId: versionId,
       });
