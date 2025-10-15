@@ -13,9 +13,10 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
+import { AIAssistedTextInput } from '@/components/ui/ai-assisted-text-input';
+import { generateAIText } from '@/app/(chat)/actions';
 
 interface CreateObjectiveDialogProps {
   workspaceId: string;
@@ -93,13 +94,16 @@ export function CreateObjectiveDialog({
 
           <div className="grid gap-2">
             <Label htmlFor="description">Description (optional)</Label>
-            <Textarea
-              id="description"
-              placeholder="Describe this objective..."
+            <AIAssistedTextInput
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={setDescription}
+              multiline
               rows={3}
+              placeholder="Describe this objective..."
               disabled={isCreating}
+              instruction="Generate a description for this objective"
+              context={{ title }}
+              generateAction={generateAIText}
             />
           </div>
         </div>
