@@ -10,18 +10,15 @@ import { PlusIcon, VercelIcon } from './icons';
 import { useSidebar } from './ui/sidebar';
 import { memo } from 'react';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
-import { type VisibilityType, VisibilitySelector } from './visibility-selector';
 
 function PureChatHeader({
   chatId,
   workspaceId,
-  selectedVisibilityType,
   isReadonly,
   objectiveId,
 }: {
   chatId: string;
   workspaceId: string;
-  selectedVisibilityType: VisibilityType;
   isReadonly: boolean;
   objectiveId?: string;
 }) {
@@ -61,14 +58,6 @@ function PureChatHeader({
         </Tooltip>
       )}
 
-      {!isReadonly && (
-        <VisibilitySelector
-          chatId={chatId}
-          selectedVisibilityType={selectedVisibilityType}
-          className="order-1 md:order-2"
-        />
-      )}
-
       <Button
         className="bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-zinc-50 dark:text-zinc-900 hidden md:flex py-1.5 px-2 h-fit md:h-[34px] order-3 md:ml-auto"
         asChild
@@ -89,7 +78,6 @@ export const ChatHeader = memo(PureChatHeader, (prevProps, nextProps) => {
   return (
     prevProps.chatId === nextProps.chatId &&
     prevProps.workspaceId === nextProps.workspaceId &&
-    prevProps.selectedVisibilityType === nextProps.selectedVisibilityType &&
     prevProps.isReadonly === nextProps.isReadonly &&
     prevProps.objectiveId === nextProps.objectiveId
   );

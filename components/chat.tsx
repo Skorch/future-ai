@@ -10,10 +10,8 @@ import { fetcher, fetchWithErrorHandlers, generateUUID } from '@/lib/utils';
 import { Artifact } from './artifact';
 import { MultimodalInput } from './multimodal-input';
 import { Messages } from './messages';
-import type { VisibilityType } from './visibility-selector';
 import { useArtifactSelector } from '@/hooks/use-artifact';
 import { toast } from './toast';
-import { useChatVisibility } from '@/hooks/use-chat-visibility';
 import { useAutoResume } from '@/hooks/use-auto-resume';
 import { ChatSDKError } from '@/lib/errors';
 import type { Attachment, ChatMessage } from '@/lib/types';
@@ -26,7 +24,6 @@ export function Chat({
   id,
   workspaceId,
   initialMessages,
-  initialVisibilityType,
   isReadonly,
   autoResume,
   chat,
@@ -37,7 +34,6 @@ export function Chat({
   id: string;
   workspaceId: string;
   initialMessages: ChatMessage[];
-  initialVisibilityType: VisibilityType;
   isReadonly: boolean;
   autoResume: boolean;
   chat?: ChatType | null;
@@ -45,11 +41,6 @@ export function Chat({
   initialQuery?: string;
   shouldAutoSubmit?: boolean;
 }) {
-  const { visibilityType } = useChatVisibility({
-    chatId: id,
-    initialVisibilityType,
-  });
-
   const { mutate } = useSWRConfig();
   const { setDataStream } = useDataStream();
 
@@ -76,7 +67,6 @@ export function Chat({
           body: {
             id,
             message: messages.at(-1),
-            selectedVisibilityType: visibilityType,
             ...(objectiveId && { objectiveId }),
             ...body,
           },
@@ -191,7 +181,6 @@ export function Chat({
         <ChatHeader
           chatId={id}
           workspaceId={workspaceId}
-          selectedVisibilityType={initialVisibilityType}
           isReadonly={isReadonly}
           objectiveId={objectiveId}
         />
@@ -222,7 +211,6 @@ export function Chat({
               messages={messages}
               setMessages={setMessages}
               sendMessage={sendMessage}
-              selectedVisibilityType={visibilityType}
               chat={chat}
             />
           )}
@@ -244,7 +232,6 @@ export function Chat({
         regenerate={regenerate}
         votes={votes}
         isReadonly={isReadonly}
-        selectedVisibilityType={visibilityType}
       />
     </>
   );

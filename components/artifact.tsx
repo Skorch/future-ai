@@ -27,7 +27,6 @@ import { createDocumentCacheMutator } from '@/lib/cache/document-cache';
 
 const logger = getLogger('Artifact');
 import type { UseChatHelpers } from '@ai-sdk/react';
-import type { VisibilityType } from './visibility-selector';
 import type { Attachment, ChatMessage } from '@/lib/types';
 import {
   artifactRegistry,
@@ -71,7 +70,6 @@ function PureArtifact({
   regenerate,
   votes,
   isReadonly,
-  selectedVisibilityType,
 }: {
   chatId: string;
   workspaceId: string;
@@ -87,7 +85,6 @@ function PureArtifact({
   sendMessage: UseChatHelpers<ChatMessage>['sendMessage'];
   regenerate: UseChatHelpers<ChatMessage>['regenerate'];
   isReadonly: boolean;
-  selectedVisibilityType: VisibilityType;
 }) {
   const { artifact, setArtifact, metadata, setMetadata } = useArtifact();
 
@@ -482,7 +479,6 @@ function PureArtifact({
                     sendMessage={sendMessage}
                     className="bg-background dark:bg-muted"
                     setMessages={setMessages}
-                    selectedVisibilityType={selectedVisibilityType}
                   />
                 </div>
               </div>
@@ -655,8 +651,6 @@ export const Artifact = memo(PureArtifact, (prevProps, nextProps) => {
   if (!equal(prevProps.votes, nextProps.votes)) return false;
   if (prevProps.input !== nextProps.input) return false;
   if (!equal(prevProps.messages, nextProps.messages.length)) return false;
-  if (prevProps.selectedVisibilityType !== nextProps.selectedVisibilityType)
-    return false;
 
   return true;
 });
