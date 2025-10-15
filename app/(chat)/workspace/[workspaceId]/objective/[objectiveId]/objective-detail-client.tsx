@@ -9,6 +9,10 @@ import {
   FileTextIcon,
   MessageSquare,
   ChevronRightIcon,
+  ChevronDownIcon,
+  ExternalLinkIcon,
+  BookOpen,
+  FolderOpen,
 } from 'lucide-react';
 import {
   Card,
@@ -33,12 +37,6 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  ChevronDownIcon,
-  ExternalLinkIcon,
-  BookOpen,
-  FolderOpen,
-} from 'lucide-react';
 import { KnowledgeTable } from '@/components/knowledge-table';
 import type { KnowledgeDocument } from '@/lib/db/knowledge-document';
 
@@ -279,7 +277,7 @@ export function ObjectiveDetailClient({
 
         {/* Tab Content */}
         <div className="overflow-auto">
-          <TabsContent value="objective" className="mt-0 px-6 pt-6 pb-6">
+          <TabsContent value="objective" className="mt-0 p-6">
             {/* Document Viewer */}
             {document && (
               <div className="space-y-4">
@@ -386,7 +384,7 @@ export function ObjectiveDetailClient({
             )}
           </TabsContent>
 
-          <TabsContent value="knowledge" className="mt-0 px-6 pt-6 pb-6">
+          <TabsContent value="knowledge" className="mt-0 p-6">
             {knowledge.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <h3 className="text-lg font-semibold mb-2">
@@ -406,7 +404,7 @@ export function ObjectiveDetailClient({
             )}
           </TabsContent>
 
-          <TabsContent value="raw" className="mt-0 px-6 pt-6 pb-6">
+          <TabsContent value="raw" className="mt-0 p-6">
             {raw.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <h3 className="text-lg font-semibold mb-2">

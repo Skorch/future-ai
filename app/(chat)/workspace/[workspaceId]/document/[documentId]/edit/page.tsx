@@ -38,6 +38,7 @@ export default async function DocumentEditPage({
       documentId={documentId}
       initialContent={versionToEdit.content || ''}
       initialTitle={docWithVersions.document.title}
+      documentType="objective"
     />
   );
 }

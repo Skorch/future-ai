@@ -13,6 +13,8 @@ interface DocumentEditorWithNavProps {
   documentId: string;
   initialContent: string;
   initialTitle: string;
+  documentType: 'knowledge' | 'objective';
+  backRoute?: string;
 }
 
 export function DocumentEditorWithNav({
@@ -20,6 +22,8 @@ export function DocumentEditorWithNav({
   documentId,
   initialContent,
   initialTitle,
+  documentType,
+  backRoute,
 }: DocumentEditorWithNavProps) {
   const router = useRouter();
   const editorRef = useRef<{ saveNow: () => Promise<void> }>(null);
@@ -31,7 +35,14 @@ export function DocumentEditorWithNav({
     if (editorRef.current?.saveNow) {
       await editorRef.current.saveNow();
     }
-    router.push(`/workspace/${workspaceId}/document/${documentId}`);
+
+    // Use custom backRoute if provided, otherwise use default based on documentType
+    const defaultBackRoute =
+      documentType === 'knowledge'
+        ? `/workspace/${workspaceId}/knowledge/${documentId}`
+        : `/workspace/${workspaceId}/document/${documentId}`;
+
+    router.push(backRoute || defaultBackRoute);
   };
 
   return (
@@ -53,6 +64,7 @@ export function DocumentEditorWithNav({
         workspaceId={workspaceId}
         initialContent={initialContent}
         initialTitle={initialTitle}
+        documentType={documentType}
       />
     </div>
   );

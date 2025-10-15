@@ -190,7 +190,7 @@ export function AddKnowledgeModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-screen-toast-mobile">
         <DialogHeader>
           <DialogTitle>Add Knowledge to Objective</DialogTitle>
           <DialogDescription>

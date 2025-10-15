@@ -32,9 +32,14 @@ interface DocumentHeaderProps {
     isSearchable?: boolean; // Optional - only for KnowledgeDocuments
   };
   workspaceId: string;
+  documentType: 'knowledge' | 'objective';
 }
 
-export function DocumentHeader({ document, workspaceId }: DocumentHeaderProps) {
+export function DocumentHeader({
+  document,
+  workspaceId,
+  documentType,
+}: DocumentHeaderProps) {
   const router = useRouter();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isSearchable, setIsSearchable] = useState(
@@ -48,14 +53,16 @@ export function DocumentHeader({ document, workspaceId }: DocumentHeaderProps) {
     // Optimistic update - update UI immediately
     setIsSearchable(newState);
 
-    const promise = fetch(
-      `/api/workspace/${workspaceId}/document/${document.id}/searchable`,
-      {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isSearchable: newState }),
-      },
-    );
+    const endpoint =
+      documentType === 'knowledge'
+        ? `/api/workspace/${workspaceId}/knowledge/${document.id}`
+        : `/api/workspace/${workspaceId}/document/${document.id}/searchable`;
+
+    const promise = fetch(endpoint, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isSearchable: newState }),
+    });
 
     toast.promise(promise, {
       loading: 'Updating knowledge base...',
@@ -76,16 +83,24 @@ export function DocumentHeader({ document, workspaceId }: DocumentHeaderProps) {
 
   // Delete handler
   const handleDelete = () => {
-    const promise = fetch(
-      `/api/workspace/${workspaceId}/document/${document.id}/delete`,
-      { method: 'POST' },
-    );
+    const endpoint =
+      documentType === 'knowledge'
+        ? `/api/workspace/${workspaceId}/knowledge/${document.id}`
+        : `/api/workspace/${workspaceId}/document/${document.id}/delete`;
+
+    const method = documentType === 'knowledge' ? 'DELETE' : 'POST';
+
+    const promise = fetch(endpoint, { method });
 
     toast.promise(promise, {
       loading: 'Deleting document...',
       success: () => {
         // Navigate away after successful delete
-        router.push(`/workspace/${workspaceId}/document`);
+        const targetRoute =
+          documentType === 'knowledge'
+            ? `/workspace/${workspaceId}`
+            : `/workspace/${workspaceId}/document`;
+        router.push(targetRoute);
         return 'Document deleted successfully';
       },
       error: 'Failed to delete document',
@@ -96,7 +111,11 @@ export function DocumentHeader({ document, workspaceId }: DocumentHeaderProps) {
 
   // Edit handler
   const handleEdit = () => {
-    router.push(`/workspace/${workspaceId}/document/${document.id}/edit`);
+    const editRoute =
+      documentType === 'knowledge'
+        ? `/workspace/${workspaceId}/knowledge/${document.id}/edit`
+        : `/workspace/${workspaceId}/document/${document.id}/edit`;
+    router.push(editRoute);
   };
 
   return (

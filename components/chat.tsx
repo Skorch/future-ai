@@ -193,6 +193,7 @@ export function Chat({
           workspaceId={workspaceId}
           selectedVisibilityType={initialVisibilityType}
           isReadonly={isReadonly}
+          objectiveId={objectiveId}
         />
 
         <Messages

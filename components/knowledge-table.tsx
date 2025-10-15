@@ -47,22 +47,35 @@ export function KnowledgeTable({
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  const handleView = (docId: string) => {
-    toast.info('Document viewer coming soon');
-    // TODO: Navigate to document detail page when implemented
-  };
-
   const handleDelete = async () => {
     if (!deleteId) return;
 
-    toast.info('Delete functionality coming soon');
-    setShowDeleteDialog(false);
-    setDeleteId(null);
-    // TODO: Call delete action when implemented
+    try {
+      const response = await fetch(
+        `/api/workspace/${workspaceId}/knowledge/${deleteId}`,
+        { method: 'DELETE' },
+      );
+
+      if (response.ok) {
+        toast.success('Document deleted successfully');
+        router.refresh(); // Refresh the page to update the table
+      } else {
+        toast.error('Failed to delete document');
+      }
+    } catch (error) {
+      toast.error('Failed to delete document');
+    } finally {
+      setShowDeleteDialog(false);
+      setDeleteId(null);
+    }
   };
 
-  const allColumns = useMemo<Column<KnowledgeDocument>[]>(
-    () => [
+  const allColumns = useMemo<Column<KnowledgeDocument>[]>(() => {
+    const handleView = (docId: string) => {
+      router.push(`/workspace/${workspaceId}/knowledge/${docId}`);
+    };
+
+    return [
       {
         key: 'title',
         name: 'Title',
@@ -175,9 +188,8 @@ export function KnowledgeTable({
           </div>
         ),
       },
-    ],
-    [objectives, router, workspaceId],
-  );
+    ];
+  }, [objectives, router, workspaceId]);
 
   // Filter out objective column if requested
   const filteredColumns = hideObjectiveColumn

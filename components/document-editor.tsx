@@ -18,12 +18,14 @@ import { Card, CardContent, CardHeader } from './ui/card';
 import { debounce } from '@/lib/utils/debounce';
 import { useSWRConfig } from 'swr';
 import { createDocumentCacheMutator } from '@/lib/cache/document-cache';
+import { createKnowledgeCacheMutator } from '@/lib/cache/knowledge-cache';
 
 interface DocumentEditorProps {
   documentId: string;
   workspaceId: string;
   initialContent: string;
   initialTitle: string;
+  documentType: 'knowledge' | 'objective';
 }
 
 export interface DocumentEditorRef {
@@ -34,7 +36,7 @@ export const DocumentEditor = forwardRef<
   DocumentEditorRef,
   DocumentEditorProps
 >(function DocumentEditor(
-  { documentId, workspaceId, initialContent, initialTitle },
+  { documentId, workspaceId, initialContent, initialTitle, documentType },
   ref,
 ) {
   const [title, setTitle] = useState(initialTitle);
@@ -42,11 +44,12 @@ export const DocumentEditor = forwardRef<
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const { mutate } = useSWRConfig();
 
-  // Centralized cache mutator
-  const cacheMutator = useMemo(
-    () => createDocumentCacheMutator(mutate, workspaceId, documentId),
-    [mutate, workspaceId, documentId],
-  );
+  // Centralized cache mutator - conditional based on document type
+  const cacheMutator = useMemo(() => {
+    return documentType === 'knowledge'
+      ? createKnowledgeCacheMutator(mutate, workspaceId, documentId)
+      : createDocumentCacheMutator(mutate, workspaceId, documentId);
+  }, [mutate, workspaceId, documentId, documentType]);
 
   const editor = useEditor({
     extensions: [
@@ -69,7 +72,7 @@ export const DocumentEditor = forwardRef<
     },
   });
 
-  // Auto-save function
+  // Auto-save function - handles both knowledge and objective documents
   const saveDocument = useCallback(
     async (content: string, titleToSave: string) => {
       if (!content) return; // Don't save empty content
@@ -77,17 +80,37 @@ export const DocumentEditor = forwardRef<
       setIsSaving(true);
 
       try {
-        const response = await fetch(
-          `/api/workspace/${workspaceId}/document/${documentId}/content`,
-          {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ content, title: titleToSave }),
-          },
-        );
+        if (documentType === 'knowledge') {
+          // Knowledge documents: Single endpoint for both content and title
+          const response = await fetch(
+            `/api/workspace/${workspaceId}/knowledge/${documentId}`,
+            {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                content,
+                title: titleToSave,
+              }),
+            },
+          );
 
-        if (!response.ok) {
-          throw new Error('Failed to save');
+          if (!response.ok) {
+            throw new Error('Failed to save');
+          }
+        } else {
+          // Objective documents: Content-only endpoint (title updates not supported in editing)
+          const response = await fetch(
+            `/api/workspace/${workspaceId}/document/${documentId}/content`,
+            {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ content }),
+            },
+          );
+
+          if (!response.ok) {
+            throw new Error('Failed to save');
+          }
         }
 
         setLastSaved(new Date());
@@ -101,7 +124,7 @@ export const DocumentEditor = forwardRef<
         setIsSaving(false);
       }
     },
-    [documentId, workspaceId, cacheMutator],
+    [documentId, workspaceId, documentType, cacheMutator],
   );
 
   // Debounced auto-save (2 second delay)

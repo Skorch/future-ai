@@ -49,6 +49,7 @@ export default async function Page(props: {
         isReadonly={userId !== chat.userId}
         autoResume={true}
         chat={chat}
+        objectiveId={chat.objectiveId}
       />
       <DataStreamHandler />
     </>

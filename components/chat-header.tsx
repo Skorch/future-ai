@@ -17,11 +17,13 @@ function PureChatHeader({
   workspaceId,
   selectedVisibilityType,
   isReadonly,
+  objectiveId,
 }: {
   chatId: string;
   workspaceId: string;
   selectedVisibilityType: VisibilityType;
   isReadonly: boolean;
+  objectiveId?: string;
 }) {
   const router = useRouter();
   const { open } = useSidebar();
@@ -31,6 +33,14 @@ function PureChatHeader({
   return (
     <header className="flex sticky top-0 bg-background py-1.5 items-center px-2 md:px-2 gap-2">
       <SidebarToggle />
+
+      {objectiveId && (
+        <Button asChild variant="ghost" size="sm">
+          <Link href={`/workspace/${workspaceId}/objective/${objectiveId}`}>
+            ← Back to Objective
+          </Link>
+        </Button>
+      )}
 
       {(!open || windowWidth < 768) && (
         <Tooltip>
@@ -80,6 +90,7 @@ export const ChatHeader = memo(PureChatHeader, (prevProps, nextProps) => {
     prevProps.chatId === nextProps.chatId &&
     prevProps.workspaceId === nextProps.workspaceId &&
     prevProps.selectedVisibilityType === nextProps.selectedVisibilityType &&
-    prevProps.isReadonly === nextProps.isReadonly
+    prevProps.isReadonly === nextProps.isReadonly &&
+    prevProps.objectiveId === nextProps.objectiveId
   );
 });

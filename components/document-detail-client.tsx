@@ -19,23 +19,31 @@ interface DocumentDetailClientProps {
     isSearchable?: boolean; // Optional - only for KnowledgeDocuments
     content: string;
   };
+  objectiveId?: string;
+  documentType: 'knowledge' | 'objective';
 }
 
 export function DocumentDetailClient({
   workspaceId,
   document,
+  objectiveId,
+  documentType,
 }: DocumentDetailClientProps) {
   const { open } = useSidebar();
   const { width } = useWindowSize();
+
+  // Determine back navigation based on context
+  const backHref = objectiveId
+    ? `/workspace/${workspaceId}/objective/${objectiveId}`
+    : `/workspace/${workspaceId}/document`;
+  const backLabel = objectiveId ? 'Objective' : 'Documents';
 
   return (
     <div className="container mx-auto py-6">
       <div className="mb-4 flex items-center gap-2">
         {(!open || width < 768) && <SidebarToggle />}
         <Button asChild variant="ghost">
-          <Link href={`/workspace/${workspaceId}/document`}>
-            ← Back to Documents
-          </Link>
+          <Link href={backHref}>← Back to {backLabel}</Link>
         </Button>
       </div>
 
@@ -51,6 +59,7 @@ export function DocumentDetailClient({
           }),
         }}
         workspaceId={workspaceId}
+        documentType={documentType}
       />
 
       <div className="border rounded-lg bg-card">

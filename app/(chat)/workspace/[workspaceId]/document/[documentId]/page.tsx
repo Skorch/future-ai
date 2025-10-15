@@ -47,6 +47,9 @@ export default async function DocumentDetailPage({
         // Don't pass isSearchable - ObjectiveDocuments don't have this field
         content: versionToShow.content || '',
       }}
+      documentType="objective"
+      // ObjectiveDocument doesn't have objectiveId field - navigates to /documents
+      objectiveId={undefined}
     />
   );
 }
