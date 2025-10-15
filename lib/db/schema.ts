@@ -57,6 +57,8 @@ export const workspace = pgTable(
     name: varchar('name', { length: 255 }).notNull(),
     description: text('description'),
     domainId: varchar('domainId', { length: 50 }).notNull().default('sales'),
+    context: text('context'), // Workspace-specific AI instructions (markdown)
+    contextUpdatedAt: timestamp('contextUpdatedAt'), // Last context update timestamp
     createdAt: timestamp('createdAt').defaultNow().notNull(),
     lastAccessedAt: timestamp('lastAccessedAt').defaultNow().notNull(),
     deletedAt: timestamp('deletedAt'), // Soft delete

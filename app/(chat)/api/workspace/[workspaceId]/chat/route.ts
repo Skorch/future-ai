@@ -41,6 +41,7 @@ import { loadDocuments } from '@/lib/ai/tools/load-documents';
 import { setMode } from '@/lib/ai/tools/set-mode';
 import { askUser } from '@/lib/ai/tools/ask-user';
 import { getPlaybook } from '@/lib/ai/tools/get-playbook';
+import { updateWorkspaceContext } from '@/lib/ai/tools/update-workspace-context';
 // TODO: Rewire to new DAL - updateDocumentVersionsMessageId stub removed
 // import { updateDocumentVersionsMessageId } from '@/lib/db/documents';
 import { isProductionEnvironment } from '@/lib/constants';
@@ -125,15 +126,19 @@ export async function POST(
       return new ChatSDKError('unauthorized:chat').toResponse();
     }
 
-    // Load domain from workspace
+    // Load domain and context from workspace
     const workspaceData = await db
-      .select({ domainId: workspace.domainId })
+      .select({
+        domainId: workspace.domainId,
+        context: workspace.context,
+      })
       .from(workspace)
       .where(eq(workspace.id, workspaceId))
       .limit(1);
 
     const domainId = (workspaceData[0]?.domainId as DomainId) || DEFAULT_DOMAIN;
     const domain = getDomain(domainId);
+    const workspaceContext = workspaceData[0]?.context || null;
 
     logger.debug(`Agent domain from workspace: ${domainId}`, {
       workspaceId,
@@ -257,11 +262,12 @@ export async function POST(
     // Get mode-specific configuration (still needed for initial model selection)
     const modeConfig = getModeConfig(currentMode);
 
-    // Create prepareStep function with initial state
+    // Create prepareStep function with initial state and workspace context
     const prepareStepFn = createPrepareStep(
       currentMode,
       modeContext,
       chat?.complete || false,
+      workspaceContext,
     );
 
     logger.debug(
@@ -530,6 +536,12 @@ export async function POST(
                     dataStream,
                     workspaceId,
                     objectiveId: chatObjectiveId,
+                  }),
+
+                  // Workspace context update tool
+                  updateWorkspaceContext: updateWorkspaceContext({
+                    session,
+                    workspaceId,
                   }),
 
                   // Query and load tools

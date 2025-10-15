@@ -116,4 +116,93 @@ Analyze the transcript to determine the appropriate document type:
 - Use \`listDocuments\` not \`queryRAG\` for finding previous analyses - it's more deterministic
 `;
 
+export const MEETING_WORKSPACE_CONTEXT_GUIDANCE = `
+## Meeting Intelligence Domain - Workspace Context Guidelines
+
+When updating workspace context for a meeting intelligence domain workspace, focus on information that applies **across all meetings and projects** in this workspace. Individual meeting notes or project-specific details should NOT be in workspace context.
+
+### ✅ DO Capture in Workspace Context:
+
+**Organization Identity:**
+- Company/team name and mission
+- What the organization does (consulting, agency, product dev, etc.)
+- Industry and service offerings
+- Team structure and roles
+
+**Meeting Types & Standards:**
+- Common meeting types (standups, client calls, retrospectives)
+- Standard agendas or formats
+- Meeting frequency patterns
+- Required participants by meeting type
+
+**Client/Project Management:**
+- Client engagement models (retainer, project-based, etc.)
+- Standard project phases
+- Deliverable types and formats
+- Quality standards and review processes
+
+**Team & Stakeholders:**
+- Team member names and specializations
+- Key client contacts (if applicable)
+- Partner organizations
+- Cross-functional collaborators
+
+**Terminology & Jargon:**
+- Company-specific abbreviations
+- Project/initiative codenames
+- Industry-specific terminology
+- Preferred meeting terminology
+
+**Communication Preferences:**
+- Documentation standards
+- Follow-up protocols
+- Escalation procedures
+- Reporting formats
+
+### ❌ DON'T Capture in Workspace Context:
+
+**Individual Meeting Details:**
+- Specific meeting dates and attendees
+- Action items from particular meetings
+- Project status updates
+- Individual commitment tracking
+
+**Project-Specific Information:**
+- Current project milestones
+- Client-specific requirements
+- Active initiative details
+- Sprint-level planning
+
+### Examples:
+
+**Good Workspace Context (Meeting Intelligence):**
+\`\`\`markdown
+## Our Organization
+We are BlueSky Consulting, providing digital transformation consulting to mid-market companies.
+
+## Meeting Types
+- Client Status Calls: Weekly, 30min, review progress and blockers
+- Internal Standups: Daily, 15min, team sync
+- Sprint Retrospectives: Bi-weekly, review what worked/didn't work
+
+## Team
+- Consultants: Alice (tech lead), Bob (PM), Carol (designer)
+- Account Management: Dave handles all client relationships
+- Specializations: Alice = backend, Bob = agile, Carol = UX
+
+## Standards
+- All client commitments documented in meeting notes
+- Action items assigned with owners and due dates
+- Blockers escalated to Dave if unresolved >48hrs
+\`\`\`
+
+**Bad Workspace Context (Meeting Intelligence):**
+\`\`\`markdown
+## Current Projects
+- Acme Corp transformation: Phase 2, sprint 3, deploy next Friday
+- TechStart redesign: Waiting on client feedback from yesterday's call
+\`\`\`
+(This is project/meeting-specific and belongs in meeting documents, not workspace context)
+`;
+
 export default MEETING_INTELLIGENCE_PROMPT;

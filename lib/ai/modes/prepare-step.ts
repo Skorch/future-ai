@@ -45,6 +45,7 @@ export function createPrepareStep(
   initialMode: ChatMode,
   initialContext: ModeContext,
   initialComplete = false,
+  workspaceContext: string | null = null,
 ) {
   // State persists across all steps via closure
   const state: ModeState = {
@@ -173,13 +174,19 @@ export function createPrepareStep(
     // Get mode configuration
     const modeConfig = getModeConfig(state.currentMode);
 
-    // Build dynamic system prompt with completion status
+    // Build dynamic system prompt with workspace context and completion status
     const baseSystemPrompt = modeConfig.system(context);
+
+    const contextSection = workspaceContext
+      ? `\n\n## Workspace Context\n\nThis workspace has accumulated the following knowledge that helps you better understand and serve the user:\n\n${workspaceContext}\n`
+      : '';
+
     const completionStatus = state.isComplete
       ? '\n\n📋 STATUS: This task/conversation has been marked as COMPLETE. If the user asks for more help, you should mark it as incomplete with setComplete(false) before proceeding.'
       : '';
 
-    const modeSystemPrompt = baseSystemPrompt + completionStatus;
+    const modeSystemPrompt =
+      baseSystemPrompt + contextSection + completionStatus;
 
     logger.debug(
       `[prepareStep] Applying ${state.currentMode} mode: ${modeConfig.experimental_activeTools.length} active tools, Complete: ${state.isComplete}`,

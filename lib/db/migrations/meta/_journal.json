@@ -43,6 +43,13 @@
       "when": 1760544295535,
       "tag": "0005_simple_changeling",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1760570878840,
+      "tag": "0006_loose_the_twelve",
+      "breakpoints": true
     }
   ]
 }

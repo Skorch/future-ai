@@ -1,6 +1,22 @@
-import { MEETING_INTELLIGENCE_PROMPT } from '@/lib/ai/prompts/domains/meeting-intelligence';
-import { SALES_INTELLIGENCE_PROMPT } from '@/lib/ai/prompts/domains/sales-intelligence';
+import {
+  MEETING_INTELLIGENCE_PROMPT,
+  MEETING_WORKSPACE_CONTEXT_GUIDANCE,
+} from '@/lib/ai/prompts/domains/meeting-intelligence';
+import {
+  SALES_INTELLIGENCE_PROMPT,
+  SALES_WORKSPACE_CONTEXT_GUIDANCE,
+} from '@/lib/ai/prompts/domains/sales-intelligence';
 import type { DocumentType } from '@/lib/artifacts';
+
+export interface Domain {
+  id: string;
+  label: string;
+  description: string;
+  defaultDocumentType: DocumentType;
+  prompt: string;
+  workspaceContextPrompt: string;
+  allowedTypes: DocumentType[];
+}
 
 export const DOMAINS = {
   project: {
@@ -9,6 +25,7 @@ export const DOMAINS = {
     description: 'Project & meeting management',
     defaultDocumentType: 'business-requirements' as const,
     prompt: MEETING_INTELLIGENCE_PROMPT,
+    workspaceContextPrompt: MEETING_WORKSPACE_CONTEXT_GUIDANCE,
     allowedTypes: ['business-requirements'] as DocumentType[],
   },
   sales: {
@@ -17,6 +34,7 @@ export const DOMAINS = {
     description: 'Sales call summaries & strategy',
     defaultDocumentType: 'sales-strategy' as const,
     prompt: SALES_INTELLIGENCE_PROMPT,
+    workspaceContextPrompt: SALES_WORKSPACE_CONTEXT_GUIDANCE,
     allowedTypes: ['sales-strategy'] as DocumentType[],
   },
 } as const;

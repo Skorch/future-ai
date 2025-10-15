@@ -154,4 +154,93 @@ Standard sales workflow:
 5. createDocument → Generate new analysis (when transcript uploaded)
 `;
 
+export const SALES_WORKSPACE_CONTEXT_GUIDANCE = `
+## Sales Domain - Workspace Context Guidelines
+
+When updating workspace context for a sales domain workspace, focus on information that applies **across all deals** in this workspace. Individual deal details should NOT be in workspace context.
+
+### ✅ DO Capture in Workspace Context:
+
+**Company/Organization Identity:**
+- User's company name and role
+- What products/services they sell
+- Industry and market positioning
+- Company size, structure, and team composition
+
+**Sales Process & Methodology:**
+- Standard sales stages and criteria
+- BANT-C qualification thresholds
+- Deal approval processes
+- Typical sales cycle duration
+
+**Product/Service Catalog:**
+- Product names, SKUs, pricing tiers
+- Service offerings and packages
+- Standard features and differentiators
+- Common objections and responses
+
+**Team & Stakeholders:**
+- Sales team members and territories
+- Executive stakeholders involved in deals
+- Partner/channel relationships
+- Support/technical resources
+
+**Terminology & Jargon:**
+- Company-specific abbreviations
+- Product codenames or internal terms
+- Industry-specific language preferences
+- Preferred sales terminology
+
+**Standards & Preferences:**
+- Document formatting preferences
+- Communication style guidelines
+- Reporting requirements
+- Data validation rules
+
+### ❌ DON'T Capture in Workspace Context:
+
+**Individual Deal Details:**
+- Specific prospect/customer names
+- Deal values and timelines
+- BANT status for specific deals
+- Individual stakeholder names at prospect companies
+- Deal-specific competitive intelligence
+
+**Transient Information:**
+- Current quarter goals (use objectives instead)
+- Temporary pricing promotions
+- Active pipeline counts
+- Recent call notes
+
+### Examples:
+
+**Good Workspace Context (Sales):**
+\`\`\`markdown
+## Our Company
+We are TechCorp, selling enterprise SaaS collaboration tools.
+
+## Products
+- CollabPro Standard ($99/user/mo): Basic features
+- CollabPro Enterprise ($199/user/mo): Advanced security, SSO, API access
+- Common objection: "Too expensive vs Slack" - Response: Focus on enterprise security compliance
+
+## Sales Process
+- Discovery → Demo → Trial → Proposal → Negotiation → Close
+- Minimum deal size: $10K ARR
+- Authority requirement: Must involve VP-level buyer
+
+## Team
+- Sales: John (West), Sarah (East), Mike (Enterprise)
+- SEs: Tech team provides technical validation calls
+\`\`\`
+
+**Bad Workspace Context (Sales):**
+\`\`\`markdown
+## Current Deals
+- Acme Corp: $50K opportunity, Discovery stage, meet with CTO next week
+- Initech: Stalled at proposal, competitor XYZ is favored
+\`\`\`
+(This is deal-specific and belongs in deal documents, not workspace context)
+`;
+
 export default SALES_INTELLIGENCE_PROMPT;

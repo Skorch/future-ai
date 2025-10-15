@@ -166,5 +166,50 @@ export async function findUserDemoWorkspace(userId: string) {
   return result[0] || null;
 }
 
+/**
+ * Get workspace context (for reading only)
+ */
+export async function getWorkspaceContext(workspaceId: string, userId: string) {
+  const [ws] = await db
+    .select({
+      context: workspace.context,
+      contextUpdatedAt: workspace.contextUpdatedAt,
+    })
+    .from(workspace)
+    .where(
+      and(
+        eq(workspace.id, workspaceId),
+        eq(workspace.userId, userId),
+        isNull(workspace.deletedAt),
+      ),
+    );
+  return ws;
+}
+
+/**
+ * Update workspace context with new content
+ */
+export async function updateWorkspaceContext(
+  workspaceId: string,
+  userId: string,
+  context: string,
+) {
+  const [ws] = await db
+    .update(workspace)
+    .set({
+      context,
+      contextUpdatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(workspace.id, workspaceId),
+        eq(workspace.userId, userId),
+        isNull(workspace.deletedAt),
+      ),
+    )
+    .returning();
+  return ws;
+}
+
 // Phase 2: Objective functions removed
 // Use lib/db/objective.ts functions directly for objective operations

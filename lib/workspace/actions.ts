@@ -8,8 +8,10 @@ import {
   deleteWorkspace,
   getWorkspaceById,
   updateWorkspaceAccess,
+  updateWorkspaceContext,
 } from './queries';
 import { setActiveWorkspace, clearActiveWorkspace } from './context';
+import { revalidatePath } from 'next/cache';
 
 const createWorkspaceSchema = z.object({
   name: z.string().min(1).max(255),
@@ -113,4 +115,34 @@ export async function switchWorkspaceAction(workspaceId: string) {
   await updateWorkspaceAccess(workspaceId);
 
   return { success: true };
+}
+
+/**
+ * Server action to update workspace context (for Phase 2 UI editor)
+ */
+export async function updateWorkspaceContextAction(
+  workspaceId: string,
+  context: string,
+): Promise<{ error?: string }> {
+  const { userId } = await auth();
+  if (!userId) {
+    return { error: 'Unauthorized' };
+  }
+
+  // Get max length from env (default 10K)
+  const maxLength = Number.parseInt(
+    process.env.WORKSPACE_CONTEXT_MAX_LENGTH || '10000',
+  );
+
+  if (context.length > maxLength) {
+    return { error: `Context exceeds ${maxLength} character limit` };
+  }
+
+  try {
+    await updateWorkspaceContext(workspaceId, userId, context);
+    revalidatePath(`/workspace/${workspaceId}`);
+    return {};
+  } catch (error) {
+    return { error: 'Failed to update context' };
+  }
 }
