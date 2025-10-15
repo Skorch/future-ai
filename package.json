@@ -18,6 +18,8 @@
     "db:check": "drizzle-kit check",
     "db:up": "drizzle-kit up",
     "db:reset": "tsx scripts/reset-database.ts",
+    "db:local:up": "docker-compose up -d",
+    "db:local:down": "docker-compose down",
     "test": "vitest run",
     "test:watch": "vitest watch",
     "test:coverage": "vitest run --coverage",
