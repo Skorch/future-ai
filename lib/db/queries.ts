@@ -4,8 +4,6 @@ const logger = getLogger('queries');
 import 'server-only';
 
 import { and, asc, count, desc, eq, gte, inArray } from 'drizzle-orm';
-import { drizzle } from 'drizzle-orm/vercel-postgres';
-import { sql as vercelSql } from '@vercel/postgres';
 
 import {
   user,
@@ -15,40 +13,14 @@ import {
   type DBMessage,
   type ChatMode,
   stream,
-  documentEnvelope,
-  documentVersion,
-  documentEnvelopeRelations,
-  documentVersionRelations,
-  workspace,
-  playbook,
-  playbookStep,
   objective,
 } from './schema';
 import { ChatSDKError } from '../errors';
 
-// Optionally, if not using email/pass login, you can
-// use the Drizzle adapter for Auth.js / NextAuth
-// https://authjs.dev/reference/adapter/drizzle
+// Import the database connection from the factory
+import { db } from './connection';
 
-// Using @vercel/postgres for better serverless support
-const db = drizzle(vercelSql, {
-  schema: {
-    user,
-    chat,
-    message,
-    vote,
-    stream,
-    documentEnvelope,
-    documentVersion,
-    documentEnvelopeRelations,
-    documentVersionRelations,
-    workspace,
-    playbook,
-    playbookStep,
-  },
-});
-
-// Export db instance for use in other files
+// Re-export db instance for use in other files
 export { db };
 
 // Get user by Clerk ID (which is now the primary key)
@@ -95,6 +67,8 @@ export async function upsertUser(userData: {
 
     return upsertedUser;
   } catch (error) {
+    logger.error('Database error in upsertUser:', error);
+    logger.error('Failed with userData:', userData);
     throw new ChatSDKError('bad_request:database', 'Failed to upsert user');
   }
 }
