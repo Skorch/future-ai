@@ -172,11 +172,14 @@ export async function updatePlaybook(
 }
 
 export async function deletePlaybook(id: string): Promise<boolean> {
-  const result = await db.delete(playbook).where(eq(playbook.id, id));
+  const result = await db
+    .delete(playbook)
+    .where(eq(playbook.id, id))
+    .returning();
 
   // Invalidate cache
   revalidateTag(CACHE_TAG);
   revalidateTag(`playbook-${id}`);
 
-  return (result.rowCount ?? 0) > 0;
+  return result.length > 0;
 }
