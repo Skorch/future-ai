@@ -9,13 +9,13 @@ import {
   getWorkspaceById,
 } from './queries';
 import {
-  WORKSPACE_CONTEXT_GENERATION_PROMPT,
   WorkspaceContextSchema,
   formatWorkspaceContextAsMarkdown,
   type WorkspaceContext,
 } from '@/lib/ai/prompts/workspace-context-generation';
 import { getDomain } from '@/lib/domains';
 import { myProvider } from '@/lib/ai/providers';
+import { WorkspaceContextBuilder } from '@/lib/ai/prompts/builders';
 
 const logger = getLogger('WorkspaceContext');
 
@@ -75,12 +75,9 @@ export async function generateWorkspaceContext({
     // Get domain for domain-specific guidance
     const domain = getDomain(workspace.domainId);
 
-    // Build system prompt: base + domain-specific guidance
-    const systemPrompt = `${WORKSPACE_CONTEXT_GENERATION_PROMPT}
-
-## Domain-Specific Guidance
-
-${domain.workspaceContextPrompt}`;
+    // Build system prompt using builder
+    const builder = new WorkspaceContextBuilder();
+    const systemPrompt = builder.generateContextPrompt(domain);
 
     // Build user prompt with current context and observations
     const userPrompt = `

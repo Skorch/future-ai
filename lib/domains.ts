@@ -4,14 +4,14 @@ import {
   MEETING_WORKSPACE_CONTEXT_PLACEHOLDER,
   MEETING_OBJECTIVE_CONTEXT_GUIDANCE,
   MEETING_OBJECTIVE_CONTEXT_PLACEHOLDER,
-} from '@/lib/ai/prompts/domains/meeting-intelligence';
+} from '@/lib/ai/prompts/builders/shared/prompts/domains/meeting-intelligence.prompts';
 import {
   SALES_INTELLIGENCE_PROMPT,
   SALES_WORKSPACE_CONTEXT_GUIDANCE,
   SALES_WORKSPACE_CONTEXT_PLACEHOLDER,
   SALES_OBJECTIVE_CONTEXT_GUIDANCE,
   SALES_OBJECTIVE_CONTEXT_PLACEHOLDER,
-} from '@/lib/ai/prompts/domains/sales-intelligence';
+} from '@/lib/ai/prompts/builders/shared/prompts/domains/sales-intelligence.prompts';
 import type { DocumentType } from '@/lib/artifacts';
 
 export interface Domain {

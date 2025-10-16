@@ -9,7 +9,6 @@ import {
   getObjectiveById,
 } from '@/lib/db/objective';
 import {
-  OBJECTIVE_CONTEXT_GENERATION_PROMPT,
   ObjectiveContextSchema,
   formatObjectiveContextAsMarkdown,
   type ObjectiveContext,
@@ -17,6 +16,7 @@ import {
 import { getDomain } from '@/lib/domains';
 import { getWorkspaceById } from '@/lib/workspace/queries';
 import { myProvider } from '@/lib/ai/providers';
+import { ObjectiveContextBuilder } from '@/lib/ai/prompts/builders';
 
 const logger = getLogger('ObjectiveContext');
 
@@ -72,12 +72,9 @@ export async function generateObjectiveContext({
     }
     const domain = getDomain(workspace.domainId);
 
-    // Build system prompt: base + domain-specific guidance
-    const systemPrompt = `${OBJECTIVE_CONTEXT_GENERATION_PROMPT}
-
-## Domain-Specific Guidance
-
-${domain.objectiveContextPrompt}`;
+    // Build system prompt using builder
+    const builder = new ObjectiveContextBuilder();
+    const systemPrompt = builder.generateContextPrompt(domain);
 
     // Build user prompt with current context and observations
     const userPrompt = `
