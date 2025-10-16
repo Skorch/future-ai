@@ -5,6 +5,7 @@ import { getLogger } from '@/lib/logger';
 const logger = getLogger('message');
 import { AnimatePresence, motion } from 'framer-motion';
 import { memo, useState, useEffect } from 'react';
+import type { ToolUIPart } from 'ai';
 import type { Vote } from '@/lib/db/schema';
 import { DocumentToolResult as DocumentToolResultDisplay } from './elements/document-tool-result';
 import { PlaybookToolResult } from './elements/playbook-tool-result';
@@ -39,6 +40,7 @@ import {
 import { SearchIcon, ChevronDownIcon, CheckCircleIcon } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { LLMRAGQueryResult } from './llm-rag-result';
+import { UpdateWorkspaceContextTool } from './messages/updateWorkspaceContextTool';
 
 // Type narrowing is handled by TypeScript's control flow analysis
 // The AI SDK provides proper discriminated unions for tool calls
@@ -666,6 +668,34 @@ const PurePreviewMessage = ({
                       )}
                     </ToolContent>
                   </Tool>
+                );
+              }
+
+              if ((type as string) === 'tool-updateWorkspaceContext') {
+                const toolPart = part as {
+                  toolCallId: string;
+                  state: ToolUIPart['state'];
+                  input?: unknown;
+                  output?: unknown;
+                };
+                const { toolCallId, state } = toolPart;
+
+                return (
+                  <UpdateWorkspaceContextTool
+                    key={toolCallId}
+                    toolCallId={toolCallId}
+                    state={state}
+                    input={toolPart.input}
+                    output={
+                      toolPart.output && typeof toolPart.output === 'object'
+                        ? (toolPart.output as {
+                            success?: boolean;
+                            updatedSections?: string[];
+                            error?: string;
+                          })
+                        : undefined
+                    }
+                  />
                 );
               }
 

@@ -2,13 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { PlusIcon, Target, BookOpen, FolderOpen } from 'lucide-react';
+import { PlusIcon, Target, BookOpen, FolderOpen, FileEdit } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { ObjectiveTable } from '@/components/objective-table';
 import { KnowledgeTable } from '@/components/knowledge-table';
 import { CreateObjectiveDialog } from './create-objective-dialog';
+import { WorkspaceContextTab } from './workspace-context-tab';
+import { getDomain } from '@/lib/domains';
 import type { Workspace } from '@/lib/db/schema';
 import type { Objective } from '@/lib/db/objective';
 import type { KnowledgeDocument } from '@/lib/db/knowledge-document';
@@ -34,7 +36,12 @@ export function WorkspacePageClient({
   // Initialize from URL hash on mount
   useEffect(() => {
     const hash = window.location.hash.slice(1); // Remove '#'
-    if (hash === 'knowledge' || hash === 'raw' || hash === 'objectives') {
+    if (
+      hash === 'knowledge' ||
+      hash === 'raw' ||
+      hash === 'objectives' ||
+      hash === 'context'
+    ) {
       setActiveTab(hash);
     }
   }, []);
@@ -90,6 +97,13 @@ export function WorkspacePageClient({
               </span>
             </TabsTrigger>
             <TabsTrigger
+              value="context"
+              className="flex flex-col items-center gap-2 w-32 py-3 data-[state=active]:bg-muted hover:bg-muted/50 rounded-full transition-all"
+            >
+              <FileEdit className="size-5" />
+              <span className="text-sm font-medium">Context</span>
+            </TabsTrigger>
+            <TabsTrigger
               value="knowledge"
               className="flex flex-col items-center gap-2 w-32 py-3 data-[state=active]:bg-muted hover:bg-muted/50 rounded-full transition-all"
             >
@@ -130,6 +144,17 @@ export function WorkspacePageClient({
                 workspaceId={workspace.id}
               />
             )}
+          </TabsContent>
+
+          <TabsContent value="context" className="mt-0 p-6">
+            <WorkspaceContextTab
+              workspaceId={workspace.id}
+              initialContext={workspace.context}
+              lastUpdated={workspace.contextUpdatedAt}
+              placeholder={
+                getDomain(workspace.domainId).workspaceContextPlaceholder
+              }
+            />
           </TabsContent>
 
           <TabsContent value="knowledge" className="mt-0 p-6">
