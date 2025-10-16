@@ -3,7 +3,7 @@
  * Generates system prompts for requirements meeting summary documents
  */
 
-import type { DocumentBuilder } from '../factories/document-builder-factory';
+import type { DocumentBuilder } from '../types';
 import type { Domain } from '@/lib/domains';
 import type { Workspace, Objective } from '@/lib/db/schema';
 import { REQUIREMENTS_MEETING_SUMMARY_PROMPT } from '../shared/prompts/documents/requirements-meeting-summary.prompts';

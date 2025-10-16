@@ -7,7 +7,7 @@ import {
   type RawDocumentType,
 } from '@/lib/db/types/document-types';
 import { logger } from '@/lib/logger';
-import { KNOWLEDGE_DOCUMENT_METADATA_SYSTEM_PROMPT } from '@/lib/ai/prompts/title-metadata-generation';
+import { generateKnowledgeMetadata } from '@/lib/ai/prompts/builders/specialized/title-builder';
 
 /**
  * AI-generated metadata for raw documents
@@ -58,7 +58,7 @@ export async function generateDocumentMetadata({
       model: myProvider.languageModel('title-model'), // claude-3-5-haiku-latest
       mode: 'json',
       schema: DocumentMetadataSchema,
-      system: KNOWLEDGE_DOCUMENT_METADATA_SYSTEM_PROMPT(maxTitleLength),
+      system: generateKnowledgeMetadata(maxTitleLength),
       prompt: `Analyze this document and provide metadata:
 
 ${content}${fileName ? `\n\nOriginal filename: ${fileName}` : ''}`,

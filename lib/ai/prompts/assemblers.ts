@@ -260,8 +260,8 @@ export async function assembleDocumentPrompt(params: {
     systemPrompt = parts.join('\n');
   } catch {
     // Fallback for simple document types (text, etc.) that don't have a prompts file
-    expertSystem = docMetadata.prompt || 'Write a professional document.';
-    outputTemplate = docMetadata.template || '';
+    expertSystem = 'Write a professional document.';
+    outputTemplate = '';
     systemPrompt = expertSystem;
   }
 

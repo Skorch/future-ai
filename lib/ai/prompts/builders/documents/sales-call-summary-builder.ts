@@ -3,7 +3,7 @@
  * Generates system prompts for sales call summary documents
  */
 
-import type { DocumentBuilder } from '../factories/document-builder-factory';
+import type { DocumentBuilder } from '../types';
 import type { Domain } from '@/lib/domains';
 import type { Workspace, Objective } from '@/lib/db/schema';
 import { SALES_CALL_SUMMARY_PROMPT } from '../shared/prompts/documents/sales-call-summary.prompts';

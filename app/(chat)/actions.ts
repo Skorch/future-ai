@@ -8,9 +8,9 @@ import {
 import { generateTitle } from '@/lib/ai/utils/generate-title';
 import { getLogger } from '@/lib/logger';
 import {
-  AI_TEXT_GENERATION_SYSTEM_PROMPT,
-  CHAT_TITLE_GENERATION_SYSTEM_PROMPT,
-} from '@/lib/ai/prompts/title-metadata-generation';
+  generateAIText as generateAITextPrompt,
+  generateChatTitle,
+} from '@/lib/ai/prompts/builders/specialized/title-builder';
 
 const logger = getLogger('ChatActions');
 
@@ -47,7 +47,7 @@ export async function generateAIText(
 
     const text = await generateTitle({
       context: {},
-      systemPrompt: AI_TEXT_GENERATION_SYSTEM_PROMPT,
+      systemPrompt: generateAITextPrompt(),
       userPrompt,
       maxLength: 500,
       temperature: 0.3,
@@ -73,7 +73,7 @@ export async function generateTitleFromUserMessage({
     context: {
       message: JSON.stringify(message),
     },
-    systemPrompt: CHAT_TITLE_GENERATION_SYSTEM_PROMPT,
+    systemPrompt: generateChatTitle(80),
     userPrompt: '{message}',
     maxLength: 80,
   });

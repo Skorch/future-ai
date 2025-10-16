@@ -5,7 +5,6 @@
 
 // Factories
 export { createAgentBuilder } from './factories/agent-builder-factory';
-export { createDocumentBuilder } from './factories/document-builder-factory';
 export { createKnowledgeBuilder } from './factories/knowledge-builder-factory';
 
 // Agent Builders
@@ -23,12 +22,14 @@ export { RequirementsMeetingSummaryDocumentBuilder } from './documents/requireme
 // Specialized Builders
 export { WorkspaceContextBuilder } from './specialized/workspace-context-builder';
 export { ObjectiveContextBuilder } from './specialized/objective-context-builder';
-export { TitleBuilder } from './specialized/title-builder';
+export {
+  generateChatTitle,
+  generateAIText,
+  generateKnowledgeMetadata,
+  generateObjectiveTitle,
+} from './specialized/title-builder';
 
 // Type exports
 export type { AgentBuilder } from './factories/agent-builder-factory';
-export type { DocumentBuilder } from './factories/document-builder-factory';
-export type {
-  KnowledgeBuilder,
-  KnowledgeType,
-} from './factories/knowledge-builder-factory';
+export type { DocumentBuilder, KnowledgeBuilder } from './types';
+export type { KnowledgeType } from './factories/knowledge-builder-factory';

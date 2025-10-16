@@ -1,8 +1,9 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import {
   createAgentBuilder,
-  createDocumentBuilder,
   createKnowledgeBuilder,
+  SalesStrategyDocumentBuilder,
+  BusinessRequirementsDocumentBuilder,
 } from '@/lib/ai/prompts/builders';
 import { getDomain, type DomainId } from '@/lib/domains';
 import type { ChatMode } from '@/lib/db/schema';
@@ -39,7 +40,7 @@ export async function POST(req: NextRequest) {
       const domain = getDomain(body.domain as DomainId);
       const documentType = body.documentType as DocumentType | KnowledgeType;
 
-      // Determine if it's a document or knowledge type
+      // Determine if it's a document or knowledge type and instantiate appropriate builder
       let systemPrompt: string;
       if (
         documentType === 'sales-call-summary' ||
@@ -47,9 +48,14 @@ export async function POST(req: NextRequest) {
       ) {
         const builder = createKnowledgeBuilder(documentType as KnowledgeType);
         systemPrompt = builder.generate(domain, null, null);
-      } else {
-        const builder = createDocumentBuilder(documentType as DocumentType);
+      } else if (documentType === 'sales-strategy') {
+        const builder = new SalesStrategyDocumentBuilder();
         systemPrompt = builder.generate(domain, null, null);
+      } else if (documentType === 'business-requirements') {
+        const builder = new BusinessRequirementsDocumentBuilder();
+        systemPrompt = builder.generate(domain, null, null);
+      } else {
+        throw new Error(`Unknown document type: ${documentType}`);
       }
 
       return NextResponse.json({

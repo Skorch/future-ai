@@ -16,7 +16,7 @@ import type {
 } from './schema';
 import { ChatSDKError } from '@/lib/errors';
 import { generateTitle } from '@/lib/ai/utils/generate-title';
-import { OBJECTIVE_DOCUMENT_TITLE_SYSTEM_PROMPT } from '@/lib/ai/prompts/title-metadata-generation';
+import { generateObjectiveTitle } from '@/lib/ai/prompts/builders/specialized/title-builder';
 
 export type { ObjectiveDocument, ObjectiveDocumentVersion };
 
@@ -442,7 +442,7 @@ export async function initializeVersionForChat(
             objectiveTitle: obj.title,
             documentType: obj.documentType,
           },
-          systemPrompt: OBJECTIVE_DOCUMENT_TITLE_SYSTEM_PROMPT,
+          systemPrompt: generateObjectiveTitle(100),
           userPrompt:
             'Objective: {objectiveTitle}\nDocument Type: {documentType}',
           maxLength: 100,

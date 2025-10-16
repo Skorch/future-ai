@@ -1,5 +1,5 @@
 import type { ModeConfig } from './types';
-import { BUILD_MODE_PROMPT } from '@/lib/ai/prompts/modes/build';
+import { BUILD_MODE_PROMPT } from '@/lib/ai/prompts/builders/shared/prompts/modes/build.prompts';
 import { ThinkingBudget } from '@/lib/ai/types';
 
 export const buildMode: ModeConfig = {

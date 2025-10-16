@@ -3,8 +3,7 @@
  * Returns the appropriate builder for the knowledge type
  */
 
-import type { Domain } from '@/lib/domains';
-import type { Workspace, Objective } from '@/lib/db/schema';
+import type { KnowledgeBuilder } from '../types';
 import { SalesCallSummaryDocumentBuilder } from '../documents/sales-call-summary-builder';
 import { RequirementsMeetingSummaryDocumentBuilder } from '../documents/requirements-meeting-summary-builder';
 
@@ -14,18 +13,6 @@ import { RequirementsMeetingSummaryDocumentBuilder } from '../documents/requirem
 export type KnowledgeType =
   | 'sales-call-summary'
   | 'requirements-meeting-summary';
-
-/**
- * Category-specific interface for Knowledge builders
- * Each builder generates a complete system prompt
- */
-export interface KnowledgeBuilder {
-  generate(
-    domain: Domain,
-    workspace: Workspace | null,
-    objective: Objective | null,
-  ): string;
-}
 
 /**
  * Factory function for creating knowledge builders based on knowledge type

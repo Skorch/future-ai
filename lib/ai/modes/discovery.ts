@@ -1,5 +1,5 @@
 import type { ModeConfig } from './types';
-import { DISCOVERY_MODE_PROMPT } from '@/lib/ai/prompts/modes/discovery';
+import { DISCOVERY_MODE_PROMPT } from '@/lib/ai/prompts/builders/shared/prompts/modes/discovery.prompts';
 import { ThinkingBudget } from '@/lib/ai/types';
 
 export const discoveryMode: ModeConfig = {
