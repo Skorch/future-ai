@@ -215,4 +215,17 @@ Consider including:
 • Project terminology and abbreviations
 • Documentation and communication preferences`;
 
+export const MEETING_OBJECTIVE_CONTEXT_GUIDANCE = `
+Focus on THIS specific project/product:
+- Project goals and key stakeholders
+- Requirements and technical approach
+- Timeline, milestones, and dependencies
+- Current progress, status, and blockers
+- Decisions made and open questions
+`;
+
+export const MEETING_OBJECTIVE_CONTEXT_PLACEHOLDER = `Capture everything about this specific project...
+
+Include: Goals, stakeholders, requirements, architecture decisions, timeline, progress, blockers.`;
+
 export default MEETING_INTELLIGENCE_PROMPT;

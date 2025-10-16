@@ -251,6 +251,30 @@ Consider including:
 • Product catalog, pricing, and common objections
 • Sales team members and territories
 • Industry terminology and abbreviations
-• Communication and documentation preferences`;
+• Communication and documentation preferences
+
+Never include:
+• Specific prospect or deal details
+• Individual stakeholder names at prospect companies
+• Deal values, timelines
+
+`;
+
+export const SALES_OBJECTIVE_CONTEXT_GUIDANCE = `
+Focus on THIS specific deal:
+- Company name and key stakeholders (names, roles, influence)
+- Deal size, budget, timeline, and decision process
+- Requirements, pain points, and success criteria
+- Competition and our competitive position
+- Current status, momentum, and next steps
+
+Never include:
+- Specifics TODOs or action items for the deal
+
+`;
+
+export const SALES_OBJECTIVE_CONTEXT_PLACEHOLDER = `Capture everything about this specific deal...
+
+Include: Company, stakeholders, budget, timeline, requirements, competition, status, next steps.`;
 
 export default SALES_INTELLIGENCE_PROMPT;
