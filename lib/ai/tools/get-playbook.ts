@@ -6,7 +6,7 @@ import {
 } from '@/lib/db/queries/playbooks';
 import type { DomainId } from '@/lib/domains';
 import type { PlaybookMetadata, PlaybookStep } from '@/lib/db/schema';
-import { GET_PLAYBOOK_PROMPT } from '@/lib/ai/prompts/tools/get-playbook';
+import { GET_PLAYBOOK_PROMPT } from '@/lib/ai/prompts/builders/shared/prompts/tools/get-playbook.prompts';
 
 interface GetPlaybookProps {
   domainId: DomainId;

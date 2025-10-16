@@ -2,7 +2,7 @@ import { tool } from 'ai';
 import type { UIMessageStreamWriter } from 'ai';
 import { z } from 'zod';
 import type { ChatMessage } from '@/lib/types';
-import { ASK_USER_PROMPT } from '@/lib/ai/prompts/tools/ask-user';
+import { ASK_USER_PROMPT } from '@/lib/ai/prompts/builders/shared/prompts/tools/ask-user.prompts';
 
 const askUserSchema = z.object({
   question: z

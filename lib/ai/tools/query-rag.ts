@@ -8,7 +8,7 @@ import { createReranker } from '../../rag/reranker';
 import { rerankWithLLM, type LLMRerankResult } from '../../rag/llm-reranker';
 import type { QueryResult, QueryMatch, RAGMetadata } from '../../rag/types';
 import type { ChatMessage } from '@/lib/types';
-import { QUERY_RAG_PROMPT } from '@/lib/ai/prompts/tools/query-rag';
+import { QUERY_RAG_PROMPT } from '@/lib/ai/prompts/builders/shared/prompts/tools/query-rag.prompts';
 import { getDocumentTypeDisplayMap, type DocumentType } from '@/lib/artifacts';
 import type { DomainId } from '@/lib/domains';
 import { getDomain } from '@/lib/domains';
