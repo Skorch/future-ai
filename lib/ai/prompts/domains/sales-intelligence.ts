@@ -212,6 +212,12 @@ When updating workspace context for a sales domain workspace, focus on informati
 - Active pipeline counts
 - Recent call notes
 
+Never include:
+• Specific prospect or deal details
+• Individual stakeholder names at prospect companies
+• Deal values, timelines
+
+
 ### Examples:
 
 **Good Workspace Context (Sales):**
@@ -252,11 +258,6 @@ Consider including:
 • Sales team members and territories
 • Industry terminology and abbreviations
 • Communication and documentation preferences
-
-Never include:
-• Specific prospect or deal details
-• Individual stakeholder names at prospect companies
-• Deal values, timelines
 
 `;
 
