@@ -36,6 +36,9 @@ export interface GenerateKnowledgeProps {
   instruction: string;
   summaryPrompt: string;
   dataStream: UIMessageStreamWriter<ChatMessage>;
+  domain: import('@/lib/domains').Domain;
+  workspace: import('@/lib/db/schema').Workspace | null;
+  objective: import('@/lib/db/schema').Objective | null;
 }
 
 /**

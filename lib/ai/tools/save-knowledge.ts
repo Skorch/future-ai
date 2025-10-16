@@ -99,6 +99,25 @@ IMPORTANT:
           throw new Error('Objective not found or access denied');
         }
 
+        // 2.5. Load workspace for domain context
+        const { db } = await import('@/lib/db/queries');
+        const { workspace: workspaceSchema } = await import('@/lib/db/schema');
+        const { eq } = await import('drizzle-orm');
+        const { getDomain } = await import('@/lib/domains');
+
+        const workspaceData = await db
+          .select()
+          .from(workspaceSchema)
+          .where(eq(workspaceSchema.id, workspaceId))
+          .limit(1);
+
+        const workspace = workspaceData[0] || null;
+        if (!workspace) {
+          throw new Error('Workspace not found');
+        }
+
+        const domain = getDomain(workspace.domainId);
+
         // 3. Load appropriate knowledge handler
         let handler: KnowledgeHandler;
         try {
@@ -142,6 +161,9 @@ IMPORTANT:
           objectiveDescription: objective.description || undefined,
           instruction: params.instruction || 'Create a comprehensive summary',
           dataStream,
+          domain,
+          workspace,
+          objective,
         });
 
         // 7. Save knowledge document with metadata

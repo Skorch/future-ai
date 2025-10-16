@@ -1,10 +1,6 @@
 /**
  * Document Builder Factory
  * Returns the appropriate builder for the document type
- *
- * Note: Only includes document types that exist in the artifact registry.
- * Summary documents (sales-call-summary, requirements-meeting-summary) will be
- * added in a future phase when they're registered in lib/artifacts/index.ts
  */
 
 import type { DocumentType } from '@/lib/artifacts';

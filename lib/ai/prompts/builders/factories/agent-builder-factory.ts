@@ -10,14 +10,19 @@ import { BuildAgentBuilder } from '../agents/build-agent-builder';
 
 /**
  * Category-specific interface for Agent builders
- * Each builder generates a complete system prompt
+ * Each builder generates a complete system prompt including:
+ * - Base system prompt with capabilities
+ * - Domain-specific prompt
+ * - Mode-specific prompt
+ * - Workspace context (if provided)
+ * - Objective context (if provided)
  */
 export interface AgentBuilder {
   generate(
     domain: Domain,
     workspace: Workspace | null,
     objective: Objective | null,
-  ): string;
+  ): Promise<string>;
 }
 
 /**

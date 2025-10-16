@@ -1,10 +1,18 @@
 import { getLogger } from '@/lib/logger';
 
 const logger = getLogger('prepare-step');
-import type { ChatMode, ModeContext, Todo } from '@/lib/db/schema';
+import type {
+  ChatMode,
+  ModeContext,
+  Todo,
+  Workspace,
+  Objective,
+} from '@/lib/db/schema';
 import { getModeConfig } from './index';
 import { myProvider } from '@/lib/ai/providers';
 import type { LanguageModel } from 'ai';
+import { createAgentBuilder } from '@/lib/ai/prompts/builders';
+import type { Domain } from '@/lib/domains';
 
 // Define PrepareStep types since they're not exported from 'ai'
 interface PrepareStepInput {
@@ -34,19 +42,20 @@ interface ModeState {
   }>;
   goal: string | null;
   todos: Todo[];
-  isComplete: boolean;
 }
 
 /**
  * Creates a stateful prepareStep function that manages mode transitions
- * and completion tracking across multiple steps within a single streamText execution.
+ * across multiple steps within a single streamText execution.
+ * Uses builder system to generate complete system prompts including
+ * base prompt, capabilities, domain, mode, and contexts.
  */
 export function createPrepareStep(
   initialMode: ChatMode,
   initialContext: ModeContext,
-  initialComplete = false,
-  workspaceContext: string | null = null,
-  objectiveContext: string | null = null,
+  domain: Domain,
+  workspace: Workspace | null,
+  objective: Objective | null,
 ) {
   // State persists across all steps via closure
   const state: ModeState = {
@@ -60,17 +69,16 @@ export function createPrepareStep(
     ],
     goal: initialContext.goal,
     todos: initialContext.todoList || [],
-    isComplete: initialComplete,
   };
 
   // This function is called before EACH step
-  return ({
+  return async ({
     steps,
     stepNumber,
     messages,
-  }: PrepareStepInput): PrepareStepResult => {
+  }: PrepareStepInput): Promise<PrepareStepResult> => {
     logger.debug(
-      `[prepareStep] Step ${stepNumber}, Mode: ${state.currentMode}, Complete: ${state.isComplete}, History: ${state.modeHistory.length} entries`,
+      `[prepareStep] Step ${stepNumber}, Mode: ${state.currentMode}, History: ${state.modeHistory.length} entries`,
     );
 
     // Check if previous step called setMode or setComplete
@@ -132,25 +140,6 @@ export function createPrepareStep(
         }
       }
 
-      // Check for completion status change
-      const setCompleteCall = lastStep?.toolCalls?.find(
-        // biome-ignore lint/suspicious/noExplicitAny: Tool call structure varies by tool
-        (tc: any) => tc.toolName === 'setComplete',
-      );
-
-      if (setCompleteCall?.args) {
-        const { complete, reason } = setCompleteCall.args as {
-          complete: boolean;
-          reason?: string;
-        };
-
-        logger.info(
-          `[prepareStep] Completion status changed: ${state.isComplete} → ${complete}${reason ? ` (Reason: ${reason})` : ''}`,
-        );
-
-        state.isComplete = complete;
-      }
-
       // Check for goal updates from any tool
       const goalUpdate = lastStep?.toolResults?.find(
         // biome-ignore lint/suspicious/noExplicitAny: Tool results vary by tool type
@@ -172,38 +161,22 @@ export function createPrepareStep(
       modeSetAt: state.modeHistory[state.modeHistory.length - 1].timestamp,
     };
 
-    // Get mode configuration
+    // Get mode configuration for tools
     const modeConfig = getModeConfig(state.currentMode);
 
-    // Build dynamic system prompt with workspace context, objective context, and completion status
-    const baseSystemPrompt = modeConfig.system(context);
-
-    const workspaceContextSection = workspaceContext
-      ? `\n\n## Workspace Context: How We Work\n\nThis workspace has accumulated the following knowledge that helps you better understand and serve the user:\n\n${workspaceContext}\n`
-      : '';
-
-    const objectiveContextSection = objectiveContext
-      ? `\n\n## Objective Context: Our Current Goal\n\nThis objective has accumulated the following knowledge about what we're working on:\n\n${objectiveContext}\n`
-      : '';
-
-    const completionStatus = state.isComplete
-      ? '\n\n📋 STATUS: This task/conversation has been marked as COMPLETE. If the user asks for more help, you should mark it as incomplete with setComplete(false) before proceeding.'
-      : '';
-
-    const modeSystemPrompt =
-      baseSystemPrompt +
-      workspaceContextSection +
-      objectiveContextSection +
-      completionStatus;
+    // Use builder to generate complete system prompt
+    // Includes: base + capabilities + domain + mode + workspace context + objective context
+    const builder = createAgentBuilder(state.currentMode);
+    const systemPrompt = await builder.generate(domain, workspace, objective);
 
     logger.debug(
-      `[prepareStep] Applying ${state.currentMode} mode: ${modeConfig.experimental_activeTools.length} active tools, Complete: ${state.isComplete}`,
+      `[prepareStep] Applying ${state.currentMode} mode with ${modeConfig.experimental_activeTools.length} active tools`,
     );
 
     // Return configuration for this step
     return {
-      // Override system prompt with mode-specific content
-      system: modeSystemPrompt,
+      // Complete system prompt from builder
+      system: systemPrompt,
 
       // Set active tools based on mode
       activeTools: modeConfig.experimental_activeTools,
@@ -213,7 +186,7 @@ export function createPrepareStep(
         model: myProvider.languageModel(modeConfig.model),
       }),
 
-      // Pass through modified messages if we injected continuation
+      // Pass through messages
       ...(messages && { messages }),
     };
   };

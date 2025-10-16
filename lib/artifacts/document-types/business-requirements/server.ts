@@ -1,13 +1,12 @@
 import { myProvider } from '@/lib/ai/providers';
 import { metadata } from './metadata';
-import { BRD_PROMPT, BRD_TEMPLATE, BRD_PUNCHLIST_PROMPT } from './prompts';
+import { BRD_PUNCHLIST_PROMPT } from './prompts';
 import { OutputSize } from '@/lib/artifacts/types';
 import {
   processStream,
   saveGeneratedDocument,
   fetchSourceDocuments,
   buildStreamConfig,
-  composeSystemPrompt,
   generatePunchlist,
   fetchKnowledgeDocuments,
   GLOBAL_PUNCHLIST_TEMPLATE,
@@ -17,12 +16,19 @@ import type {
   CreateDocumentCallbackProps,
   GeneratePunchlistCallbackProps,
 } from '@/lib/artifacts/server';
+import { createDocumentBuilder } from '@/lib/ai/prompts/builders';
+import { getDomain, type DomainId } from '@/lib/domains';
+import { db } from '@/lib/db/queries';
+import { workspace } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
+import { getObjectiveById } from '@/lib/db/objective';
 
 interface BRDMetadata {
   sourceDocumentIds?: string[];
   projectName?: string;
   clientName?: string;
   version?: string;
+  objectiveId?: string;
 }
 
 export const businessRequirementsHandler: DocumentHandler<'text'> = {
@@ -60,11 +66,28 @@ export const businessRequirementsHandler: DocumentHandler<'text'> = {
     const clientName = typedMetadata?.clientName || 'Client';
     const version = typedMetadata?.version || '1.0';
 
-    // Compose prompt with instructions and template
-    const systemPrompt = composeSystemPrompt(
-      BRD_PROMPT,
-      BRD_TEMPLATE,
-      'BRD Template Structure',
+    // Load workspace object for builder
+    const workspaceData = await db
+      .select()
+      .from(workspace)
+      .where(eq(workspace.id, workspaceId))
+      .limit(1);
+
+    const workspaceObject = workspaceData[0] || null;
+    const domainId = workspaceObject?.domainId as DomainId;
+    const domain = getDomain(domainId);
+
+    // Load objective if provided
+    const objectiveObject = typedMetadata?.objectiveId
+      ? await getObjectiveById(typedMetadata.objectiveId, session.user.id)
+      : null;
+
+    // Use builder to generate system prompt with workspace/objective context
+    const builder = createDocumentBuilder('business-requirements');
+    const systemPrompt = builder.generate(
+      domain,
+      workspaceObject,
+      objectiveObject,
     );
 
     // Build user prompt

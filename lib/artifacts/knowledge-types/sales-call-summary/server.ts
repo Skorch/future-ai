@@ -4,7 +4,7 @@
 
 import type { KnowledgeHandler, GenerateKnowledgeProps } from '../base-handler';
 import { generateKnowledgeSummary } from '../base-handler';
-import { SALES_CALL_SUMMARY_PROMPT } from './prompts';
+import { createKnowledgeBuilder } from '@/lib/ai/prompts/builders';
 
 export const metadata = {
   type: 'sales-call-summary',
@@ -19,9 +19,17 @@ export const handler: KnowledgeHandler = {
   async onGenerateKnowledge(
     props: Omit<GenerateKnowledgeProps, 'summaryPrompt'>,
   ) {
+    // Use builder to generate summary prompt with workspace/objective context
+    const builder = createKnowledgeBuilder('sales-call-summary');
+    const summaryPrompt = builder.generate(
+      props.domain,
+      props.workspace,
+      props.objective,
+    );
+
     return await generateKnowledgeSummary({
       ...props,
-      summaryPrompt: SALES_CALL_SUMMARY_PROMPT,
+      summaryPrompt,
     });
   },
 };
