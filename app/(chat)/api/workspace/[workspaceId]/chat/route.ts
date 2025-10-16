@@ -42,6 +42,7 @@ import { setMode } from '@/lib/ai/tools/set-mode';
 import { askUser } from '@/lib/ai/tools/ask-user';
 import { getPlaybook } from '@/lib/ai/tools/get-playbook';
 import { updateWorkspaceContext } from '@/lib/ai/tools/update-workspace-context';
+import { updateObjectiveContext } from '@/lib/ai/tools/update-objective-context';
 // TODO: Rewire to new DAL - updateDocumentVersionsMessageId stub removed
 // import { updateDocumentVersionsMessageId } from '@/lib/db/documents';
 import { isProductionEnvironment } from '@/lib/constants';
@@ -262,12 +263,21 @@ export async function POST(
     // Get mode-specific configuration (still needed for initial model selection)
     const modeConfig = getModeConfig(currentMode);
 
+    // Load objective context
+    let objectiveContext: string | null = null;
+    if (chatObjectiveId) {
+      const { getObjectiveContext } = await import('@/lib/db/objective');
+      const objectiveData = await getObjectiveContext(chatObjectiveId, userId);
+      objectiveContext = objectiveData?.context || null;
+    }
+
     // Create prepareStep function with initial state and workspace context
     const prepareStepFn = createPrepareStep(
       currentMode,
       modeContext,
       chat?.complete || false,
       workspaceContext,
+      objectiveContext,
     );
 
     logger.debug(
@@ -541,6 +551,13 @@ export async function POST(
                   // Workspace context update tool
                   updateWorkspaceContext: updateWorkspaceContext({
                     session,
+                    workspaceId,
+                  }),
+
+                  // Objective context update tool
+                  updateObjectiveContext: updateObjectiveContext({
+                    session,
+                    objectiveId: chatObjectiveId,
                     workspaceId,
                   }),
 

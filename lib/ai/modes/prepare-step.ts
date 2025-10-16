@@ -46,6 +46,7 @@ export function createPrepareStep(
   initialContext: ModeContext,
   initialComplete = false,
   workspaceContext: string | null = null,
+  objectiveContext: string | null = null,
 ) {
   // State persists across all steps via closure
   const state: ModeState = {
@@ -174,11 +175,15 @@ export function createPrepareStep(
     // Get mode configuration
     const modeConfig = getModeConfig(state.currentMode);
 
-    // Build dynamic system prompt with workspace context and completion status
+    // Build dynamic system prompt with workspace context, objective context, and completion status
     const baseSystemPrompt = modeConfig.system(context);
 
-    const contextSection = workspaceContext
-      ? `\n\n## Workspace Context\n\nThis workspace has accumulated the following knowledge that helps you better understand and serve the user:\n\n${workspaceContext}\n`
+    const workspaceContextSection = workspaceContext
+      ? `\n\n## Workspace Context: How We Work\n\nThis workspace has accumulated the following knowledge that helps you better understand and serve the user:\n\n${workspaceContext}\n`
+      : '';
+
+    const objectiveContextSection = objectiveContext
+      ? `\n\n## Objective Context: Our Current Goal\n\nThis objective has accumulated the following knowledge about what we're working on:\n\n${objectiveContext}\n`
       : '';
 
     const completionStatus = state.isComplete
@@ -186,7 +191,10 @@ export function createPrepareStep(
       : '';
 
     const modeSystemPrompt =
-      baseSystemPrompt + contextSection + completionStatus;
+      baseSystemPrompt +
+      workspaceContextSection +
+      objectiveContextSection +
+      completionStatus;
 
     logger.debug(
       `[prepareStep] Applying ${state.currentMode} mode: ${modeConfig.experimental_activeTools.length} active tools, Complete: ${state.isComplete}`,

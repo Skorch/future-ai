@@ -15,6 +15,7 @@ export const discoveryMode: ModeConfig = {
     'saveKnowledge', // Phase 3: Knowledge processing
     'updatePunchlist', // Phase 4: Update punchlist from knowledge
     'updateWorkspaceContext', // Update workspace-level persistent context
+    'updateObjectiveContext', // Update objective-level persistent context
     'getPlaybook', // Retrieve structured playbook workflows
     'setMode',
     'setComplete', // Allow marking task complete in any mode

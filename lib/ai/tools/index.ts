@@ -11,3 +11,4 @@ export { setComplete } from './set-complete';
 export { askUser } from './ask-user';
 export { getPlaybook } from './get-playbook';
 export { updateWorkspaceContext } from './update-workspace-context';
+export { updateObjectiveContext } from './update-objective-context';
