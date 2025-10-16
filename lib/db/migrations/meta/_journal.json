@@ -50,6 +50,13 @@
       "when": 1760570878840,
       "tag": "0006_loose_the_twelve",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1760583551513,
+      "tag": "0007_great_hairball",
+      "breakpoints": true
     }
   ]
 }

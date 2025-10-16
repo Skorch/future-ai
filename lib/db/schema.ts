@@ -111,6 +111,8 @@ export const objective = pgTable(
     description: text('description'),
     documentType: text('documentType').notNull(),
     status: objectiveStatusEnum('status').notNull().default('open'),
+    context: text('context'), // Objective-specific AI context (markdown, max 5K chars)
+    contextUpdatedAt: timestamp('contextUpdatedAt'), // Last context update timestamp
     createdAt: timestamp('createdAt').defaultNow().notNull(),
     updatedAt: timestamp('updatedAt').defaultNow().notNull(),
     publishedAt: timestamp('publishedAt'),
