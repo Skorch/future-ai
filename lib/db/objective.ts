@@ -276,3 +276,116 @@ export async function getOrCreateActiveObjective(
     throw new Error('Failed to get or create active objective');
   }
 }
+
+/**
+ * Get objective context (for reading)
+ */
+export async function getObjectiveContext(
+  objectiveId: string,
+  userId: string,
+): Promise<{ context: string | null; contextUpdatedAt: Date | null } | null> {
+  try {
+    const [obj] = await db
+      .select({
+        context: objective.context,
+        contextUpdatedAt: objective.contextUpdatedAt,
+      })
+      .from(objective)
+      .innerJoin(workspace, eq(objective.workspaceId, workspace.id))
+      .where(
+        and(
+          eq(objective.id, objectiveId),
+          eq(workspace.userId, userId),
+          isNull(workspace.deletedAt),
+        ),
+      )
+      .limit(1);
+
+    return obj || null;
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get objective context',
+    );
+  }
+}
+
+/**
+ * Update objective context with new content
+ */
+export async function updateObjectiveContext(
+  objectiveId: string,
+  userId: string,
+  context: string,
+): Promise<void> {
+  try {
+    // Verify ownership via workspace
+    const existing = await getObjectiveById(objectiveId, userId);
+    if (!existing) {
+      throw new ChatSDKError(
+        'not_found:database',
+        'Objective not found or access denied',
+      );
+    }
+
+    await db
+      .update(objective)
+      .set({
+        context,
+        contextUpdatedAt: new Date(),
+      })
+      .where(eq(objective.id, objectiveId));
+  } catch (error) {
+    if (error instanceof ChatSDKError) {
+      throw error;
+    }
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to update objective context',
+    );
+  }
+}
+
+/**
+ * Get objective with context (for page load)
+ */
+export async function getObjectiveWithContext(
+  objectiveId: string,
+  userId: string,
+): Promise<{
+  objective: Objective;
+  context: string | null;
+  contextUpdatedAt: Date | null;
+} | null> {
+  try {
+    const [result] = await db
+      .select({
+        objective,
+        context: objective.context,
+        contextUpdatedAt: objective.contextUpdatedAt,
+      })
+      .from(objective)
+      .innerJoin(workspace, eq(objective.workspaceId, workspace.id))
+      .where(
+        and(
+          eq(objective.id, objectiveId),
+          eq(workspace.userId, userId),
+          isNull(workspace.deletedAt),
+        ),
+      )
+      .limit(1);
+
+    if (!result) return null;
+
+    return {
+      objective: result.objective,
+      context: result.context,
+      contextUpdatedAt: result.contextUpdatedAt,
+    };
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get objective with context',
+    );
+  }
+}
