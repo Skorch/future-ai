@@ -126,7 +126,7 @@ Ensure:
 
     // Validate length
     const maxLength = Number.parseInt(
-      process.env.WORKSPACE_CONTEXT_MAX_LENGTH || '10000',
+      process.env.WORKSPACE_CONTEXT_MAX_LENGTH || '5000',
     );
     if (markdown.length > maxLength) {
       logger.error('Generated context exceeds limit', {
@@ -188,9 +188,9 @@ export async function updateWorkspaceContextAction(
     return { error: 'Unauthorized' };
   }
 
-  // Get max length from env (default 10K)
+  // Get max length from env (default 5K)
   const maxLength = Number.parseInt(
-    process.env.WORKSPACE_CONTEXT_MAX_LENGTH || '10000',
+    process.env.WORKSPACE_CONTEXT_MAX_LENGTH || '5000',
   );
 
   if (context.length > maxLength) {

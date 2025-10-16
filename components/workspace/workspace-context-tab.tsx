@@ -102,7 +102,7 @@ export function WorkspaceContextTab({
         const potentialNewContent = textBefore + text + textAfter;
 
         // Check if paste would exceed limit
-        const maxLength = 10000;
+        const maxLength = 5000;
         if (potentialNewContent.length > maxLength) {
           // Truncate the pasted text to fit
           const availableSpace =
@@ -143,12 +143,12 @@ export function WorkspaceContextTab({
         (editor.storage as any).markdown?.getMarkdown?.() || editor.getText();
 
       // Check character limit
-      if (markdown.length > 10000) {
-        // Truncate to 10000 characters
-        const truncated = markdown.slice(0, 10000);
+      if (markdown.length > 5000) {
+        // Truncate to 5000 characters
+        const truncated = markdown.slice(0, 5000);
         editor.commands.setContent(truncated);
         toast.error(
-          'Character limit reached. Content truncated to 10,000 characters.',
+          'Character limit reached. Content truncated to 5,000 characters.',
         );
         return;
       }
@@ -174,8 +174,8 @@ export function WorkspaceContextTab({
     : 0;
 
   // Character limit thresholds
-  const isWarning = characterCount > 9500;
-  const isAtLimit = characterCount >= 10000;
+  const isWarning = characterCount > 4750;
+  const isAtLimit = characterCount >= 5000;
 
   if (!editor) return null;
 
@@ -210,7 +210,7 @@ export function WorkspaceContextTab({
                   : ''
             }
           >
-            {characterCount.toLocaleString()} / 10,000 characters
+            {characterCount.toLocaleString()} / 5,000 characters
           </div>
         </div>
         {isAtLimit && (
