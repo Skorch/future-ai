@@ -243,4 +243,14 @@ We are TechCorp, selling enterprise SaaS collaboration tools.
 (This is deal-specific and belongs in deal documents, not workspace context)
 `;
 
+export const SALES_WORKSPACE_CONTEXT_PLACEHOLDER = `Start typing to add workspace context for your sales domain...
+
+Consider including:
+• Your company and products/services you sell
+• Sales process stages and qualification criteria
+• Product catalog, pricing, and common objections
+• Sales team members and territories
+• Industry terminology and abbreviations
+• Communication and documentation preferences`;
+
 export default SALES_INTELLIGENCE_PROMPT;

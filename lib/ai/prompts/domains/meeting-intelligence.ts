@@ -205,4 +205,14 @@ We are BlueSky Consulting, providing digital transformation consulting to mid-ma
 (This is project/meeting-specific and belongs in meeting documents, not workspace context)
 `;
 
+export const MEETING_WORKSPACE_CONTEXT_PLACEHOLDER = `Start typing to add workspace context for your meeting intelligence domain...
+
+Consider including:
+• Your organization and what you do
+• Common meeting types and standards
+• Team members and their specializations
+• Client engagement models and processes
+• Project terminology and abbreviations
+• Documentation and communication preferences`;
+
 export default MEETING_INTELLIGENCE_PROMPT;
