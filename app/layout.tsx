@@ -71,7 +71,7 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased">
-        <ClerkProvider>
+        <ClerkProvider waitlistUrl="/waitlist">
           <ThemeProvider
             attribute="class"
             defaultTheme="system"
