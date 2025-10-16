@@ -1,6 +1,7 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 import { getLogger } from '@/lib/logger';
+import { generateWorkspaceContext } from '@/lib/workspace/workspace-context';
 
 const logger = getLogger('UpdateWorkspaceContext');
 
@@ -74,70 +75,30 @@ The workspace context helps you provide better assistance in future conversation
     }),
 
     execute: async ({ observations, updateReason }) => {
-      const startTime = Date.now();
+      logger.debug('Tool called: updateWorkspaceContext', {
+        workspaceId,
+        updateReason,
+        observationCount: observations.length,
+      });
 
-      try {
-        logger.debug('Updating workspace context', {
-          workspaceId,
-          updateReason,
-          observationCount: observations.length,
-        });
+      const result = await generateWorkspaceContext({
+        workspaceId,
+        userId: session.user.id,
+        observations,
+        updateReason,
+      });
 
-        // Call the API route
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/workspace/${workspaceId}/context`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              // Pass user ID for auth (this runs server-side, so we need to handle auth)
-              'x-user-id': session.user.id,
-            },
-            body: JSON.stringify({
-              observations,
-              updateReason,
-            }),
-          },
-        );
-
-        if (!response.ok) {
-          const error = await response.json();
-          logger.error('Failed to update workspace context', {
-            status: response.status,
-            error,
-          });
-          return {
-            success: false,
-            error: error.error || 'Failed to update context',
-          };
-        }
-
-        const result = await response.json();
-
-        logger.info('Workspace context updated successfully', {
-          workspaceId,
-          updateReason,
-          updatedSections: result.updatedSections,
-          duration: Date.now() - startTime,
-        });
-
+      if (result.success) {
         return {
           success: true,
           message: 'Workspace context updated successfully',
-          updatedSections: result.updatedSections,
-        };
-      } catch (error) {
-        logger.error('Error updating workspace context', {
-          error,
-          workspaceId,
-        });
-        return {
-          success: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : 'Unknown error updating context',
+          updatedSections: result.updatedSections || [],
         };
       }
+
+      return {
+        success: false,
+        error: result.error || 'Failed to update context',
+      };
     },
   });
