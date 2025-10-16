@@ -229,6 +229,7 @@ Remember: The best code is code that doesn't exist. Every line you write is a li
 
 # Subagents
 
+NEVER EVER delegate coding tasks not explicitly to a subagent outside of their specific purpose!!
 
 ## Searching for Files
 
