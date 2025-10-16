@@ -41,6 +41,7 @@ import { SearchIcon, ChevronDownIcon, CheckCircleIcon } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { LLMRAGQueryResult } from './llm-rag-result';
 import { UpdateWorkspaceContextTool } from './messages/updateWorkspaceContextTool';
+import { UpdateObjectiveContextTool } from './messages/updateObjectiveContextTool';
 
 // Type narrowing is handled by TypeScript's control flow analysis
 // The AI SDK provides proper discriminated unions for tool calls
@@ -682,6 +683,34 @@ const PurePreviewMessage = ({
 
                 return (
                   <UpdateWorkspaceContextTool
+                    key={toolCallId}
+                    toolCallId={toolCallId}
+                    state={state}
+                    input={toolPart.input}
+                    output={
+                      toolPart.output && typeof toolPart.output === 'object'
+                        ? (toolPart.output as {
+                            success?: boolean;
+                            updatedSections?: string[];
+                            error?: string;
+                          })
+                        : undefined
+                    }
+                  />
+                );
+              }
+
+              if ((type as string) === 'tool-updateObjectiveContext') {
+                const toolPart = part as {
+                  toolCallId: string;
+                  state: ToolUIPart['state'];
+                  input?: unknown;
+                  output?: unknown;
+                };
+                const { toolCallId, state } = toolPart;
+
+                return (
+                  <UpdateObjectiveContextTool
                     key={toolCallId}
                     toolCallId={toolCallId}
                     state={state}

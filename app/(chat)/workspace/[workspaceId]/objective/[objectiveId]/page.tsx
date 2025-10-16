@@ -1,9 +1,11 @@
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
-import { getObjectiveById } from '@/lib/db/objective';
+import { getObjectiveWithContext } from '@/lib/db/objective';
 import { getDocumentByObjectiveId } from '@/lib/db/objective-document';
 import { getChatsByObjectiveId } from '@/lib/db/queries';
 import { getKnowledgeByObjectiveId } from '@/lib/db/knowledge-document';
+import { getWorkspaceById } from '@/lib/workspace/queries';
+import { getDomain } from '@/lib/domains';
 import { ObjectiveDetailClient } from './objective-detail-client';
 
 export default async function ObjectiveDetailPage(props: {
@@ -17,16 +19,22 @@ export default async function ObjectiveDetailPage(props: {
     redirect('/login');
   }
 
-  // Load objective data
-  const objective = await getObjectiveById(objectiveId, userId);
-  if (!objective) {
+  // Load objective data with context
+  const objectiveData = await getObjectiveWithContext(objectiveId, userId);
+  if (!objectiveData) {
     redirect(`/workspace/${workspaceId}`);
   }
+
+  const { objective, context, contextUpdatedAt } = objectiveData;
 
   // Verify objective belongs to this workspace
   if (objective.workspaceId !== workspaceId) {
     redirect(`/workspace/${workspaceId}`);
   }
+
+  // Get domain for placeholder
+  const workspace = await getWorkspaceById(workspaceId, userId);
+  const domain = getDomain(workspace?.domainId);
 
   // Load document, chats, and knowledge documents in parallel
   const [document, chatsRaw, knowledgeDocs] = await Promise.all([
@@ -58,6 +66,9 @@ export default async function ObjectiveDetailPage(props: {
       chats={chats}
       knowledge={knowledge}
       raw={raw}
+      objectiveContext={context}
+      contextUpdatedAt={contextUpdatedAt}
+      objectiveContextPlaceholder={domain.objectiveContextPlaceholder}
     />
   );
 }

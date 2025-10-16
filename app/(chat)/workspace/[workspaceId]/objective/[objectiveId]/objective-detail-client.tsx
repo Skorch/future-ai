@@ -39,6 +39,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { KnowledgeTable } from '@/components/knowledge-table';
 import type { KnowledgeDocument } from '@/lib/db/knowledge-document';
+import { ObjectiveContextTab } from '@/components/objective/objective-context-tab';
 
 interface Chat {
   id: string;
@@ -67,6 +68,9 @@ interface ObjectiveDetailClientProps {
   chats: Chat[];
   knowledge: KnowledgeDocument[];
   raw: KnowledgeDocument[];
+  objectiveContext: string | null;
+  contextUpdatedAt: Date | null;
+  objectiveContextPlaceholder: string;
 }
 
 export function ObjectiveDetailClient({
@@ -77,6 +81,9 @@ export function ObjectiveDetailClient({
   chats,
   knowledge,
   raw,
+  objectiveContext,
+  contextUpdatedAt,
+  objectiveContextPlaceholder,
 }: ObjectiveDetailClientProps) {
   const router = useRouter();
   const [isPublished, setIsPublished] = useState(
@@ -115,7 +122,12 @@ export function ObjectiveDetailClient({
   // Initialize from URL hash on mount
   useEffect(() => {
     const hash = window.location.hash.slice(1); // Remove '#'
-    if (hash === 'knowledge' || hash === 'raw' || hash === 'objective') {
+    if (
+      hash === 'knowledge' ||
+      hash === 'raw' ||
+      hash === 'objective' ||
+      hash === 'context'
+    ) {
       setActiveTab(hash);
     }
   }, []);
@@ -256,6 +268,13 @@ export function ObjectiveDetailClient({
               </span>
             </TabsTrigger>
             <TabsTrigger
+              value="context"
+              className="flex flex-col items-center gap-2 w-32 py-3 data-[state=active]:bg-muted hover:bg-muted/50 rounded-full transition-all"
+            >
+              <FileTextIcon className="size-5" />
+              <span className="text-sm font-medium">Context</span>
+            </TabsTrigger>
+            <TabsTrigger
               value="knowledge"
               className="flex flex-col items-center gap-2 w-32 py-3 data-[state=active]:bg-muted hover:bg-muted/50 rounded-full transition-all"
             >
@@ -381,6 +400,15 @@ export function ObjectiveDetailClient({
                 )}
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="context" className="mt-0 p-6">
+            <ObjectiveContextTab
+              objectiveId={objectiveId}
+              initialContext={objectiveContext}
+              lastUpdated={contextUpdatedAt}
+              placeholder={objectiveContextPlaceholder}
+            />
           </TabsContent>
 
           <TabsContent value="knowledge" className="mt-0 p-6">
