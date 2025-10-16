@@ -16,7 +16,6 @@ import type {
   CreateDocumentCallbackProps,
   GeneratePunchlistCallbackProps,
 } from '@/lib/artifacts/server';
-import { createDocumentBuilder } from '@/lib/ai/prompts/builders';
 import { getDomain, type DomainId } from '@/lib/domains';
 import { db } from '@/lib/db/queries';
 import { workspace } from '@/lib/db/schema';
@@ -83,7 +82,7 @@ export const businessRequirementsHandler: DocumentHandler<'text'> = {
       : null;
 
     // Use builder to generate system prompt with workspace/objective context
-    const builder = createDocumentBuilder('business-requirements');
+    const builder = new metadata.builderClass();
     const systemPrompt = builder.generate(
       domain,
       workspaceObject,

@@ -1,4 +1,5 @@
 import { OutputSize, ThinkingBudget } from '@/lib/ai/types';
+import type { DocumentBuilder } from '@/lib/ai/prompts/builders/types';
 
 // Re-export for backward compatibility
 export { OutputSize, ThinkingBudget };
@@ -13,9 +14,8 @@ export interface ArtifactMetadata {
   clientKind: 'text';
   icon?: string; // lucide-react icon name for UI display
 
-  // Prompt and template content
-  prompt: string;
-  template: string;
+  // Builder class for generating prompts
+  builderClass: new () => DocumentBuilder;
 
   // Agent guidance for when to use this artifact type
   agentGuidance: {

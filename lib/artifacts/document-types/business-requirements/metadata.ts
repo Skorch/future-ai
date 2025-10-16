@@ -3,6 +3,7 @@ import {
   ThinkingBudget,
   type ArtifactMetadata,
 } from '@/lib/artifacts/types';
+import { BusinessRequirementsDocumentBuilder } from '@/lib/ai/prompts/builders/documents/business-requirements-builder';
 
 export const metadata: ArtifactMetadata = {
   type: 'business-requirements',
@@ -12,9 +13,7 @@ export const metadata: ArtifactMetadata = {
   clientKind: 'text',
   icon: 'FileCheck',
 
-  prompt:
-    'Create a comprehensive Business Requirements Document from meeting transcripts',
-  template: '', // Will be defined in prompts.ts
+  builderClass: BusinessRequirementsDocumentBuilder,
 
   agentGuidance: {
     when: 'User needs to create formal requirements documentation from discovery sessions',

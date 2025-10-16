@@ -1,6 +1,6 @@
 import type { ArtifactMetadata } from '@/lib/artifacts/types';
 import { ThinkingBudget } from '@/lib/artifacts/types';
-import { SALES_STRATEGY_PROMPT, SALES_STRATEGY_TEMPLATE } from './prompts';
+import { SalesStrategyDocumentBuilder } from '@/lib/ai/prompts/builders/documents/sales-strategy-builder';
 
 export const metadata: ArtifactMetadata = {
   type: 'sales-strategy',
@@ -10,8 +10,7 @@ export const metadata: ArtifactMetadata = {
   clientKind: 'text',
   icon: 'Target',
 
-  prompt: SALES_STRATEGY_PROMPT,
-  template: SALES_STRATEGY_TEMPLATE,
+  builderClass: SalesStrategyDocumentBuilder,
 
   agentGuidance: {
     when: 'User requests strategic recommendations, deal probability assessment, or asks "what should we do" about a sales opportunity',

@@ -15,7 +15,6 @@ import {
 } from '@/lib/artifacts/document-types/base-handler';
 import { OutputSize } from '@/lib/artifacts/types';
 import { myProvider } from '@/lib/ai/providers';
-import { createDocumentBuilder } from '@/lib/ai/prompts/builders';
 import { getDomain, type DomainId } from '@/lib/domains';
 import { db } from '@/lib/db/queries';
 import { workspace } from '@/lib/db/schema';
@@ -123,7 +122,7 @@ ${analyses}
       : null;
 
     // Use builder to generate system prompt with workspace/objective context
-    const builder = createDocumentBuilder('sales-strategy');
+    const builder = new metadata.builderClass();
     const systemPrompt = builder.generate(
       domain,
       workspaceObject,
