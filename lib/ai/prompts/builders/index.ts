@@ -7,9 +7,8 @@
 export { createAgentBuilder } from './factories/agent-builder-factory';
 export { createKnowledgeBuilder } from './factories/knowledge-builder-factory';
 
-// Agent Builders
-export { DiscoveryAgentBuilder } from './agents/discovery-agent-builder';
-export { BuildAgentBuilder } from './agents/build-agent-builder';
+// Agent Builders (MODE system removed - now unified)
+export { UnifiedAgentBuilder } from './agents/unified-agent-builder';
 
 // Document Builders (only registered artifact types)
 export { SalesStrategyDocumentBuilder } from './documents/sales-strategy-builder';

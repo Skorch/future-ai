@@ -1,19 +1,18 @@
 /**
  * Agent Builder Factory
- * Returns the appropriate builder for the current agent mode
+ * Returns the unified agent builder (MODE system removed in Phase 2)
  */
 
-import type { ChatMode, Workspace, Objective } from '@/lib/db/schema';
+import type { Workspace, Objective } from '@/lib/db/schema';
 import type { Domain } from '@/lib/domains';
-import { DiscoveryAgentBuilder } from '../agents/discovery-agent-builder';
-import { BuildAgentBuilder } from '../agents/build-agent-builder';
+import { UnifiedAgentBuilder } from '../agents/unified-agent-builder';
 
 /**
  * Category-specific interface for Agent builders
  * Each builder generates a complete system prompt including:
  * - Base system prompt with capabilities
  * - Domain-specific prompt
- * - Mode-specific prompt
+ * - Unified agent prompt (no modes)
  * - Workspace context (if provided)
  * - Objective context (if provided)
  */
@@ -26,15 +25,9 @@ export interface AgentBuilder {
 }
 
 /**
- * Factory function for creating agent builders based on mode
+ * Factory function for creating agent builders
+ * Returns unified builder (MODE system removed)
  */
-export function createAgentBuilder(mode: ChatMode): AgentBuilder {
-  switch (mode) {
-    case 'discovery':
-      return new DiscoveryAgentBuilder();
-    case 'build':
-      return new BuildAgentBuilder();
-    default:
-      throw new Error(`Unknown agent mode: ${mode}`);
-  }
+export function createAgentBuilder(): AgentBuilder {
+  return new UnifiedAgentBuilder();
 }
