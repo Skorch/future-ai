@@ -11,7 +11,6 @@ import {
   message,
   vote,
   type DBMessage,
-  type ChatMode,
   stream,
   objective,
 } from './schema';
@@ -290,8 +289,6 @@ export async function getChatsByObjectiveId(
         createdAt: chat.createdAt,
         userId: chat.userId,
         objectiveId: chat.objectiveId,
-        mode: chat.mode,
-        complete: chat.complete,
         messageCount: count(message.id),
       })
       .from(chat)
@@ -303,8 +300,6 @@ export async function getChatsByObjectiveId(
         chat.createdAt,
         chat.userId,
         chat.objectiveId,
-        chat.mode,
-        chat.complete,
       )
       .orderBy(desc(chat.createdAt));
 
@@ -504,69 +499,4 @@ export async function getStreamIdsByChatId({ chatId }: { chatId: string }) {
 }
 
 // deleteAllUserData function removed - no longer needed
-
-// Mode System DAL Functions
-export async function updateChatMode({
-  id,
-  mode,
-}: {
-  id: string;
-  mode: ChatMode;
-}) {
-  const [updatedChat] = await db
-    .update(chat)
-    .set({
-      mode,
-      modeSetAt: new Date(),
-    })
-    .where(eq(chat.id, id))
-    .returning();
-
-  return updatedChat;
-}
-
-export async function getChatMode(id: string): Promise<ChatMode | undefined> {
-  const result = await db
-    .select({
-      mode: chat.mode,
-      modeSetAt: chat.modeSetAt,
-    })
-    .from(chat)
-    .where(eq(chat.id, id))
-    .limit(1);
-
-  return result[0]?.mode as ChatMode | undefined;
-}
-
-export async function updateChatCompletion({
-  id,
-  complete,
-  completedAt,
-  firstCompletedAt,
-}: {
-  id: string;
-  complete: boolean;
-  completedAt: Date | null;
-  firstCompletedAt?: Date; // undefined means don't update this field
-}) {
-  // Build update object conditionally
-  const updateObj: Record<string, unknown> = {
-    complete,
-    completedAt,
-  };
-
-  // Only update firstCompletedAt if explicitly provided
-  if (firstCompletedAt !== undefined) {
-    // NOTE: We can't check existing chat without workspaceId
-    // So we'll just set it - the database constraint will prevent duplicates
-    updateObj.firstCompletedAt = firstCompletedAt;
-  }
-
-  const [updatedChat] = await db
-    .update(chat)
-    .set(updateObj)
-    .where(eq(chat.id, id))
-    .returning();
-
-  return updatedChat;
-}
+// Mode system functions removed - MODE system removed in Phase 2

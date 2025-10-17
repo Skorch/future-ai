@@ -115,20 +115,12 @@ vi.mock('@/lib/ai/tools/load-documents', () => ({
   loadDocuments: vi.fn(() => ({})),
 }));
 
-vi.mock('@/lib/ai/tools/set-mode', () => ({
-  setMode: vi.fn(() => ({})),
-}));
-
 vi.mock('@/lib/ai/tools/ask-user', () => ({
   askUser: vi.fn(() => ({})),
 }));
 
 vi.mock('@/lib/ai/tools/get-playbook', () => ({
   getPlaybook: vi.fn(() => Promise.resolve(null)),
-}));
-
-vi.mock('@/lib/ai/tools/set-complete', () => ({
-  setComplete: vi.fn(() => ({})),
 }));
 
 vi.mock('@/lib/logger', () => ({
