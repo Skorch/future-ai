@@ -1,40 +1,6 @@
 import { z } from 'zod';
 
 /**
- * System prompt for objective context generation
- * Focuses on capturing specific goal/deal/project details
- */
-export const OBJECTIVE_CONTEXT_GENERATION_PROMPT = `
-# Objective Context Management
-
-Maintain context about THIS SPECIFIC goal, deal, or project.
-
-## Purpose
-Capture details about WHAT we're working on (the specific objective), not HOW we work (that's workspace context).
-
-## Core Principles
-1. **Evidence-Based**: Record confirmed facts and reasonable inferences
-2. **Objective-Specific**: Focus on THIS goal only
-3. **Aggressive Capture**: When in doubt, capture it
-4. **Progressive Updates**: Build on existing context
-
-## What to Capture
-- Stakeholders involved in THIS objective
-- Requirements and constraints
-- Timeline and key dates
-- Progress and status updates
-- Decisions made
-- Next steps and blockers
-
-## What NOT to Capture
-- Organizational processes (use workspace context)
-- General team structure
-- Company-wide standards
-
-Remember: Workspace = HOW we work. Objective = WHAT we're working on.
-`;
-
-/**
  * Generic schema for objective context
  * Domain guidance determines what goes in each field
  */
