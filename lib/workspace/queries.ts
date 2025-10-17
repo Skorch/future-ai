@@ -2,7 +2,7 @@ import { getLogger } from '@/lib/logger';
 
 const logger = getLogger('WorkspaceQueries');
 import { and, desc, eq, isNull } from 'drizzle-orm';
-import { workspace } from '@/lib/db/schema';
+import { workspace, domain } from '@/lib/db/schema';
 import { db } from '@/lib/db/queries';
 
 /**
@@ -42,9 +42,45 @@ export async function createWorkspace(
   description?: string,
   domainId?: string,
 ) {
+  // Get domain to retrieve default workspace context artifact type
+  // If domainId not provided, use first available domain (for backward compatibility)
+  let targetDomainId = domainId;
+
+  if (!targetDomainId) {
+    // Get first domain as fallback (should be Sales Intelligence based on seed order)
+    const [firstDomain] = await db
+      .select({ id: domain.id })
+      .from(domain)
+      .limit(1);
+
+    if (!firstDomain) {
+      throw new Error('No domains found in database. Run seed first.');
+    }
+
+    targetDomainId = firstDomain.id;
+  }
+
+  // Get domain data for workspace context artifact type
+  const [domainData] = await db
+    .select()
+    .from(domain)
+    .where(eq(domain.id, targetDomainId))
+    .limit(1);
+
+  if (!domainData) {
+    throw new Error(`Domain not found: ${targetDomainId}`);
+  }
+
   const [ws] = await db
     .insert(workspace)
-    .values({ userId, name, description, domainId: domainId || 'sales' })
+    .values({
+      userId,
+      name,
+      description,
+      domainId: targetDomainId,
+      workspaceContextArtifactTypeId:
+        domainData.defaultWorkspaceContextArtifactTypeId,
+    })
     .returning();
   return ws;
 }

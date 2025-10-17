@@ -2,9 +2,8 @@ import 'server-only';
 
 import { and, desc, eq, isNull } from 'drizzle-orm';
 import { db } from './queries';
-import { objective, workspace } from './schema';
+import { objective, workspace, domain } from './schema';
 import type { Objective } from './schema';
-import { getDomain } from '@/lib/domains';
 import { ChatSDKError } from '@/lib/errors';
 
 export type { Objective };
@@ -35,8 +34,26 @@ export async function createObjective(
       );
     }
 
-    const domain = getDomain(ws.domainId);
-    const documentType = domain.defaultDocumentType;
+    // Get domain to get default artifact type IDs
+    const [domainData] = await db
+      .select()
+      .from(domain)
+      .where(eq(domain.id, ws.domainId))
+      .limit(1);
+
+    if (!domainData) {
+      throw new ChatSDKError(
+        'not_found:database',
+        'Domain not found for workspace',
+      );
+    }
+
+    // Map domain title to legacy documentType
+    // TODO: Remove this once documentType is removed from objective table
+    const documentType =
+      domainData.title === 'Sales Intelligence'
+        ? 'sales-strategy'
+        : 'business-requirements';
 
     const [newObjective] = await db
       .insert(objective)
@@ -47,6 +64,13 @@ export async function createObjective(
         documentType,
         status: 'open',
         createdByUserId: userId,
+        // Artifact type FKs from domain defaults
+        objectiveContextArtifactTypeId:
+          domainData.defaultObjectiveContextArtifactTypeId,
+        objectiveDocumentArtifactTypeId:
+          domainData.defaultObjectiveArtifactTypeId,
+        punchlistArtifactTypeId: domainData.defaultPunchlistArtifactTypeId,
+        summaryArtifactTypeId: domainData.defaultSummaryArtifactTypeId,
       })
       .returning();
 
