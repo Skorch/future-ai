@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import type { generateDocumentVersion } from './ai/tools/generate-document-version';
-import type { setMode } from './ai/tools/set-mode';
 import type { askUser } from './ai/tools/ask-user';
 import type { InferUITool, UIMessage } from 'ai';
 
@@ -17,12 +16,10 @@ export type MessageMetadata = z.infer<typeof messageMetadataSchema>;
 type generateDocumentVersionTool = InferUITool<
   ReturnType<typeof generateDocumentVersion>
 >;
-type setModeTool = InferUITool<ReturnType<typeof setMode>>;
 type askUserTool = InferUITool<ReturnType<typeof askUser>>;
 
 export type ChatTools = {
   generateDocumentVersion: generateDocumentVersionTool;
-  setMode: setModeTool;
   askUser: askUserTool;
 };
 
@@ -38,11 +35,6 @@ export type CustomUIDataTypes = {
   kind: ArtifactKind;
   clear: null;
   finish: null;
-  modeChanged: {
-    mode: 'discovery' | 'build';
-    reason: string;
-    timestamp: string;
-  };
   continuationRequest: {
     message: string;
   };

@@ -6,8 +6,6 @@ export { queryRAG } from './query-rag';
 export { listDocuments } from './list-documents';
 export { loadDocument } from './load-document';
 export { loadDocuments } from './load-documents';
-export { setMode } from './set-mode';
-export { setComplete } from './set-complete';
 export { askUser } from './ask-user';
 export { getPlaybook } from './get-playbook';
 export { updateWorkspaceContext } from './update-workspace-context';
