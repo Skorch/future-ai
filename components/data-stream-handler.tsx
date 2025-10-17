@@ -103,13 +103,6 @@ export function DataStreamHandler() {
               status: 'idle',
             };
 
-          case 'data-modeChanged':
-            // Mode changes are handled by ModeIndicator component
-            logger.debug(
-              '[DataStreamHandler] Mode changed event (handled elsewhere)',
-            );
-            return draftArtifact;
-
           default:
             logger.debug(
               '[DataStreamHandler] Unhandled delta type:',

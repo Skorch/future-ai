@@ -34,7 +34,6 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowDown } from 'lucide-react';
 import { useScrollToBottom } from '@/hooks/use-scroll-to-bottom';
 import type { Attachment, ChatMessage } from '@/lib/types';
-import { ModeIndicator } from './mode-indicator';
 import type { Chat } from '@/lib/db/schema';
 import {
   LARGE_PASTE_THRESHOLD,
@@ -414,15 +413,8 @@ function PureMultimodalInput({
       )}
 
       <div className="relative">
-        <ModeIndicator
-          initialMode={(chat?.mode as 'discovery' | 'build') || 'discovery'}
-          goal={chat?.goal}
-          todos={chat?.todoList}
-          className="rounded-t-3xl rounded-b-none border-b-0"
-        />
-
         <PromptInput
-          className={`bg-gray-50 border border-gray-300 shadow-none transition-all duration-200 dark:bg-sidebar dark:border-sidebar-border hover:ring-1 hover:ring-primary/30 focus-within:ring-1 focus-within:ring-primary/50 rounded-t-none rounded-b-3xl border-t-0
+          className={`bg-gray-50 border border-gray-300 shadow-none transition-all duration-200 dark:bg-sidebar dark:border-sidebar-border hover:ring-1 hover:ring-primary/30 focus-within:ring-1 focus-within:ring-primary/50 rounded-3xl
           }`}
           onSubmit={(event) => {
             event.preventDefault();
