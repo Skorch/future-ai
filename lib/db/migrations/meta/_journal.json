@@ -71,6 +71,13 @@
       "when": 1760732134542,
       "tag": "0009_rainy_hobgoblin",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1760733915172,
+      "tag": "0010_thankful_justice",
+      "breakpoints": true
     }
   ]
 }

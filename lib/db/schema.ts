@@ -257,16 +257,6 @@ export const chat = pgTable(
       () => objectiveDocumentVersion.id,
       { onDelete: 'set null' },
     ), // FK to version (one chat = one version)
-    // Mode system fields
-    mode: text('mode').default('discovery'),
-    modeSetAt: timestamp('modeSetAt').defaultNow(),
-    goal: text('goal'),
-    goalSetAt: timestamp('goalSetAt'),
-    todoList: text('todoList'),
-    todoListUpdatedAt: timestamp('todoListUpdatedAt'),
-    complete: boolean('complete').default(false).notNull(),
-    completedAt: timestamp('completedAt'),
-    firstCompletedAt: timestamp('firstCompletedAt'),
   },
   (table) => ({
     objectiveIdx: index('idx_chat_objective').on(table.objectiveId),
@@ -451,31 +441,6 @@ export const playbookStep = pgTable(
 );
 
 export type PlaybookStep = InferSelectModel<typeof playbookStep>;
-
-// Mode-Based Agent System Types
-export type ChatMode = 'discovery' | 'build';
-
-export interface ModeContext {
-  currentMode: ChatMode;
-  goal: string | null;
-  todoList: Todo[] | null;
-  modeSetAt: Date;
-  messageCount: number;
-}
-
-export interface Todo {
-  title: string;
-  description: string;
-  status: 'pending' | 'in_progress' | 'completed' | 'failed';
-  order: number;
-  attempts?: number;
-}
-
-export interface TodoList {
-  version: number;
-  todos: Todo[];
-  lastUpdated: Date;
-}
 
 // API Response Types
 export interface PlaybookWithSteps extends Playbook {
