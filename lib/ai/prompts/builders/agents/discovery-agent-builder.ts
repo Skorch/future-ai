@@ -9,8 +9,7 @@
  */
 
 import type { AgentBuilder } from '../factories/agent-builder-factory';
-import type { Domain } from '@/lib/domains';
-import type { DomainId } from '@/lib/domains';
+import type { Domain, DomainId } from '@/lib/domains';
 import type { Workspace, Objective } from '@/lib/db/schema';
 import { composeSystemPrompt } from '@/lib/ai/prompts/system';
 import { DISCOVERY_MODE_PROMPT } from '../shared/prompts/modes/discovery.prompts';
