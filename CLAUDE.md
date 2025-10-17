@@ -254,6 +254,11 @@ Any time you need to work on your Agent prompts or tool descriptions you ALWAYS 
 
 - ALWAYS wrap full paths in `"` because most paths have `(route)` in them
 - Never propose 'backward compatibility' solutions unless the User explicitly requests - always plan to roll forward with changes
+- You NEVER use console.log.  Instead you use the common `lib/logger` for smarter logging levels
+
+# GROWTH MINDSET
+
+- if the User points out a gap in your thinking or corrects a plan (or other things like that), your goal is to LEARN from this interaction.  Instead of merely saying 'you are absolutely right', have a GROWTH MINDSET and state your original thinking (you had a reason afterall) and extra steps you may take next time to arrive at this conclusion in the first place.
 
 # Markdown and Specs
 When you generate specs that contain mermaid diagrams, you will 'render' the SVG using the mmdc command.  
