@@ -57,6 +57,20 @@
       "when": 1760583551513,
       "tag": "0007_great_hairball",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1760731087928,
+      "tag": "0008_cute_pet_avengers",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1760732134542,
+      "tag": "0009_rainy_hobgoblin",
+      "breakpoints": true
     }
   ]
 }

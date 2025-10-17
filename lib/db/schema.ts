@@ -31,6 +31,83 @@ export const sourceTypeEnum = pgEnum('source_type', [
   'slack',
   'note',
 ]);
+export const artifactTypeCategoryEnum = pgEnum('artifact_type_category', [
+  'objective',
+  'summary',
+  'punchlist',
+  'context',
+]);
+
+// ArtifactType table - defines document/artifact generation instructions and templates
+export const artifactType = pgTable(
+  'ArtifactType',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    category: artifactTypeCategoryEnum('category').notNull(),
+    title: text('title').notNull(), // Human-readable (e.g., "Sales Strategy", "Workspace Context")
+    description: text('description').notNull(), // Purpose of this artifact type
+    instructionPrompt: text('instructionPrompt').notNull(), // AI instructions (markdown)
+    template: text('template'), // Output template (markdown) - nullable for context artifacts
+    createdAt: timestamp('createdAt').defaultNow().notNull(),
+    updatedAt: timestamp('updatedAt').defaultNow().notNull(),
+    updatedByUserId: varchar('updatedByUserId', { length: 255 }).references(
+      () => user.id,
+      { onDelete: 'set null' },
+    ), // FK to User.id - tracks who last modified
+  },
+  (table) => ({
+    categoryIdx: index('idx_artifact_type_category').on(table.category),
+  }),
+);
+
+export type ArtifactType = InferSelectModel<typeof artifactType>;
+
+// Domain table - defines business intelligence domains with default artifact types
+export const domain = pgTable('Domain', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  title: text('title').notNull(), // Human-readable (e.g., "Sales Intelligence", "Project Intelligence")
+  description: text('description').notNull(), // When to use this domain
+  systemPrompt: text('systemPrompt').notNull(), // "Agent operating system" - core domain intelligence
+
+  // Default artifact types for this domain (all FK → ArtifactType.id)
+  defaultObjectiveArtifactTypeId: uuid('defaultObjectiveArtifactTypeId')
+    .references(() => artifactType.id, { onDelete: 'restrict' })
+    .notNull(), // Category: objective
+  defaultSummaryArtifactTypeId: uuid('defaultSummaryArtifactTypeId')
+    .references(() => artifactType.id, { onDelete: 'restrict' })
+    .notNull(), // Category: summary
+  defaultPunchlistArtifactTypeId: uuid('defaultPunchlistArtifactTypeId')
+    .references(() => artifactType.id, { onDelete: 'restrict' })
+    .notNull(), // Category: punchlist
+  defaultWorkspaceContextArtifactTypeId: uuid(
+    'defaultWorkspaceContextArtifactTypeId',
+  )
+    .references(() => artifactType.id, { onDelete: 'restrict' })
+    .notNull(), // Category: context
+  defaultObjectiveContextArtifactTypeId: uuid(
+    'defaultObjectiveContextArtifactTypeId',
+  )
+    .references(() => artifactType.id, { onDelete: 'restrict' })
+    .notNull(), // Category: context
+
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt').defaultNow().notNull(),
+  updatedByUserId: varchar('updatedByUserId', { length: 255 }).references(
+    () => user.id,
+    { onDelete: 'set null' },
+  ), // FK to User.id - tracks who last modified
+});
+
+export type Domain = InferSelectModel<typeof domain>;
+
+// Domain with all artifact type relations loaded
+export interface DomainWithRelations extends Domain {
+  defaultObjectiveArtifactType?: ArtifactType;
+  defaultSummaryArtifactType?: ArtifactType;
+  defaultPunchlistArtifactType?: ArtifactType;
+  defaultWorkspaceContextArtifactType?: ArtifactType;
+  defaultObjectiveContextArtifactType?: ArtifactType;
+}
 
 // User table (Clerk-based authentication)
 export const user = pgTable('User', {
@@ -56,7 +133,12 @@ export const workspace = pgTable(
       .notNull(),
     name: varchar('name', { length: 255 }).notNull(),
     description: text('description'),
-    domainId: varchar('domainId', { length: 50 }).notNull().default('sales'),
+    domainId: uuid('domainId')
+      .references(() => domain.id, { onDelete: 'restrict' })
+      .notNull(), // FK to Domain table (UUID instead of varchar)
+    workspaceContextArtifactTypeId: uuid('workspaceContextArtifactTypeId')
+      .references(() => artifactType.id, { onDelete: 'restrict' })
+      .notNull(), // FK to ArtifactType for workspace context management
     context: text('context'), // Workspace-specific AI instructions (markdown)
     contextUpdatedAt: timestamp('contextUpdatedAt'), // Last context update timestamp
     createdAt: timestamp('createdAt').defaultNow().notNull(),
@@ -66,6 +148,9 @@ export const workspace = pgTable(
   (table) => ({
     userWorkspaceIdx: index('user_workspace_idx').on(table.userId, table.id),
     workspaceDomainIdx: index('workspace_domain_idx').on(table.domainId),
+    workspaceContextArtifactTypeIdx: index(
+      'workspace_context_artifact_type_idx',
+    ).on(table.workspaceContextArtifactTypeId),
   }),
 );
 
@@ -111,6 +196,19 @@ export const objective = pgTable(
     description: text('description'),
     documentType: text('documentType').notNull(),
     status: objectiveStatusEnum('status').notNull().default('open'),
+    // Artifact type FKs for objective management
+    objectiveContextArtifactTypeId: uuid('objectiveContextArtifactTypeId')
+      .references(() => artifactType.id, { onDelete: 'restrict' })
+      .notNull(), // FK for objective context management
+    objectiveDocumentArtifactTypeId: uuid('objectiveDocumentArtifactTypeId')
+      .references(() => artifactType.id, { onDelete: 'restrict' })
+      .notNull(), // FK for objective document creation
+    punchlistArtifactTypeId: uuid('punchlistArtifactTypeId')
+      .references(() => artifactType.id, { onDelete: 'restrict' })
+      .notNull(), // FK for punchlist management
+    summaryArtifactTypeId: uuid('summaryArtifactTypeId')
+      .references(() => artifactType.id, { onDelete: 'restrict' })
+      .notNull(), // FK for summary/transcript processing
     context: text('context'), // Objective-specific AI context (markdown, max 5K chars)
     contextUpdatedAt: timestamp('contextUpdatedAt'), // Last context update timestamp
     createdAt: timestamp('createdAt').defaultNow().notNull(),
@@ -124,6 +222,18 @@ export const objective = pgTable(
     workspaceIdx: index('idx_objective_workspace').on(table.workspaceId),
     statusIdx: index('idx_objective_status').on(table.status),
     documentIdx: index('idx_objective_document').on(table.objectiveDocumentId),
+    objectiveContextArtifactTypeIdx: index(
+      'idx_objective_context_artifact_type',
+    ).on(table.objectiveContextArtifactTypeId),
+    objectiveDocumentArtifactTypeIdx: index(
+      'idx_objective_document_artifact_type',
+    ).on(table.objectiveDocumentArtifactTypeId),
+    punchlistArtifactTypeIdx: index('idx_objective_punchlist_artifact_type').on(
+      table.punchlistArtifactTypeId,
+    ),
+    summaryArtifactTypeIdx: index('idx_objective_summary_artifact_type').on(
+      table.summaryArtifactTypeId,
+    ),
   }),
 );
 
