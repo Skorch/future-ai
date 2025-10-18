@@ -1,13 +1,13 @@
-import type { Domain } from '@/lib/domains';
-import { OBJECTIVE_CONTEXT_GENERATION_PROMPT } from '../shared/prompts/generation/context.prompts';
+import type { ArtifactType, Domain } from '@/lib/db/schema';
 
 export class ObjectiveContextBuilder {
-  generateContextPrompt(domain: Domain): string {
-    let prompt = OBJECTIVE_CONTEXT_GENERATION_PROMPT;
+  generateContextPrompt(artifactType: ArtifactType, domain: Domain): string {
+    // Use database prompt instead of hardcoded
+    let prompt = artifactType.instructionPrompt;
 
-    // Add domain-specific guidance from domain configuration
-    if (domain.objectiveContextPrompt) {
-      prompt += `\n\n## Domain-Specific Guidance\n\n${domain.objectiveContextPrompt}`;
+    // Add domain-specific guidance from domain.systemPrompt
+    if (domain.systemPrompt) {
+      prompt += `\n\n## Domain-Specific Guidance\n\n${domain.systemPrompt}`;
     }
 
     return prompt;

@@ -5,18 +5,14 @@
 
 // Factories
 export { createAgentBuilder } from './factories/agent-builder-factory';
-export { createKnowledgeBuilder } from './factories/knowledge-builder-factory';
 
 // Agent Builders (MODE system removed - now unified)
 export { UnifiedAgentBuilder } from './agents/unified-agent-builder';
 
-// Document Builders (only registered artifact types)
-export { SalesStrategyDocumentBuilder } from './documents/sales-strategy-builder';
-export { BusinessRequirementsDocumentBuilder } from './documents/business-requirements-builder';
-
-// Knowledge Builders (for knowledge summaries)
-export { SalesCallSummaryDocumentBuilder } from './documents/sales-call-summary-builder';
-export { RequirementsMeetingSummaryDocumentBuilder } from './documents/requirements-meeting-summary-builder';
+// Category Builders (generic, database-driven)
+export { ObjectiveDocumentBuilder } from './objective-document-builder';
+export { SummaryBuilder } from './summary-builder';
+export { PunchlistBuilder } from './punchlist-builder';
 
 // Specialized Builders
 export { WorkspaceContextBuilder } from './specialized/workspace-context-builder';
@@ -31,4 +27,3 @@ export {
 // Type exports
 export type { AgentBuilder } from './factories/agent-builder-factory';
 export type { DocumentBuilder, KnowledgeBuilder } from './types';
-export type { KnowledgeType } from './factories/knowledge-builder-factory';

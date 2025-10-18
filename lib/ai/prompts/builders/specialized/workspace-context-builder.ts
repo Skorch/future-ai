@@ -1,13 +1,14 @@
-import type { Domain } from '@/lib/domains';
-import { WORKSPACE_CONTEXT_GENERATION_PROMPT } from '../shared/prompts/generation/context.prompts';
+import type { ArtifactType, Domain } from '@/lib/db/schema';
 
 export class WorkspaceContextBuilder {
-  generateContextPrompt(domain: Domain): string {
-    let prompt = WORKSPACE_CONTEXT_GENERATION_PROMPT;
+  generateContextPrompt(artifactType: ArtifactType, domain: Domain): string {
+    // Use database prompt instead of hardcoded
+    let prompt = artifactType.instructionPrompt;
 
-    // Add domain-specific guidance from domain configuration
-    if (domain.workspaceContextPrompt) {
-      prompt += `\n\n## Domain-Specific Guidance\n\n${domain.workspaceContextPrompt}`;
+    // Add domain-specific guidance from domain.systemPrompt
+    // (Domain intelligence may include workspace-context-specific rules)
+    if (domain.systemPrompt) {
+      prompt += `\n\n## Domain-Specific Guidance\n\n${domain.systemPrompt}`;
     }
 
     return prompt;

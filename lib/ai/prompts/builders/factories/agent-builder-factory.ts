@@ -3,18 +3,17 @@
  * Returns the unified agent builder (MODE system removed in Phase 2)
  */
 
-import type { Workspace, Objective } from '@/lib/db/schema';
-import type { Domain } from '@/lib/domains';
+import type { Domain, Workspace, Objective } from '@/lib/db/schema';
 import { UnifiedAgentBuilder } from '../agents/unified-agent-builder';
 
 /**
  * Category-specific interface for Agent builders
  * Each builder generates a complete system prompt including:
- * - Base system prompt with capabilities
- * - Domain-specific prompt
- * - Unified agent prompt (no modes)
- * - Workspace context (if provided)
- * - Objective context (if provided)
+ * - Base system prompt (hardcoded - core philosophy)
+ * - Playbook guidance (hardcoded - workflow instructions)
+ * - Domain intelligence (database - domain.systemPrompt)
+ * - Unified agent prompt (hardcoded - replaces mode-specific prompts)
+ * - Context layers (database - workspace and objective context)
  */
 export interface AgentBuilder {
   generate(

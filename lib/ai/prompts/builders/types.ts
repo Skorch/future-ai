@@ -3,8 +3,11 @@
  * Shared interfaces for all builder categories
  */
 
-import type { Domain } from '@/lib/domains';
-import type { Workspace, Objective } from '@/lib/db/schema';
+import type {
+  DomainWithRelations,
+  Workspace,
+  Objective,
+} from '@/lib/db/schema';
 
 /**
  * Category-specific interface for Document builders
@@ -12,7 +15,7 @@ import type { Workspace, Objective } from '@/lib/db/schema';
  */
 export interface DocumentBuilder {
   generate(
-    domain: Domain,
+    domain: DomainWithRelations,
     workspace: Workspace | null,
     objective: Objective | null,
   ): string;
@@ -24,7 +27,7 @@ export interface DocumentBuilder {
  */
 export interface KnowledgeBuilder {
   generate(
-    domain: Domain,
+    domain: DomainWithRelations,
     workspace: Workspace | null,
     objective: Objective | null,
   ): string;
