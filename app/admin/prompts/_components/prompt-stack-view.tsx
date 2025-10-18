@@ -1,7 +1,10 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { PromptLayerEditor } from './prompt-layer-editor';
+import { useMemo, useRef, forwardRef, useImperativeHandle } from 'react';
+import {
+  PromptLayerEditor,
+  type PromptLayerEditorRef,
+} from './prompt-layer-editor';
 import { TokenCounter } from './token-counter';
 import { PromptActions } from './prompt-actions';
 import type { Scenario } from '../types';
@@ -18,6 +21,8 @@ interface PromptStackViewProps {
   artifactType: ArtifactType | null;
   workspace?: { context: string | null } | null;
   objective?: { context: string | null } | null;
+  expandedLayers: Set<string>;
+  onToggleLayer: (layerSource: string) => void;
   onSaveDomain?: (domainId: string, systemPrompt: string) => Promise<void>;
   onSaveArtifactType?: (
     artifactTypeId: string,
@@ -25,28 +30,29 @@ interface PromptStackViewProps {
   ) => Promise<void>;
 }
 
-export function PromptStackView({
-  scenario,
-  domain,
-  artifactType,
-  workspace,
-  objective,
-  onSaveDomain,
-  onSaveArtifactType,
-}: PromptStackViewProps) {
-  const [expandedLayers, setExpandedLayers] = useState<Set<string>>(new Set()); // Start with all layers collapsed
+export interface PromptStackViewRef {
+  saveAll: () => Promise<void>;
+}
 
-  const toggleLayer = (layerSource: string) => {
-    setExpandedLayers((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(layerSource)) {
-        newSet.delete(layerSource);
-      } else {
-        newSet.add(layerSource);
-      }
-      return newSet;
-    });
-  };
+export const PromptStackView = forwardRef<
+  PromptStackViewRef,
+  PromptStackViewProps
+>(function PromptStackView(
+  {
+    scenario,
+    domain,
+    artifactType,
+    workspace,
+    objective,
+    expandedLayers,
+    onToggleLayer,
+    onSaveDomain,
+    onSaveArtifactType,
+  },
+  ref,
+) {
+  // Create refs for all layer editors
+  const editorRefs = useRef<Map<string, PromptLayerEditorRef>>(new Map());
 
   // Compose layer content from various sources
   const layers = useMemo(() => {
@@ -135,6 +141,19 @@ export function PromptStackView({
     }));
   }, [layers]);
 
+  // Expose saveAll method to flush all pending saves
+  useImperativeHandle(ref, () => ({
+    saveAll: async () => {
+      const savePromises: Promise<void>[] = [];
+      editorRefs.current.forEach((editorRef) => {
+        if (editorRef) {
+          savePromises.push(editorRef.saveNow());
+        }
+      });
+      await Promise.all(savePromises);
+    },
+  }));
+
   return (
     <div className="space-y-4">
       {/* Token Counter */}
@@ -148,16 +167,23 @@ export function PromptStackView({
         {layers.map((layer) => (
           <PromptLayerEditor
             key={layer.source}
+            ref={(el) => {
+              if (el) {
+                editorRefs.current.set(layer.source, el);
+              } else {
+                editorRefs.current.delete(layer.source);
+              }
+            }}
             label={layer.label}
             dbField={layer.dbField}
             content={layer.content}
             editable={layer.editable}
             expanded={expandedLayers.has(layer.source)}
-            onToggle={() => toggleLayer(layer.source)}
+            onToggle={() => onToggleLayer(layer.source)}
             onSave={layer.onSave}
           />
         ))}
       </div>
     </div>
   );
-}
+});

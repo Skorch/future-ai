@@ -1,6 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import {
+  useState,
+  useEffect,
+  useCallback,
+  forwardRef,
+  useImperativeHandle,
+} from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import TiptapStarterKit from '@tiptap/starter-kit';
 import { Markdown } from 'tiptap-markdown';
@@ -33,15 +39,17 @@ interface PromptLayerEditorProps {
   onSave: (content: string) => Promise<void>;
 }
 
-export function PromptLayerEditor({
-  label,
-  dbField,
-  content,
-  editable,
-  expanded,
-  onToggle,
-  onSave,
-}: PromptLayerEditorProps) {
+export interface PromptLayerEditorRef {
+  saveNow: () => Promise<void>;
+}
+
+export const PromptLayerEditor = forwardRef<
+  PromptLayerEditorRef,
+  PromptLayerEditorProps
+>(function PromptLayerEditor(
+  { label, dbField, content, editable, expanded, onToggle, onSave },
+  ref,
+) {
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [, setEditorState] = useState(0); // Force re-render on selection change
@@ -128,6 +136,31 @@ export function PromptLayerEditor({
       editor.off('selectionUpdate', handleSelectionUpdate);
     };
   }, [editor]);
+
+  // Update editor content when prop changes (e.g., domain switch)
+  useEffect(() => {
+    if (!editor || !content) return;
+
+    // Only update if content actually changed to avoid disrupting user edits
+    const currentContent =
+      // biome-ignore lint/suspicious/noExplicitAny: Tiptap storage types don't include markdown extension
+      (editor.storage as any).markdown?.getMarkdown?.() || editor.getText();
+
+    if (currentContent !== content) {
+      editor.commands.setContent(content);
+    }
+  }, [content, editor]);
+
+  // Expose saveNow method via ref (like DocumentEditor pattern)
+  useImperativeHandle(ref, () => ({
+    saveNow: async () => {
+      if (!editor || !editable) return;
+      const markdown =
+        // biome-ignore lint/suspicious/noExplicitAny: Tiptap storage types don't include markdown extension
+        (editor.storage as any).markdown?.getMarkdown?.() || editor.getText();
+      await saveContent(markdown);
+    },
+  }));
 
   if (!editor) {
     return null;
@@ -271,4 +304,4 @@ export function PromptLayerEditor({
       )}
     </Card>
   );
-}
+});
