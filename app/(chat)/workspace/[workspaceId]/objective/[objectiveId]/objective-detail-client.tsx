@@ -185,9 +185,6 @@ export function ObjectiveDetailClient({
 
           {/* Metadata Row */}
           <div className="flex items-center gap-4 flex-wrap">
-            <Badge variant="outline" className="text-sm capitalize">
-              {objective.documentType}
-            </Badge>
             <span className="text-sm text-muted-foreground">
               Created{' '}
               {formatDistanceToNow(new Date(objective.createdAt), {

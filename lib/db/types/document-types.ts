@@ -1,26 +1,18 @@
+/**
+ * Document Type Definitions
+ *
+ * Separates document types into two categories:
+ * 1. Raw Documents - Uploaded/imported content (transcripts, emails, etc.)
+ * 2. Knowledge Documents - AI-generated artifacts (meeting analysis, requirements, etc.)
+ */
+
 import { z } from 'zod';
 
 /**
- * Document Type System
+ * Raw Document Types - User-uploaded content
  *
- * Two parallel type systems for different document categories:
- *
- * RAW_DOCUMENT_TYPES: For uploaded/pasted content (category: 'raw')
- * - Naming: underscore_separated (e.g., 'meeting_notes')
- * - Purpose: Classify source/format of raw documents before AI processing
- *
- * KNOWLEDGE_DOCUMENT_TYPES: For AI-generated summaries (category: 'knowledge')
- * - Naming: hyphen-separated (e.g., 'meeting-analysis')
- * - Purpose: Map to artifact registry types for AI-generated knowledge documents
- *
- * Naming Convention Rationale:
- * - Raw types use underscores for consistency with database enum conventions
- * - Knowledge types use hyphens to match existing artifact registry keys
- */
-
-/**
- * RAW_DOCUMENT_TYPES - For uploaded/pasted content (category: 'raw')
- * These types classify the source/format of raw documents before AI processing
+ * These represent documents imported or uploaded by users.
+ * Used for classification during upload and metadata generation.
  */
 export const RAW_DOCUMENT_TYPES = {
   TRANSCRIPT: 'transcript',
@@ -35,8 +27,10 @@ export type RawDocumentType =
   (typeof RAW_DOCUMENT_TYPES)[keyof typeof RAW_DOCUMENT_TYPES];
 
 /**
- * KNOWLEDGE_DOCUMENT_TYPES - For AI-generated summaries/analysis (category: 'knowledge')
- * These types map to artifact registry types for AI-generated knowledge documents
+ * Knowledge Document Types - AI-generated artifacts
+ *
+ * These are created by the AI through various document generation tools.
+ * Each has specific prompts and structure defined in lib/artifacts/.
  */
 export const KNOWLEDGE_DOCUMENT_TYPES = {
   TEXT: 'text',
@@ -53,31 +47,31 @@ export type KnowledgeDocumentType =
   (typeof KNOWLEDGE_DOCUMENT_TYPES)[keyof typeof KNOWLEDGE_DOCUMENT_TYPES];
 
 /**
- * Combined union type for all document types (stored in DB as TEXT)
+ * Union of all document types
  */
 export type DocumentType = RawDocumentType | KnowledgeDocumentType;
 
 /**
- * Zod schemas for runtime validation
+ * Zod Schemas for validation
  */
 export const RawDocumentTypeSchema = z.enum([
-  'transcript',
-  'email',
-  'slack',
-  'meeting_notes',
-  'research',
-  'other',
+  RAW_DOCUMENT_TYPES.TRANSCRIPT,
+  RAW_DOCUMENT_TYPES.EMAIL,
+  RAW_DOCUMENT_TYPES.SLACK,
+  RAW_DOCUMENT_TYPES.MEETING_NOTES,
+  RAW_DOCUMENT_TYPES.RESEARCH,
+  RAW_DOCUMENT_TYPES.OTHER,
 ]);
 
 export const KnowledgeDocumentTypeSchema = z.enum([
-  'text',
-  'meeting-analysis',
-  'meeting-agenda',
-  'meeting-minutes',
-  'use-case',
-  'business-requirements',
-  'sales-call-summary',
-  'sales-strategy',
+  KNOWLEDGE_DOCUMENT_TYPES.TEXT,
+  KNOWLEDGE_DOCUMENT_TYPES.MEETING_ANALYSIS,
+  KNOWLEDGE_DOCUMENT_TYPES.MEETING_AGENDA,
+  KNOWLEDGE_DOCUMENT_TYPES.MEETING_MINUTES,
+  KNOWLEDGE_DOCUMENT_TYPES.USE_CASE,
+  KNOWLEDGE_DOCUMENT_TYPES.BUSINESS_REQUIREMENTS,
+  KNOWLEDGE_DOCUMENT_TYPES.SALES_CALL_SUMMARY,
+  KNOWLEDGE_DOCUMENT_TYPES.SALES_STRATEGY,
 ]);
 
 export const DocumentTypeSchema = z.union([
@@ -86,52 +80,52 @@ export const DocumentTypeSchema = z.union([
 ]);
 
 /**
- * Type guards
+ * Type Guards
  */
-export function isRawDocumentType(value: string): value is RawDocumentType {
-  return Object.values(RAW_DOCUMENT_TYPES).includes(value as RawDocumentType);
+export function isRawDocumentType(type: string): type is RawDocumentType {
+  return Object.values(RAW_DOCUMENT_TYPES).includes(type as RawDocumentType);
 }
 
 export function isKnowledgeDocumentType(
-  value: string,
-): value is KnowledgeDocumentType {
+  type: string,
+): type is KnowledgeDocumentType {
   return Object.values(KNOWLEDGE_DOCUMENT_TYPES).includes(
-    value as KnowledgeDocumentType,
+    type as KnowledgeDocumentType,
   );
 }
 
-export function isValidDocumentType(value: string): value is DocumentType {
-  return isRawDocumentType(value) || isKnowledgeDocumentType(value);
+export function isValidDocumentType(type: string): type is DocumentType {
+  return isRawDocumentType(type) || isKnowledgeDocumentType(type);
 }
 
 /**
- * Display labels for UI
+ * Display Labels for UI
  */
 export const RAW_DOCUMENT_TYPE_LABELS: Record<RawDocumentType, string> = {
-  transcript: 'Transcript',
-  email: 'Email',
-  slack: 'Slack Conversation',
-  meeting_notes: 'Meeting Notes',
-  research: 'Research Document',
-  other: 'Other',
+  [RAW_DOCUMENT_TYPES.TRANSCRIPT]: 'Transcript',
+  [RAW_DOCUMENT_TYPES.EMAIL]: 'Email',
+  [RAW_DOCUMENT_TYPES.SLACK]: 'Slack Conversation',
+  [RAW_DOCUMENT_TYPES.MEETING_NOTES]: 'Meeting Notes',
+  [RAW_DOCUMENT_TYPES.RESEARCH]: 'Research Document',
+  [RAW_DOCUMENT_TYPES.OTHER]: 'Other',
 };
 
 export const KNOWLEDGE_DOCUMENT_TYPE_LABELS: Record<
   KnowledgeDocumentType,
   string
 > = {
-  text: 'Text',
-  'meeting-analysis': 'Meeting Analysis',
-  'meeting-agenda': 'Meeting Agenda',
-  'meeting-minutes': 'Meeting Minutes',
-  'use-case': 'Use Case',
-  'business-requirements': 'Business Requirements',
-  'sales-call-summary': 'Sales Call Summary',
-  'sales-strategy': 'Sales Strategy',
+  [KNOWLEDGE_DOCUMENT_TYPES.TEXT]: 'Text',
+  [KNOWLEDGE_DOCUMENT_TYPES.MEETING_ANALYSIS]: 'Meeting Analysis',
+  [KNOWLEDGE_DOCUMENT_TYPES.MEETING_AGENDA]: 'Meeting Agenda',
+  [KNOWLEDGE_DOCUMENT_TYPES.MEETING_MINUTES]: 'Meeting Minutes',
+  [KNOWLEDGE_DOCUMENT_TYPES.USE_CASE]: 'Use Case',
+  [KNOWLEDGE_DOCUMENT_TYPES.BUSINESS_REQUIREMENTS]: 'Business Requirements',
+  [KNOWLEDGE_DOCUMENT_TYPES.SALES_CALL_SUMMARY]: 'Sales Call Summary',
+  [KNOWLEDGE_DOCUMENT_TYPES.SALES_STRATEGY]: 'Sales Strategy',
 };
 
 /**
- * Helper to get display label for any document type
+ * Get human-readable label for any document type
  */
 export function getDocumentTypeLabel(type: DocumentType): string {
   if (isRawDocumentType(type)) {
@@ -141,62 +135,4 @@ export function getDocumentTypeLabel(type: DocumentType): string {
     return KNOWLEDGE_DOCUMENT_TYPE_LABELS[type];
   }
   return 'Unknown';
-}
-
-/**
- * Metadata Extraction Utilities
- *
- * Functions for safely extracting document type information
- * from untyped database metadata objects
- */
-
-/**
- * Safely extract document type from database metadata
- *
- * Handles untyped metadata objects from the database and returns
- * a validated DocumentType or a safe default.
- *
- * @param metadata - Untyped metadata object from database
- * @returns Valid DocumentType or 'text' as safe default
- *
- * @example
- * const docType = extractDocumentType(objectiveDoc.latestVersion.metadata);
- */
-export function extractDocumentType(metadata: unknown): DocumentType {
-  if (
-    typeof metadata === 'object' &&
-    metadata !== null &&
-    'documentType' in metadata &&
-    typeof metadata.documentType === 'string' &&
-    isValidDocumentType(metadata.documentType)
-  ) {
-    return metadata.documentType;
-  }
-  return KNOWLEDGE_DOCUMENT_TYPES.TEXT; // Safe default for knowledge documents
-}
-
-/**
- * Safely extract raw document type from database metadata
- *
- * Specifically for raw documents (category: 'raw') where we need
- * to ensure we get a RawDocumentType for summary generation.
- *
- * @param metadata - Untyped metadata object from database
- * @returns Valid RawDocumentType or 'other' as safe default
- *
- * @example
- * const rawType = extractRawDocumentType(rawDoc.metadata);
- * const prompt = buildSummaryPromptWithContent(rawType, content);
- */
-export function extractRawDocumentType(metadata: unknown): RawDocumentType {
-  if (
-    typeof metadata === 'object' &&
-    metadata !== null &&
-    'documentType' in metadata &&
-    typeof metadata.documentType === 'string' &&
-    isRawDocumentType(metadata.documentType)
-  ) {
-    return metadata.documentType;
-  }
-  return RAW_DOCUMENT_TYPES.OTHER; // Safe default for raw documents
 }

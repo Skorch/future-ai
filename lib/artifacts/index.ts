@@ -1,6 +1,4 @@
 import type { ArtifactDefinition } from './types';
-import type { DomainId } from '@/lib/domains';
-import { getDomain } from '@/lib/domains';
 
 // Artifact registry - single source of truth for all document types
 export const artifactRegistry = {
@@ -33,28 +31,12 @@ export async function getDocumentTypeDefinition(
 }
 
 // Load all definitions (for prompts, UI, etc.)
-// Filtered by domain - only returns types allowed in the given domain
+// TODO: This should be replaced with database-driven artifact type queries
+// For now, returns all types unfiltered
 export async function getAllDocumentTypes(
-  domainId: DomainId,
+  _domainId?: string, // Ignored for now - domain filtering should come from database
 ): Promise<ArtifactDefinition[]> {
-  const domain = getDomain(domainId);
-  const allowedTypes = domain.allowedTypes;
-
-  // Filter registry entries by domain's allowed types
-  const entries = Object.entries(artifactRegistry).filter(([key]) =>
-    allowedTypes.includes(key as DocumentType),
-  );
-
-  const definitions = await Promise.all(
-    entries.map(async ([, loader]) => {
-      const artifactModule = await loader();
-      return {
-        metadata: artifactModule.metadata,
-        handler: artifactModule.handler,
-      };
-    }),
-  );
-  return definitions;
+  return getAllDocumentTypesUnfiltered();
 }
 
 // Internal function to load ALL document types (unfiltered)

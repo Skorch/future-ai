@@ -1,7 +1,3 @@
-import { getAllDocumentTypes } from '@/lib/artifacts';
-import type { ArtifactDefinition } from '@/lib/artifacts/types';
-import type { DomainId } from '@/lib/domains';
-
 /**
  * Get system prompt header with dynamic context
  * Injects current date and other temporal context
@@ -128,67 +124,3 @@ Playbooks are retrieval-based workflows that provide:
 
 Remember: When in doubt about a complex workflow, check if a playbook exists using getPlaybook tool.
 `;
-
-// Generate system capabilities from registry
-// Domain-specific - no cache (capabilities differ by domain)
-async function generateSystemCapabilities(domainId: DomainId): Promise<string> {
-  try {
-    const docTypes = await getAllDocumentTypes(domainId);
-
-    return `
-## My Core Capabilities
-
-### Document Creation
-I can help you create these types of business documents:
-
-${docTypes
-  .map((dt: ArtifactDefinition) => {
-    const metadata = dt.metadata;
-    const required = metadata.requiredParams?.includes('sourceDocumentIds')
-      ? '📎 Requires transcript/source documents'
-      : '✏️ Can create from scratch';
-
-    return `**${metadata.name}**
-  ${metadata.description}
-  ${required}
-  Use when: ${metadata.agentGuidance.when}
-  Keywords: ${metadata.agentGuidance.triggers.slice(0, 3).join(', ')}`;
-  })
-  .join('\n\n')}
-
-### How I Work
-- **Discovery Mode**: I investigate your needs, search existing knowledge, and guide you to the right solution
-- **Build Mode**: I create documents and deliverables based on discovered requirements
-
-To get started, you can:
-- Ask "What can you do?" to see my capabilities
-- Upload a transcript for automatic processing
-- Describe the document you need
-- Ask me to search for existing information`;
-  } catch (error) {
-    // Log error silently and return empty string - don't break the prompt
-    // Consider using a proper logger here if available
-    return '';
-  }
-}
-
-// Main system prompt composer - NOW ASYNC
-export async function composeSystemPrompt({
-  domainPrompts = [],
-  domainId,
-}: {
-  domainPrompts?: string[];
-  domainId: DomainId;
-}): Promise<string> {
-  // Generate capabilities at system level (filtered by domain)
-  const capabilities = await generateSystemCapabilities(domainId);
-
-  const components = [
-    SYSTEM_PROMPT_BASE,
-    capabilities, // System-level capability injection
-    PLAYBOOK_GUIDANCE, // Playbook guidance for structured workflows
-    ...domainPrompts,
-  ].filter(Boolean);
-
-  return components.join('\n\n---\n\n');
-}

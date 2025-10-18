@@ -17,11 +17,11 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { fetcher } from '@/lib/utils';
 import type { Workspace } from '@/lib/db/schema';
+import type { WorkspaceWithDomain } from '@/lib/workspace/queries';
 import {
   CreateWorkspaceDialog,
   DeleteWorkspaceDialog,
 } from './workspace-dialogs';
-import { getDomain } from '@/lib/domains';
 
 interface WorkspaceSwitcherProps {
   currentWorkspaceId: string;
@@ -39,7 +39,7 @@ function WorkspaceSwitcherContent({
     data: workspaces,
     mutate,
     isLoading,
-  } = useSWR<Workspace[]>('/api/workspace', fetcher, {
+  } = useSWR<WorkspaceWithDomain[]>('/api/workspace', fetcher, {
     revalidateOnFocus: false,
     fallbackData: [], // Provide empty array as fallback for SSR
   });
@@ -74,15 +74,12 @@ function WorkspaceSwitcherContent({
   };
 
   const handleCreateSuccess = async (newWorkspace: Workspace) => {
-    // Optimistically add the new workspace
-    mutate([...(workspaces || []), newWorkspace], false);
-
     // Switch to the new workspace
     startTransition(() => {
       router.push(`/workspace/${newWorkspace.id}`);
     });
 
-    // Revalidate in background
+    // Revalidate to fetch workspace with domain title
     mutate();
 
     toast.success(`Created workspace "${newWorkspace.name}"`);
@@ -140,7 +137,6 @@ function WorkspaceSwitcherContent({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-[240px]">
           {workspaces.map((workspace) => {
-            const domain = getDomain(workspace.domainId);
             return (
               <DropdownMenuItem
                 key={workspace.id}
@@ -150,9 +146,11 @@ function WorkspaceSwitcherContent({
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2">
                     <span>{workspace.name}</span>
-                    <span className="px-1.5 py-0.5 text-[10px] font-medium bg-muted rounded uppercase">
-                      {domain.label}
-                    </span>
+                    {workspace.domainTitle && (
+                      <span className="px-1.5 py-0.5 text-[10px] font-medium bg-muted rounded uppercase">
+                        {workspace.domainTitle}
+                      </span>
+                    )}
                   </div>
                   {workspace.description && (
                     <span className="text-xs text-muted-foreground">

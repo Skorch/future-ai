@@ -145,16 +145,6 @@ export function ObjectiveTable({
         },
       },
       {
-        key: 'documentType',
-        name: 'Type',
-        width: 120,
-        renderCell: ({ row }) => (
-          <Badge variant="outline" className="capitalize">
-            {row.documentType}
-          </Badge>
-        ),
-      },
-      {
         key: 'status',
         name: 'Status',
         width: 120,

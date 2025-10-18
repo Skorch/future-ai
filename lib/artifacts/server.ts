@@ -40,6 +40,7 @@ export interface GeneratePunchlistCallbackProps {
   dataStream: UIMessageStreamWriter<ChatMessage>;
   workspaceId: string;
   session: { user: { id: string } };
+  objectiveId: string;
 }
 
 export interface DocumentHandler<T = ArtifactKind> {

@@ -1,11 +1,11 @@
 // Re-export core components from new structure
 export {
-  composeSystemPrompt,
   getSystemPromptHeader,
   SYSTEM_PROMPT_BASE,
+  PLAYBOOK_GUIDANCE,
 } from './prompts/system';
 
-// Note: systemPrompt function has been removed. Use composeSystemPrompt() from './prompts/system' instead.
+// Note: composeSystemPrompt has been removed. Builders now compose prompts directly from database.
 import { getLogger } from '@/lib/logger';
 
 const logger = getLogger('prompts');

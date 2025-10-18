@@ -10,7 +10,6 @@ import { ObjectiveTable } from '@/components/objective-table';
 import { KnowledgeTable } from '@/components/knowledge-table';
 import { CreateObjectiveDialog } from './create-objective-dialog';
 import { WorkspaceContextTab } from './workspace-context-tab';
-import { getDomain } from '@/lib/domains';
 import type { Workspace } from '@/lib/db/schema';
 import type { Objective } from '@/lib/db/objective';
 import type { KnowledgeDocument } from '@/lib/db/knowledge-document';
@@ -20,6 +19,7 @@ interface WorkspacePageClientProps {
   objectives: Objective[];
   knowledge: KnowledgeDocument[];
   raw: KnowledgeDocument[];
+  workspaceContextPlaceholder: string;
 }
 
 export function WorkspacePageClient({
@@ -27,6 +27,7 @@ export function WorkspacePageClient({
   objectives,
   knowledge,
   raw,
+  workspaceContextPlaceholder,
 }: WorkspacePageClientProps) {
   const [activeTab, setActiveTab] = useState('objectives');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -151,9 +152,7 @@ export function WorkspacePageClient({
               workspaceId={workspace.id}
               initialContext={workspace.context}
               lastUpdated={workspace.contextUpdatedAt}
-              placeholder={
-                getDomain(workspace.domainId).workspaceContextPlaceholder
-              }
+              placeholder={workspaceContextPlaceholder}
             />
           </TabsContent>
 

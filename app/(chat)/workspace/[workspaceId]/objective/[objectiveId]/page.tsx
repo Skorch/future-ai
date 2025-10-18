@@ -4,8 +4,7 @@ import { getObjectiveWithContext } from '@/lib/db/objective';
 import { getDocumentByObjectiveId } from '@/lib/db/objective-document';
 import { getChatsByObjectiveId } from '@/lib/db/queries';
 import { getKnowledgeByObjectiveId } from '@/lib/db/knowledge-document';
-import { getWorkspaceById } from '@/lib/workspace/queries';
-import { getDomain } from '@/lib/domains';
+import { getByWorkspaceId as getDomainByWorkspaceId } from '@/lib/db/queries/domain';
 import { ObjectiveDetailClient } from './objective-detail-client';
 
 export default async function ObjectiveDetailPage(props: {
@@ -32,12 +31,9 @@ export default async function ObjectiveDetailPage(props: {
     redirect(`/workspace/${workspaceId}`);
   }
 
-  // Get domain for placeholder
-  const workspace = await getWorkspaceById(workspaceId, userId);
-  const domain = getDomain(workspace?.domainId);
-
-  // Load document, chats, and knowledge documents in parallel
-  const [document, chatsRaw, knowledgeDocs] = await Promise.all([
+  // Load domain, document, chats, and knowledge documents in parallel
+  const [domain, document, chatsRaw, knowledgeDocs] = await Promise.all([
+    getDomainByWorkspaceId(workspaceId),
     getDocumentByObjectiveId(objectiveId),
     getChatsByObjectiveId(objectiveId, userId),
     getKnowledgeByObjectiveId(objectiveId),
@@ -68,7 +64,10 @@ export default async function ObjectiveDetailPage(props: {
       raw={raw}
       objectiveContext={context}
       contextUpdatedAt={contextUpdatedAt}
-      objectiveContextPlaceholder={domain.objectiveContextPlaceholder}
+      objectiveContextPlaceholder={
+        domain?.defaultObjectiveContextArtifactType?.description ||
+        'Provide context about this objective...'
+      }
     />
   );
 }
