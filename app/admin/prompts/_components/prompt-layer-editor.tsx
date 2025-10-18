@@ -55,7 +55,8 @@ export const PromptLayerEditor = forwardRef<
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [isDirty, setIsDirty] = useState(false); // Track unsaved changes
   const [, setEditorState] = useState(0); // Force re-render on selection change
-  const isLoadingContent = useRef(true); // Start true to block initial page load saves
+  const isInitialMount = useRef(true); // Block saves on initial mount
+  const isLoadingContent = useRef(false); // Block saves during programmatic content updates
 
   const editor = useEditor({
     extensions: [
@@ -107,11 +108,14 @@ export const PromptLayerEditor = forwardRef<
     [saveContent],
   );
 
-  // Enable saves after initial render completes
+  // Mark initial mount complete after first render
   useEffect(() => {
     if (editor) {
-      // Allow user edits to trigger saves after page load
-      isLoadingContent.current = false;
+      // Small delay to ensure initial content is fully loaded
+      const timer = setTimeout(() => {
+        isInitialMount.current = false;
+      }, 100);
+      return () => clearTimeout(timer);
     }
   }, [editor]);
 
@@ -120,7 +124,10 @@ export const PromptLayerEditor = forwardRef<
     if (!editor || !editable) return;
 
     const handleUpdate = () => {
-      // Ignore updates from programmatic content changes (e.g., domain switch, page load)
+      // Ignore updates on initial mount (page load)
+      if (isInitialMount.current) return;
+
+      // Ignore updates from programmatic content changes (e.g., domain switch)
       if (isLoadingContent.current) return;
 
       setIsDirty(true); // Mark as dirty on user edit only
@@ -168,10 +175,10 @@ export const PromptLayerEditor = forwardRef<
       editor.commands.setContent(content);
       setIsDirty(false); // New content loaded, not dirty yet
 
-      // Clear the flag after the update event has fired
+      // Clear the flag after a brief delay to ensure update event is ignored
       setTimeout(() => {
         isLoadingContent.current = false;
-      }, 0);
+      }, 50);
     }
   }, [content, editor]);
 
