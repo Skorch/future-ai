@@ -12,8 +12,8 @@ import {
   logTokenStats,
 } from '@/lib/ai/utils/token-analyzer';
 import { auth } from '@clerk/nextjs/server';
-import { composeSystemPrompt } from '@/lib/ai/prompts/system';
-import { getDomain, DEFAULT_DOMAIN, type DomainId } from '@/lib/domains';
+import { getByWorkspaceId as getDomainByWorkspaceId } from '@/lib/db/queries/domain';
+import { createAgentBuilder } from '@/lib/ai/prompts/builders/factories/agent-builder-factory';
 import {
   createStreamId,
   getChatByIdWithWorkspace,
@@ -22,13 +22,16 @@ import {
   saveMessages,
   db,
 } from '@/lib/db/queries';
-import {
-  getOrCreateActiveObjective,
-  getObjectiveById,
-} from '@/lib/db/objective';
+import { getOrCreateActiveObjective } from '@/lib/db/objective';
 import { initializeVersionForChat } from '@/lib/db/objective-document';
-import { workspace, chat as chatTable } from '@/lib/db/schema';
+import {
+  workspace,
+  chat as chatTable,
+  objective,
+  type Objective,
+} from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+
 import { convertToUIMessages, generateUUID } from '@/lib/utils';
 import { generateTitleFromUserMessage } from '@/app/(chat)/actions';
 import { generateDocumentVersion } from '@/lib/ai/tools/generate-document-version';
@@ -61,6 +64,16 @@ import { getLogger } from '@/lib/logger';
 const logger = getLogger('ChatRoute');
 
 export const maxDuration = 300; // 5 minutes (300 seconds)
+
+// Temporary legacy type until tools are updated
+type DomainId = 'sales' | 'project';
+/**
+ * Map database domain title to legacy DomainId
+ * TODO: Remove this mapping once tools are updated to use domain UUIDs
+ */
+function getLegacyDomainId(domainTitle: string): DomainId {
+  return domainTitle === 'Sales Intelligence' ? 'sales' : 'project';
+}
 
 let globalStreamContext: ResumableStreamContext | null = null;
 
@@ -122,20 +135,27 @@ export async function POST(
       return new ChatSDKError('unauthorized:chat').toResponse();
     }
 
-    // Load full workspace object (needed for builder)
-    const workspaceData = await db
-      .select()
-      .from(workspace)
-      .where(eq(workspace.id, workspaceId))
-      .limit(1);
+    // Fetch domain with all artifact type relations (cached)
+    const domain = await getDomainByWorkspaceId(workspaceId);
 
-    const workspaceObject = workspaceData[0] || null;
-    const domainId = (workspaceObject?.domainId as DomainId) || DEFAULT_DOMAIN;
-    const domain = getDomain(domainId);
+    if (!domain) {
+      return new ChatSDKError(
+        'not_found:database',
+        'Domain not found for workspace',
+      ).toResponse();
+    }
 
-    logger.debug(`Agent domain from workspace: ${domainId}`, {
+    // Load workspace with artifact type relation
+    const workspaceObject = await db.query.workspace.findFirst({
+      where: eq(workspace.id, workspaceId),
+      with: {
+        workspaceContextArtifactType: true,
+      },
+    });
+
+    logger.debug(`Agent domain from workspace: ${domain.id}`, {
       workspaceId,
-      domainLabel: domain.label,
+      domainTitle: domain.title,
     });
 
     // Create session object for AI tools
@@ -149,9 +169,8 @@ export async function POST(
       userId,
     });
 
-    // Determine the final objectiveId and documentType for this chat
+    // Determine the final objectiveId for this chat
     let chatObjectiveId: string;
-    let chatDocumentType: string;
 
     if (!chat) {
       const title = await generateTitleFromUserMessage({
@@ -164,15 +183,13 @@ export async function POST(
         (await getOrCreateActiveObjective(workspaceId, userId));
 
       // Initialize version for new chat (creates document if needed, returns metadata)
-      const { versionId, documentType, objectiveId } =
-        await initializeVersionForChat(
-          id,
-          chatObjectiveId,
-          userId,
-          workspaceId,
-        );
+      const { versionId, objectiveId } = await initializeVersionForChat(
+        id,
+        chatObjectiveId,
+        userId,
+        workspaceId,
+      );
 
-      chatDocumentType = documentType;
       chatObjectiveId = objectiveId;
 
       await saveChat({
@@ -186,38 +203,28 @@ export async function POST(
       logger.debug('Created chat with version', {
         chatId: id,
         versionId,
-        documentType,
       });
     } else {
       // Chat already exists, use its objectiveId
       chatObjectiveId = chat.objectiveId;
 
-      // Initialize version if missing (also gets documentType)
+      // Initialize version if missing
       if (!chat.objectiveDocumentVersionId) {
         logger.warn('Existing chat missing version, initializing', {
           chatId: id,
         });
-        const { versionId, documentType } = await initializeVersionForChat(
+        const { versionId } = await initializeVersionForChat(
           id,
           chatObjectiveId,
           userId,
           workspaceId,
         );
 
-        chatDocumentType = documentType;
-
         // Update chat with version
         await db
           .update(chatTable)
           .set({ objectiveDocumentVersionId: versionId })
           .where(eq(chatTable.id, id));
-      } else {
-        // Chat has version, just get documentType from objective
-        const objective = await getObjectiveById(chatObjectiveId, userId);
-        if (!objective) {
-          throw new ChatSDKError('not_found:chat', 'Objective not found');
-        }
-        chatDocumentType = objective.documentType;
       }
     }
 
@@ -244,16 +251,30 @@ export async function POST(
     // Use default chat model
     const selectedModel = DEFAULT_CHAT_MODEL;
 
+    // Load full objective object with artifact type relations (needed for builder)
+    let objectiveObject = null;
+    if (chatObjectiveId) {
+      objectiveObject = await db.query.objective.findFirst({
+        where: eq(objective.id, chatObjectiveId),
+        with: {
+          objectiveContextArtifactType: true,
+          summaryArtifactType: true,
+        },
+      });
+    }
+
     // Process messages BEFORE creating the stream so it's available in onFinish
     const processedMessages = await processMessageFiles(uiMessages);
 
     const modelMessages = convertToModelMessages(processedMessages);
 
-    // Get system prompt (not using MODE prepareStep anymore)
-    const systemPromptText = await composeSystemPrompt({
-      domainPrompts: [domain.prompt],
-      domainId,
-    });
+    // Use builder to compose system prompt from database
+    const builder = createAgentBuilder();
+    const systemPromptText = await builder.generate(
+      domain,
+      workspaceObject || null,
+      objectiveObject as Objective | null,
+    );
 
     // Analyze token usage before streaming
     const userMsgCount = modelMessages.filter((m) => m.role === 'user').length;
@@ -269,12 +290,6 @@ export async function POST(
     // Store initial token count for tracking growth
     let currentTokenCount = tokenStats.totalTokens;
     let stepCount = 0;
-
-    // Load full objective object (needed for tools)
-    let objectiveObject = null;
-    if (chatObjectiveId) {
-      objectiveObject = await getObjectiveById(chatObjectiveId, userId);
-    }
 
     const stream = createUIMessageStream({
       execute: async ({ writer: dataStream }) => {
@@ -390,8 +405,20 @@ export async function POST(
 
           let result: ReturnType<typeof streamText>;
           try {
+            // Map domain title to legacy DomainId for tools
+            const legacyDomainId = getLegacyDomainId(domain.title);
+
             // Build tools object (with async tool building)
-            const playbookTool = await getPlaybook({ domainId });
+            const playbookTool = await getPlaybook({
+              domainId: legacyDomainId,
+            });
+
+            // Map domain title to legacy documentType for tool
+            const documentType =
+              domain.title === 'Sales Intelligence'
+                ? 'sales-strategy'
+                : 'business-requirements';
+
             const tools = {
               // Document generation tool (replaces create/update)
               generateDocumentVersion: generateDocumentVersion({
@@ -400,7 +427,7 @@ export async function POST(
                 workspaceId,
                 chatId: id,
                 objectiveId: chatObjectiveId,
-                documentType: chatDocumentType,
+                documentType,
               }),
 
               // Punchlist update tool (Phase 4)
@@ -437,12 +464,12 @@ export async function POST(
                 session,
                 dataStream,
                 workspaceId,
-                domainId,
+                domainId: legacyDomainId,
               }),
               listDocuments: await listDocuments({
                 session,
                 workspaceId,
-                domainId,
+                domainId: legacyDomainId,
                 objectiveId: chatObjectiveId,
               }),
               loadDocument: loadDocument({ session, workspaceId }),

@@ -66,13 +66,15 @@ The tool will use the objective's document type automatically.`,
 
       try {
         // 1. Get version for this chat
-        const version = await getVersionByChatId(chatId);
-        if (!version) {
+        const result = await getVersionByChatId(chatId);
+        if (!result) {
           return {
             success: false,
             error: 'No version found for this chat. Please start a new chat.',
           };
         }
+
+        const { version } = result;
 
         // 2. Get document handler (documentType provided by tool context)
         const documentDef = await getDocumentTypeDefinition(

@@ -53,17 +53,20 @@ export const updatePunchlist = ({
       const startTime = Date.now();
 
       try {
-        // 1. Get version for this chat
-        const version = await getVersionByChatId(chatId);
-        if (!version) {
+        // 1. Get version and objectiveId for this chat
+        const result = await getVersionByChatId(chatId);
+        if (!result) {
           return {
             success: false,
             error: 'No version found for this chat. Please start a new chat.',
           };
         }
 
+        const { version, objectiveId } = result;
+
         logger.info('Starting punchlist update', {
           versionId: version.id,
+          objectiveId,
           documentType,
           knowledgeDocCount: knowledgeDocumentIds.length,
         });
@@ -118,6 +121,7 @@ export const updatePunchlist = ({
           dataStream,
           workspaceId,
           session,
+          objectiveId,
         });
 
         dataStream.write({ type: 'data-finish', data: null, transient: true });

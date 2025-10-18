@@ -13,7 +13,6 @@ import {
   formatWorkspaceContextAsMarkdown,
   type WorkspaceContext,
 } from '@/lib/ai/prompts/workspace-context-generation';
-import { getDomain } from '@/lib/domains';
 import { myProvider } from '@/lib/ai/providers';
 import { WorkspaceContextBuilder } from '@/lib/ai/prompts/builders';
 
@@ -72,12 +71,51 @@ export async function generateWorkspaceContext({
     const contextData = await getWorkspaceContext(workspaceId, userId);
     const currentContext = contextData?.context || '';
 
-    // Get domain for domain-specific guidance
-    const domain = getDomain(workspace.domainId);
+    // Load workspace with artifact type and domain for context builder
+    const { db } = await import('@/lib/db/queries');
+    const { workspace: workspaceSchema, domain: domainSchema } = await import(
+      '@/lib/db/schema'
+    );
+    const { eq } = await import('drizzle-orm');
+
+    const workspaceWithRelations = await db.query.workspace.findFirst({
+      where: eq(workspaceSchema.id, workspaceId),
+      with: {
+        workspaceContextArtifactType: true,
+      },
+    });
+
+    if (!workspaceWithRelations?.workspaceContextArtifactType) {
+      logger.error('Workspace missing workspaceContextArtifactType', {
+        workspaceId,
+      });
+      return {
+        success: false,
+        error: 'Workspace configuration error: missing artifact type',
+      };
+    }
+
+    // Load domain from database
+    const [domainRecord] = await db
+      .select()
+      .from(domainSchema)
+      .where(eq(domainSchema.id, workspace.domainId))
+      .limit(1);
+
+    if (!domainRecord) {
+      logger.error('Domain not found', { domainId: workspace.domainId });
+      return {
+        success: false,
+        error: 'Domain configuration error',
+      };
+    }
 
     // Build system prompt using builder
     const builder = new WorkspaceContextBuilder();
-    const systemPrompt = builder.generateContextPrompt(domain);
+    const systemPrompt = builder.generateContextPrompt(
+      workspaceWithRelations.workspaceContextArtifactType,
+      domainRecord,
+    );
 
     // Build user prompt with current context and observations
     const userPrompt = `

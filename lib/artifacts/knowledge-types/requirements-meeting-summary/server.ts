@@ -4,7 +4,7 @@
 
 import type { KnowledgeHandler, GenerateKnowledgeProps } from '../base-handler';
 import { generateKnowledgeSummary } from '../base-handler';
-import { createKnowledgeBuilder } from '@/lib/ai/prompts/builders';
+import { SummaryBuilder } from '@/lib/ai/prompts/builders';
 
 export const metadata = {
   type: 'requirements-meeting-summary',
@@ -19,10 +19,10 @@ export const handler: KnowledgeHandler = {
   async onGenerateKnowledge(
     props: Omit<GenerateKnowledgeProps, 'summaryPrompt'>,
   ) {
-    // Use builder to generate summary prompt with workspace/objective context
-    const builder = createKnowledgeBuilder('requirements-meeting-summary');
+    // Use SummaryBuilder to generate summary prompt from artifact type
+    const builder = new SummaryBuilder();
     const summaryPrompt = builder.generate(
-      props.domain,
+      props.artifactType,
       props.workspace,
       props.objective,
     );

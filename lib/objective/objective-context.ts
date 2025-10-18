@@ -13,7 +13,6 @@ import {
   formatObjectiveContextAsMarkdown,
   type ObjectiveContext,
 } from '@/lib/ai/prompts/objective-context-generation';
-import { getDomain } from '@/lib/domains';
 import { getWorkspaceById } from '@/lib/workspace/queries';
 import { myProvider } from '@/lib/ai/providers';
 import { ObjectiveContextBuilder } from '@/lib/ai/prompts/builders';
@@ -65,16 +64,57 @@ export async function generateObjectiveContext({
     const contextData = await getObjectiveContext(objectiveId, userId);
     const currentContext = contextData?.context || '';
 
-    // Get domain for domain-specific guidance
+    // Get workspace for domain
     const workspace = await getWorkspaceById(workspaceId, userId);
     if (!workspace) {
       return { success: false, error: 'Workspace not found' };
     }
-    const domain = getDomain(workspace.domainId);
+
+    // Load objective with artifact type and domain for context builder
+    const { db } = await import('@/lib/db/queries');
+    const { objective: objectiveSchema, domain: domainSchema } = await import(
+      '@/lib/db/schema'
+    );
+    const { eq } = await import('drizzle-orm');
+
+    const objectiveWithRelations = await db.query.objective.findFirst({
+      where: eq(objectiveSchema.id, objectiveId),
+      with: {
+        objectiveContextArtifactType: true,
+      },
+    });
+
+    if (!objectiveWithRelations?.objectiveContextArtifactType) {
+      logger.error('Objective missing objectiveContextArtifactType', {
+        objectiveId,
+      });
+      return {
+        success: false,
+        error: 'Objective configuration error: missing artifact type',
+      };
+    }
+
+    // Load domain from database
+    const [domainRecord] = await db
+      .select()
+      .from(domainSchema)
+      .where(eq(domainSchema.id, workspace.domainId))
+      .limit(1);
+
+    if (!domainRecord) {
+      logger.error('Domain not found', { domainId: workspace.domainId });
+      return {
+        success: false,
+        error: 'Domain configuration error',
+      };
+    }
 
     // Build system prompt using builder
     const builder = new ObjectiveContextBuilder();
-    const systemPrompt = builder.generateContextPrompt(domain);
+    const systemPrompt = builder.generateContextPrompt(
+      objectiveWithRelations.objectiveContextArtifactType,
+      domainRecord,
+    );
 
     // Build user prompt with current context and observations
     const userPrompt = `

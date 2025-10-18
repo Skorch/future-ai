@@ -99,11 +99,14 @@ IMPORTANT:
           throw new Error('Objective not found or access denied');
         }
 
-        // 2.5. Load workspace for domain context
+        // 2.5. Load workspace and domain for context
         const { db } = await import('@/lib/db/queries');
-        const { workspace: workspaceSchema } = await import('@/lib/db/schema');
+        const { workspace: workspaceSchema, objective: objectiveSchema } =
+          await import('@/lib/db/schema');
         const { eq } = await import('drizzle-orm');
-        const { getDomain } = await import('@/lib/domains');
+        const { getByWorkspaceId: getDomainByWorkspaceId } = await import(
+          '@/lib/db/queries/domain'
+        );
 
         const workspaceData = await db
           .select()
@@ -116,7 +119,23 @@ IMPORTANT:
           throw new Error('Workspace not found');
         }
 
-        const domain = getDomain(workspace.domainId);
+        // Load domain with artifact type relations from database
+        const domain = await getDomainByWorkspaceId(workspaceId);
+        if (!domain) {
+          throw new Error('Domain not found for workspace');
+        }
+
+        // Load objective with artifact type for summary builder
+        const objectiveWithArtifactType = await db.query.objective.findFirst({
+          where: eq(objectiveSchema.id, objectiveId),
+          with: {
+            summaryArtifactType: true,
+          },
+        });
+
+        if (!objectiveWithArtifactType?.summaryArtifactType) {
+          throw new Error('Objective missing summaryArtifactType');
+        }
 
         // 3. Load appropriate knowledge handler
         let handler: KnowledgeHandler;
@@ -164,6 +183,7 @@ IMPORTANT:
           domain,
           workspace,
           objective,
+          artifactType: objectiveWithArtifactType.summaryArtifactType,
         });
 
         // 7. Save knowledge document with metadata

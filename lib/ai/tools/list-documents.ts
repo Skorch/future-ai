@@ -6,18 +6,17 @@ import { z } from 'zod';
 import { getAllObjectiveDocumentsByWorkspaceId } from '@/lib/db/objective-document';
 import { getKnowledgeByWorkspaceId } from '@/lib/db/knowledge-document';
 import { getAllDocumentTypes } from '@/lib/artifacts';
-import type { DomainId } from '@/lib/domains';
 
 interface ListDocumentsProps {
   session: { user: { id: string } };
   workspaceId: string;
-  domainId: DomainId;
+  domainId: string; // Domain UUID
   objectiveId: string; // Filter documents by current chat's objective
 }
 
 // Build dynamic tool description from registry
 // Domain-specific - no cache (descriptions differ by domain)
-async function buildToolDescription(domainId: DomainId): Promise<string> {
+async function buildToolDescription(domainId: string): Promise<string> {
   try {
     const docTypes = await getAllDocumentTypes(domainId);
 

@@ -10,15 +10,18 @@ import type { QueryResult, QueryMatch, RAGMetadata } from '../../rag/types';
 import type { ChatMessage } from '@/lib/types';
 import { QUERY_RAG_PROMPT } from '@/lib/ai/prompts/builders/shared/prompts/tools/query-rag.prompts';
 import { getDocumentTypeDisplayMap, type DocumentType } from '@/lib/artifacts';
-import type { DomainId } from '@/lib/domains';
-import { getDomain } from '@/lib/domains';
 
 // Build schema dynamically based on allowed document types for domain
-function createQueryRAGSchema(allowedTypes: DocumentType[]) {
+// TODO: This should query database for domain-specific artifact types
+function createQueryRAGSchema(allowedTypes?: DocumentType[]) {
+  // Use all types if none provided (temporary until database-driven filtering is implemented)
+  const types =
+    allowedTypes ||
+    (['business-requirements', 'sales-strategy'] as DocumentType[]);
   // Build dynamic content types: registry types + special metadata filters
   // Note: 'transcript' and 'document' are metadata filters, not registry types
   const contentTypesArray: string[] = [
-    ...allowedTypes,
+    ...types,
     'transcript',
     'document',
     'all',
@@ -255,15 +258,15 @@ interface QueryRAGProps {
   session: { user: { id: string } };
   dataStream: UIMessageStreamWriter<ChatMessage>;
   workspaceId: string;
-  domainId: DomainId;
+  domainId: string; // Domain UUID
 }
 
 export const queryRAG = (props: QueryRAGProps) => {
   const { session, dataStream, workspaceId, domainId } = props;
 
-  // Get domain-specific allowed types
-  const domain = getDomain(domainId);
-  const allowedTypes = domain.allowedTypes;
+  // TODO: Get domain-specific allowed types from database
+  // For now, use all types
+  const allowedTypes = undefined;
 
   logger.debug(
     '[queryRAG] Creating tool with session user:',

@@ -2,24 +2,23 @@ import type {
   DocumentHandler,
   GeneratePunchlistCallbackProps,
 } from '@/lib/artifacts/server';
-import { metadata } from './metadata';
-import { SALES_STRATEGY_PUNCHLIST_PROMPT } from './prompts';
+import { ObjectiveDocumentBuilder } from '@/lib/ai/prompts/builders/objective-document-builder';
+import { PunchlistBuilder } from '@/lib/ai/prompts/builders/punchlist-builder';
 import {
   fetchSourceDocuments,
   buildStreamConfig,
   processStream,
   saveGeneratedDocument,
-  generatePunchlist,
   fetchKnowledgeDocuments,
-  GLOBAL_PUNCHLIST_TEMPLATE,
 } from '@/lib/artifacts/document-types/base-handler';
 import { OutputSize } from '@/lib/artifacts/types';
 import { myProvider } from '@/lib/ai/providers';
-import { getDomain, type DomainId } from '@/lib/domains';
+
 import { db } from '@/lib/db/queries';
-import { workspace } from '@/lib/db/schema';
+import { workspace, artifactType } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { getObjectiveById } from '@/lib/db/objective';
+import { metadata } from './metadata';
 
 export const salesStrategyHandler: DocumentHandler<'text'> = {
   kind: 'text',
@@ -113,18 +112,35 @@ ${analyses}
       .limit(1);
 
     const workspaceObject = workspaceData[0] || null;
-    const domainId = workspaceObject?.domainId as DomainId;
-    const domain = getDomain(domainId);
 
     // Load objective if provided
     const objectiveObject = typedMetadata?.objectiveId
       ? await getObjectiveById(typedMetadata.objectiveId, session.user.id)
       : null;
 
-    // Use builder to generate system prompt with workspace/objective context
-    const builder = new metadata.builderClass();
+    // Fetch objectiveDocumentArtifactType from the objective
+    if (!objectiveObject?.objectiveDocumentArtifactTypeId) {
+      throw new Error(
+        'Objective missing objectiveDocumentArtifactTypeId - cannot generate document',
+      );
+    }
+
+    const [artifactTypeData] = await db
+      .select()
+      .from(artifactType)
+      .where(
+        eq(artifactType.id, objectiveObject.objectiveDocumentArtifactTypeId),
+      )
+      .limit(1);
+
+    if (!artifactTypeData) {
+      throw new Error('ArtifactType not found for objective document');
+    }
+
+    // Use builder to generate system prompt with artifact type, workspace, and objective
+    const builder = new ObjectiveDocumentBuilder();
     const systemPrompt = builder.generate(
-      domain,
+      artifactTypeData,
       workspaceObject,
       objectiveObject,
     );
@@ -163,6 +179,7 @@ ${analyses}
     dataStream,
     workspaceId,
     session,
+    objectiveId,
   }: GeneratePunchlistCallbackProps) => {
     // Fetch knowledge documents with full attribution
     const knowledgeSummaries = await fetchKnowledgeDocuments(knowledgeDocIds);
@@ -173,15 +190,49 @@ ${analyses}
       );
     }
 
-    // Generate punchlist with Sales Strategy-specific tracking goals
-    const punchlistContent = await generatePunchlist({
-      currentPunchlist: currentVersion.punchlist,
-      currentContent: currentVersion.content,
+    // Load objective to get punchlist artifact type
+    const objectiveObject = objectiveId
+      ? await getObjectiveById(objectiveId, session.user.id)
+      : null;
+
+    if (!objectiveObject?.punchlistArtifactTypeId) {
+      throw new Error(
+        'Objective missing punchlistArtifactTypeId - cannot generate punchlist',
+      );
+    }
+
+    // Fetch punchlist artifact type
+    const [punchlistArtifactType] = await db
+      .select()
+      .from(artifactType)
+      .where(eq(artifactType.id, objectiveObject.punchlistArtifactTypeId))
+      .limit(1);
+
+    if (!punchlistArtifactType) {
+      throw new Error('PunchlistArtifactType not found');
+    }
+
+    // Use PunchlistBuilder to generate system prompt
+    const punchlistBuilder = new PunchlistBuilder();
+    const punchlistSystemPrompt = punchlistBuilder.generate(
+      punchlistArtifactType,
+      currentVersion.punchlist,
+      currentVersion.content,
       knowledgeSummaries,
-      documentSpecificPrompt: SALES_STRATEGY_PUNCHLIST_PROMPT,
-      globalPunchlistTemplate: GLOBAL_PUNCHLIST_TEMPLATE,
-      dataStream,
+    );
+
+    // Build configuration for punchlist generation
+    const config = buildStreamConfig({
+      model: myProvider.languageModel('claude-sonnet-4'),
+      system: punchlistSystemPrompt,
+      prompt:
+        'Generate the updated punchlist showing how the new knowledge affects each item.',
+      maxOutputTokens: 4000,
+      temperature: 0.4,
     });
+
+    // Process stream directly
+    const punchlistContent = await processStream(config, dataStream);
 
     // Save punchlist to database
     const { updateVersionPunchlist } = await import(
