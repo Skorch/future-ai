@@ -55,7 +55,7 @@ export const PromptLayerEditor = forwardRef<
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [isDirty, setIsDirty] = useState(false); // Track unsaved changes
   const [, setEditorState] = useState(0); // Force re-render on selection change
-  const isLoadingContent = useRef(false); // Track programmatic content updates
+  const isLoadingContent = useRef(true); // Start true to block initial page load saves
 
   const editor = useEditor({
     extensions: [
@@ -107,12 +107,20 @@ export const PromptLayerEditor = forwardRef<
     [saveContent],
   );
 
+  // Enable saves after initial render completes
+  useEffect(() => {
+    if (editor) {
+      // Allow user edits to trigger saves after page load
+      isLoadingContent.current = false;
+    }
+  }, [editor]);
+
   // Listen for content changes
   useEffect(() => {
     if (!editor || !editable) return;
 
     const handleUpdate = () => {
-      // Ignore updates from programmatic content changes (e.g., domain switch)
+      // Ignore updates from programmatic content changes (e.g., domain switch, page load)
       if (isLoadingContent.current) return;
 
       setIsDirty(true); // Mark as dirty on user edit only
