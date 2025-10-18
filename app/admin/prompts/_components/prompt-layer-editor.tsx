@@ -44,6 +44,7 @@ export function PromptLayerEditor({
 }: PromptLayerEditorProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [, setEditorState] = useState(0); // Force re-render on selection change
 
   const editor = useEditor({
     extensions: [
@@ -111,6 +112,22 @@ export function PromptLayerEditor({
       editor.off('update', handleUpdate);
     };
   }, [editor, editable, debouncedSave]);
+
+  // Listen for selection changes to update toolbar button states
+  useEffect(() => {
+    if (!editor) return;
+
+    const handleSelectionUpdate = () => {
+      // Force re-render to update button active states
+      setEditorState((prev) => prev + 1);
+    };
+
+    editor.on('selectionUpdate', handleSelectionUpdate);
+
+    return () => {
+      editor.off('selectionUpdate', handleSelectionUpdate);
+    };
+  }, [editor]);
 
   if (!editor) {
     return null;
