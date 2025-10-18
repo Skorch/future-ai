@@ -48,20 +48,12 @@ export async function createObjective(
       );
     }
 
-    // Map domain title to legacy documentType
-    // TODO: Remove this once documentType is removed from objective table
-    const documentType =
-      domainData.title === 'Sales Intelligence'
-        ? 'sales-strategy'
-        : 'business-requirements';
-
     const [newObjective] = await db
       .insert(objective)
       .values({
         workspaceId,
         title: data.title,
         description: data.description,
-        documentType,
         status: 'open',
         createdByUserId: userId,
         // Artifact type FKs from domain defaults

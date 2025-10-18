@@ -390,7 +390,7 @@ export async function deleteObjectiveDocument(
 /**
  * Initialize a new version for a chat within an objective
  * Implements "one chat = one version" rule
- * Returns versionId, documentId, documentType, objectiveId, and whether this is the first version
+ * Returns versionId, documentId, objectiveId, and whether this is the first version
  */
 export async function initializeVersionForChat(
   chatId: string,
@@ -401,16 +401,14 @@ export async function initializeVersionForChat(
   versionId: string;
   documentId: string;
   isFirstVersion: boolean;
-  documentType: string;
   objectiveId: string;
 }> {
   try {
     return await db.transaction(async (tx) => {
-      // 1. Get objective's documentId, documentType, title, and workspaceId for validation
+      // 1. Get objective's documentId, title, and workspaceId for validation
       const [obj] = await tx
         .select({
           objectiveDocumentId: objective.objectiveDocumentId,
-          documentType: objective.documentType,
           workspaceId: objective.workspaceId,
           title: objective.title,
         })
@@ -440,11 +438,9 @@ export async function initializeVersionForChat(
         const documentTitle = await generateTitle({
           context: {
             objectiveTitle: obj.title,
-            documentType: obj.documentType,
           },
           systemPrompt: generateObjectiveTitle(100),
-          userPrompt:
-            'Objective: {objectiveTitle}\nDocument Type: {documentType}',
+          userPrompt: 'Objective: {objectiveTitle}',
           maxLength: 100,
         });
 
@@ -476,7 +472,6 @@ export async function initializeVersionForChat(
         versionId,
         documentId,
         isFirstVersion,
-        documentType: obj.documentType,
         objectiveId,
       };
     });
@@ -497,14 +492,16 @@ export async function initializeVersionForChat(
 /**
  * Get version by chatId (for tool context)
  * Uses the new FK relationship where chat references version
+ * Returns both the version and objectiveId from the chat
  */
 export async function getVersionByChatId(
   chatId: string,
-): Promise<ObjectiveDocumentVersion | null> {
+): Promise<{ version: ObjectiveDocumentVersion; objectiveId: string } | null> {
   try {
     const [result] = await db
       .select({
         version: objectiveDocumentVersion,
+        objectiveId: chat.objectiveId,
       })
       .from(chat)
       .innerJoin(
@@ -514,7 +511,14 @@ export async function getVersionByChatId(
       .where(eq(chat.id, chatId))
       .limit(1);
 
-    return result?.version || null;
+    if (!result?.version || !result?.objectiveId) {
+      return null;
+    }
+
+    return {
+      version: result.version,
+      objectiveId: result.objectiveId,
+    };
   } catch (error) {
     throw new ChatSDKError(
       'bad_request:database',

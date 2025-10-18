@@ -2,16 +2,40 @@ import { getLogger } from '@/lib/logger';
 
 const logger = getLogger('WorkspaceQueries');
 import { and, desc, eq, isNull } from 'drizzle-orm';
-import { workspace, domain } from '@/lib/db/schema';
+import { workspace, domain, type Workspace } from '@/lib/db/schema';
 import { db } from '@/lib/db/queries';
 
 /**
- * Get all workspaces for a user (excluding soft-deleted)
+ * Workspace with domain title for display
  */
-export async function getWorkspacesByUserId(userId: string) {
+export type WorkspaceWithDomain = Workspace & {
+  domainTitle: string | null;
+};
+
+/**
+ * Get all workspaces for a user (excluding soft-deleted)
+ * Includes domain title for display purposes
+ */
+export async function getWorkspacesByUserId(
+  userId: string,
+): Promise<WorkspaceWithDomain[]> {
   return await db
-    .select()
+    .select({
+      id: workspace.id,
+      userId: workspace.userId,
+      name: workspace.name,
+      description: workspace.description,
+      domainId: workspace.domainId,
+      domainTitle: domain.title, // Include domain title for client display
+      workspaceContextArtifactTypeId: workspace.workspaceContextArtifactTypeId,
+      context: workspace.context,
+      contextUpdatedAt: workspace.contextUpdatedAt,
+      createdAt: workspace.createdAt,
+      lastAccessedAt: workspace.lastAccessedAt,
+      deletedAt: workspace.deletedAt,
+    })
     .from(workspace)
+    .leftJoin(domain, eq(workspace.domainId, domain.id))
     .where(and(eq(workspace.userId, userId), isNull(workspace.deletedAt)))
     .orderBy(desc(workspace.lastAccessedAt));
 }

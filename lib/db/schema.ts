@@ -194,7 +194,6 @@ export const objective = pgTable(
     ), // Natural 1:1
     title: text('title').notNull(),
     description: text('description'),
-    documentType: text('documentType').notNull(),
     status: objectiveStatusEnum('status').notNull().default('open'),
     // Artifact type FKs for objective management
     objectiveContextArtifactTypeId: uuid('objectiveContextArtifactTypeId')
@@ -469,6 +468,10 @@ export const workspaceRelations = relations(workspace, ({ one, many }) => ({
     fields: [workspace.userId],
     references: [user.id],
   }),
+  workspaceContextArtifactType: one(artifactType, {
+    fields: [workspace.workspaceContextArtifactTypeId],
+    references: [artifactType.id],
+  }),
   objectives: many(objective),
   objectiveDocuments: many(objectiveDocument),
   knowledgeDocuments: many(knowledgeDocument),
@@ -482,6 +485,14 @@ export const objectiveRelations = relations(objective, ({ one, many }) => ({
   objectiveDocument: one(objectiveDocument, {
     fields: [objective.objectiveDocumentId],
     references: [objectiveDocument.id],
+  }),
+  objectiveContextArtifactType: one(artifactType, {
+    fields: [objective.objectiveContextArtifactTypeId],
+    references: [artifactType.id],
+  }),
+  summaryArtifactType: one(artifactType, {
+    fields: [objective.summaryArtifactTypeId],
+    references: [artifactType.id],
   }),
   createdBy: one(user, {
     fields: [objective.createdByUserId],
