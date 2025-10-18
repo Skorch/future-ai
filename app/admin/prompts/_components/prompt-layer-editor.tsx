@@ -52,6 +52,7 @@ export const PromptLayerEditor = forwardRef<
 ) {
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [isDirty, setIsDirty] = useState(false); // Track unsaved changes
   const [, setEditorState] = useState(0); // Force re-render on selection change
 
   const editor = useEditor({
@@ -84,6 +85,7 @@ export const PromptLayerEditor = forwardRef<
       try {
         await onSave(newContent);
         setLastSaved(new Date());
+        setIsDirty(false); // Clear dirty flag after successful save
         toast.success('Layer saved', { duration: 1000 });
       } catch (error) {
         toast.error('Failed to save layer');
@@ -108,6 +110,7 @@ export const PromptLayerEditor = forwardRef<
     if (!editor || !editable) return;
 
     const handleUpdate = () => {
+      setIsDirty(true); // Mark as dirty on any edit
       const markdown =
         // biome-ignore lint/suspicious/noExplicitAny: Tiptap storage types don't include markdown extension
         (editor.storage as any).markdown?.getMarkdown?.() || editor.getText();
@@ -148,13 +151,14 @@ export const PromptLayerEditor = forwardRef<
 
     if (currentContent !== content) {
       editor.commands.setContent(content);
+      setIsDirty(false); // New content loaded, not dirty yet
     }
   }, [content, editor]);
 
   // Expose saveNow method via ref (like DocumentEditor pattern)
   useImperativeHandle(ref, () => ({
     saveNow: async () => {
-      if (!editor || !editable) return;
+      if (!editor || !editable || !isDirty) return; // Skip if not dirty
       const markdown =
         // biome-ignore lint/suspicious/noExplicitAny: Tiptap storage types don't include markdown extension
         (editor.storage as any).markdown?.getMarkdown?.() || editor.getText();
