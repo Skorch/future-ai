@@ -7,6 +7,9 @@ import { PromptStackView } from './prompt-stack-view';
 import { SCENARIOS, type ScenarioId } from '../types';
 import type { Domain, ArtifactType } from '@/lib/db/schema';
 import { updateDomainPrompt, updateArtifactTypePrompt } from '../actions';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 
 interface PromptsPageClientProps {
   domains: Domain[];
@@ -25,6 +28,7 @@ export function PromptsPageClient({
   const [selectedArtifactTypeId, setSelectedArtifactTypeId] = useState<
     string | null
   >(null);
+  const [configExpanded, setConfigExpanded] = useState(true);
 
   const scenario = SCENARIOS.find((s) => s.id === selectedScenarioId);
   const domain = domains.find((d) => d.id === selectedDomainId) || null;
@@ -54,41 +58,58 @@ export function PromptsPageClient({
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* Left column: Scenario and configuration */}
-      <div className="lg:col-span-1 space-y-6">
-        <ScenarioSelector
-          selectedId={selectedScenarioId}
-          onSelect={handleScenarioChange}
-        />
-
-        <ConfigurationPanel
-          scenario={scenario}
-          domains={domains}
-          artifactTypes={artifactTypes}
-          selectedDomainId={selectedDomainId}
-          selectedArtifactTypeId={selectedArtifactTypeId}
-          onDomainChange={setSelectedDomainId}
-          onArtifactTypeChange={setSelectedArtifactTypeId}
-        />
-      </div>
-
-      {/* Right column: Prompt stack view */}
-      <div className="lg:col-span-2">
-        {domain ? (
-          <PromptStackView
-            scenario={scenario}
-            domain={domain}
-            artifactType={artifactType}
-            onSaveDomain={updateDomainPrompt}
-            onSaveArtifactType={updateArtifactTypePrompt}
-          />
-        ) : (
-          <div className="text-center py-12 text-muted-foreground">
-            Please select a domain to view prompts
+    <div className="space-y-6">
+      {/* Collapsible Configuration Section */}
+      <Card>
+        <CardHeader
+          className="cursor-pointer hover:bg-accent/50 transition-colors"
+          onClick={() => setConfigExpanded(!configExpanded)}
+        >
+          <div className="flex items-center justify-between">
+            <CardTitle>Configuration</CardTitle>
+            <Button variant="ghost" size="sm">
+              {configExpanded ? (
+                <ChevronUp className="size-4" />
+              ) : (
+                <ChevronDown className="size-4" />
+              )}
+            </Button>
           </div>
+        </CardHeader>
+        {configExpanded && (
+          <CardContent className="space-y-6">
+            <ScenarioSelector
+              selectedId={selectedScenarioId}
+              onSelect={handleScenarioChange}
+            />
+
+            <ConfigurationPanel
+              scenario={scenario}
+              domains={domains}
+              artifactTypes={artifactTypes}
+              selectedDomainId={selectedDomainId}
+              selectedArtifactTypeId={selectedArtifactTypeId}
+              onDomainChange={setSelectedDomainId}
+              onArtifactTypeChange={setSelectedArtifactTypeId}
+            />
+          </CardContent>
         )}
-      </div>
+      </Card>
+
+      {/* Prompt Stack View */}
+      {domain ? (
+        <PromptStackView
+          scenario={scenario}
+          domain={domain}
+          artifactType={artifactType}
+          onSaveDomain={updateDomainPrompt}
+          onSaveArtifactType={updateArtifactTypePrompt}
+        />
+      ) : (
+        <div className="text-center py-12 text-muted-foreground">
+          Please select a domain to view prompts
+        </div>
+      )}
     </div>
   );
 }

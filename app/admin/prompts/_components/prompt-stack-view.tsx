@@ -34,9 +34,7 @@ export function PromptStackView({
   onSaveDomain,
   onSaveArtifactType,
 }: PromptStackViewProps) {
-  const [expandedLayers, setExpandedLayers] = useState<Set<string>>(
-    new Set(['base']),
-  ); // Start with first layer expanded
+  const [expandedLayers, setExpandedLayers] = useState<Set<string>>(new Set()); // Start with all layers collapsed
 
   const toggleLayer = (layerSource: string) => {
     setExpandedLayers((prev) => {

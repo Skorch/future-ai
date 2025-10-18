@@ -6,7 +6,20 @@ import TiptapStarterKit from '@tiptap/starter-kit';
 import { Markdown } from 'tiptap-markdown';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { ChevronDown, ChevronRight, Lock, Pencil } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  ChevronDown,
+  ChevronRight,
+  Lock,
+  Pencil,
+  Bold,
+  Italic,
+  List,
+  ListOrdered,
+  Heading1,
+  Heading2,
+  Heading3,
+} from 'lucide-react';
 import { debounce } from '@/lib/utils/debounce';
 import { countTokens } from '@/lib/utils/token-counter';
 
@@ -145,6 +158,80 @@ export function PromptLayerEditor({
 
       {expanded && (
         <CardContent className="space-y-2">
+          {editable && (
+            <div className="flex items-center gap-1 p-2 border rounded-lg bg-muted/50">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => editor.chain().focus().toggleBold().run()}
+                className={editor.isActive('bold') ? 'bg-accent' : ''}
+              >
+                <Bold className="size-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => editor.chain().focus().toggleItalic().run()}
+                className={editor.isActive('italic') ? 'bg-accent' : ''}
+              >
+                <Italic className="size-4" />
+              </Button>
+              <div className="w-px h-6 bg-border mx-1" />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() =>
+                  editor.chain().focus().toggleHeading({ level: 1 }).run()
+                }
+                className={
+                  editor.isActive('heading', { level: 1 }) ? 'bg-accent' : ''
+                }
+              >
+                <Heading1 className="size-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() =>
+                  editor.chain().focus().toggleHeading({ level: 2 }).run()
+                }
+                className={
+                  editor.isActive('heading', { level: 2 }) ? 'bg-accent' : ''
+                }
+              >
+                <Heading2 className="size-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() =>
+                  editor.chain().focus().toggleHeading({ level: 3 }).run()
+                }
+                className={
+                  editor.isActive('heading', { level: 3 }) ? 'bg-accent' : ''
+                }
+              >
+                <Heading3 className="size-4" />
+              </Button>
+              <div className="w-px h-6 bg-border mx-1" />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => editor.chain().focus().toggleBulletList().run()}
+                className={editor.isActive('bulletList') ? 'bg-accent' : ''}
+              >
+                <List className="size-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => editor.chain().focus().toggleOrderedList().run()}
+                className={editor.isActive('orderedList') ? 'bg-accent' : ''}
+              >
+                <ListOrdered className="size-4" />
+              </Button>
+            </div>
+          )}
           <div className="border rounded-lg bg-background">
             <EditorContent editor={editor} />
           </div>
