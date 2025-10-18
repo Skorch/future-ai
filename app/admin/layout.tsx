@@ -34,7 +34,6 @@ export default async function AdminLayout({
             <nav className="space-y-1">
               <NavLink href="/admin/playbooks">Playbooks</NavLink>
               <NavLink href="/admin/prompts">Prompts</NavLink>
-              <NavLink href="/admin/prompt-debug">Prompt Debug</NavLink>
             </nav>
           </aside>
 

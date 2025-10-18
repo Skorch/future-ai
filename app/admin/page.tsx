@@ -25,20 +25,6 @@ export default function AdminPage() {
             </Button>
           </Link>
         </div>
-
-        {/* Prompt Debug Card */}
-        <div className="border rounded-lg p-6 space-y-3">
-          <h3 className="text-lg font-semibold">Prompt Debug</h3>
-          <p className="text-sm text-muted-foreground">
-            Test and debug AI prompts, inspect tool descriptions, and configure
-            agent behavior for different domains.
-          </p>
-          <Link href="/admin/prompt-debug">
-            <Button variant="outline" className="w-full">
-              Open Prompt Debug
-            </Button>
-          </Link>
-        </div>
       </div>
     </div>
   );
