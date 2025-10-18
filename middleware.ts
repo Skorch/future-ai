@@ -11,6 +11,9 @@ const isPublicRoute = createRouteMatcher([
   '/ping', // Playwright test endpoint
 ]);
 
+// Define admin-only routes
+const isAdminRoute = createRouteMatcher(['/admin(.*)']);
+
 export default clerkMiddleware(async (auth, req) => {
   const { pathname } = req.nextUrl;
   const waitlistPath = process.env.WAITLIST_PATH;
@@ -32,6 +35,15 @@ export default clerkMiddleware(async (auth, req) => {
     if (!userId) {
       // Redirect to login if not authenticated
       return NextResponse.redirect(new URL('/login', req.url));
+    }
+  }
+
+  // Check admin access for /admin routes
+  if (isAdminRoute(req)) {
+    const { sessionClaims } = await auth();
+    const isAdmin = sessionClaims?.metadata?.isAdmin === true;
+    if (!isAdmin) {
+      return NextResponse.redirect(new URL('/', req.url));
     }
   }
 

@@ -2,6 +2,7 @@
 
 import { ChevronUp } from 'lucide-react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useUser, useClerk } from '@clerk/nextjs';
 import { useTheme } from 'next-themes';
 
@@ -80,6 +81,17 @@ export function SidebarUserNav() {
             >
               {`Toggle ${resolvedTheme === 'light' ? 'dark' : 'light'} mode`}
             </DropdownMenuItem>
+            {/* Admin Portal Link - only shown to admins */}
+            {user?.publicMetadata?.isAdmin && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild data-testid="user-nav-item-admin">
+                  <Link href="/admin" className="w-full cursor-pointer">
+                    Admin Portal
+                  </Link>
+                </DropdownMenuItem>
+              </>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild data-testid="user-nav-item-auth">
               <button
