@@ -4,6 +4,7 @@ import {
   useState,
   useEffect,
   useCallback,
+  useRef,
   forwardRef,
   useImperativeHandle,
 } from 'react';
@@ -54,6 +55,7 @@ export const PromptLayerEditor = forwardRef<
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [isDirty, setIsDirty] = useState(false); // Track unsaved changes
   const [, setEditorState] = useState(0); // Force re-render on selection change
+  const isLoadingContent = useRef(false); // Track programmatic content updates
 
   const editor = useEditor({
     extensions: [
@@ -110,7 +112,10 @@ export const PromptLayerEditor = forwardRef<
     if (!editor || !editable) return;
 
     const handleUpdate = () => {
-      setIsDirty(true); // Mark as dirty on any edit
+      // Ignore updates from programmatic content changes (e.g., domain switch)
+      if (isLoadingContent.current) return;
+
+      setIsDirty(true); // Mark as dirty on user edit only
       const markdown =
         // biome-ignore lint/suspicious/noExplicitAny: Tiptap storage types don't include markdown extension
         (editor.storage as any).markdown?.getMarkdown?.() || editor.getText();
@@ -150,8 +155,15 @@ export const PromptLayerEditor = forwardRef<
       (editor.storage as any).markdown?.getMarkdown?.() || editor.getText();
 
     if (currentContent !== content) {
+      // Flag that we're loading new content to ignore the 'update' event
+      isLoadingContent.current = true;
       editor.commands.setContent(content);
       setIsDirty(false); // New content loaded, not dirty yet
+
+      // Clear the flag after the update event has fired
+      setTimeout(() => {
+        isLoadingContent.current = false;
+      }, 0);
     }
   }, [content, editor]);
 
