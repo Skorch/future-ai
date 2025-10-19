@@ -24,6 +24,12 @@ export {
   generateObjectiveTitle,
 } from './specialized/title-builder';
 
+// Context Utilities
+export {
+  getCurrentContext,
+  type CurrentContextOptions,
+} from '@/lib/ai/prompts/current-context';
+
 // Type exports
 export type { AgentBuilder } from './factories/agent-builder-factory';
 export type { DocumentBuilder, KnowledgeBuilder } from './types';

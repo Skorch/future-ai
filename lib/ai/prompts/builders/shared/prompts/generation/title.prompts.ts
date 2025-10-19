@@ -1,6 +1,18 @@
 /**
- * Title generation prompts extracted from lib/ai/prompts/title-metadata-generation.ts
- * These are EXACT copies - no modifications
+ * Title generation prompts
+ *
+ * These prompts are ADDITIVE - they are prepended with CORE_SYSTEM_PROMPT
+ * and getCurrentContext() by the builder functions in specialized/title-builder.ts
+ *
+ * Final prompt structure when used by builders:
+ * 1. CORE_SYSTEM_PROMPT (immutable identity and ethics)
+ * 2. getCurrentContext() (user and datetime)
+ * 3. Specific prompt from this file
+ *
+ * This composition pattern ensures consistent AI behavior across all interactions
+ * while providing task-specific guidance.
+ *
+ * Originally extracted from lib/ai/prompts/title-metadata-generation.ts
  */
 
 export const AI_TEXT_GENERATION_SYSTEM_PROMPT = `You are a precise text generator with STRICT anti-hallucination guardrails.

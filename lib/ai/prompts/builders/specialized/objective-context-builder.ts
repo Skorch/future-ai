@@ -1,9 +1,22 @@
-import type { ArtifactType, Domain } from '@/lib/db/schema';
+import { CORE_SYSTEM_PROMPT } from '../../system';
+import { getCurrentContext } from '@/lib/ai/prompts/current-context';
+import type { ArtifactType, Domain, User } from '@/lib/db/schema';
 
 export class ObjectiveContextBuilder {
-  generateContextPrompt(artifactType: ArtifactType, domain: Domain): string {
+  generateContextPrompt(
+    artifactType: ArtifactType,
+    domain: Domain,
+    user: User | null,
+  ): string {
+    // Start with core system prompt and current context
+    let prompt = `${CORE_SYSTEM_PROMPT}
+
+${getCurrentContext({ user })}
+
+`;
+
     // Use database prompt instead of hardcoded
-    let prompt = artifactType.instructionPrompt;
+    prompt += artifactType.instructionPrompt;
 
     // Add domain-specific guidance from domain.systemPrompt
     if (domain.systemPrompt) {

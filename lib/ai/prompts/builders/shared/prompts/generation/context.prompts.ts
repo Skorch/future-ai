@@ -1,6 +1,19 @@
 /**
- * Context generation prompts extracted from lib/ai/prompts/workspace-context-generation.ts and objective-context-generation.ts
- * These are EXACT copies - no modifications
+ * Context generation prompts
+ *
+ * These prompts are ADDITIVE - they are prepended with CORE_SYSTEM_PROMPT
+ * and getCurrentContext() by the builder functions in specialized/context-builder.ts
+ *
+ * Final prompt structure when used by builders:
+ * 1. CORE_SYSTEM_PROMPT (immutable identity and ethics)
+ * 2. getCurrentContext() (user and datetime)
+ * 3. Specific prompt from this file
+ *
+ * This composition pattern ensures consistent AI behavior across all interactions
+ * while providing task-specific guidance for context management.
+ *
+ * Originally extracted from lib/ai/prompts/workspace-context-generation.ts
+ * and objective-context-generation.ts
  */
 
 export const WORKSPACE_CONTEXT_GENERATION_PROMPT = `
