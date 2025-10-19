@@ -66,12 +66,10 @@ export async function createWorkspace(
   description?: string,
   domainId?: string,
 ) {
-  // Get domain to retrieve default workspace context artifact type
-  // If domainId not provided, use first available domain (for backward compatibility)
   let targetDomainId = domainId;
 
   if (!targetDomainId) {
-    // Get first domain as fallback (should be Sales Intelligence based on seed order)
+    // Get first domain as fallback
     const [firstDomain] = await db
       .select({ id: domain.id })
       .from(domain)

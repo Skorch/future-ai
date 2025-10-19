@@ -27,7 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { Workspace } from '@/lib/db/schema';
+import type { Workspace, Domain } from '@/lib/db/schema';
 import useSWR from 'swr';
 import { fetcher } from '@/lib/utils';
 
@@ -49,18 +49,31 @@ export function CreateWorkspaceDialog({
 }: CreateWorkspaceDialogProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [domainId, setDomainId] = useState<'sales' | 'meeting'>('sales');
+  const [domainId, setDomainId] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ name?: string; description?: string }>(
     {},
   );
+
+  // Fetch domains from API
+  const { data: domains, isLoading: domainsLoading } = useSWR<Domain[]>(
+    '/api/domains',
+    fetcher,
+  );
+
+  // Set default domain when domains load
+  useEffect(() => {
+    if (domains && domains.length > 0 && !domainId) {
+      setDomainId(domains[0].id);
+    }
+  }, [domains, domainId]);
 
   // Reset form when dialog opens/closes
   useEffect(() => {
     if (!open) {
       setName('');
       setDescription('');
-      setDomainId('sales');
+      setDomainId('');
       setErrors({});
     }
   }, [open]);
@@ -143,17 +156,22 @@ export function CreateWorkspaceDialog({
             <Label htmlFor="domain">Domain</Label>
             <Select
               value={domainId}
-              onValueChange={(value) =>
-                setDomainId(value as 'sales' | 'meeting')
-              }
-              disabled={isLoading}
+              onValueChange={setDomainId}
+              disabled={isLoading || domainsLoading}
             >
               <SelectTrigger id="domain">
-                <SelectValue />
+                <SelectValue
+                  placeholder={
+                    domainsLoading ? 'Loading...' : 'Select a domain'
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="sales">Sales Intelligence</SelectItem>
-                <SelectItem value="meeting">Meeting Intelligence</SelectItem>
+                {domains?.map((domain) => (
+                  <SelectItem key={domain.id} value={domain.id}>
+                    {domain.title}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
