@@ -11,6 +11,7 @@ import {
   generateAIText as generateAITextPrompt,
   generateChatTitle,
 } from '@/lib/ai/prompts/builders/specialized/title-builder';
+import type { User } from '@/lib/db/schema';
 
 const logger = getLogger('ChatActions');
 
@@ -66,8 +67,10 @@ export async function generateAIText(
 
 export async function generateTitleFromUserMessage({
   message,
+  user,
 }: {
   message: UIMessage;
+  user?: User | null;
 }) {
   return generateTitle({
     context: {
@@ -76,6 +79,7 @@ export async function generateTitleFromUserMessage({
     systemPrompt: generateChatTitle(80),
     userPrompt: '{message}',
     maxLength: 80,
+    user: user || null,
   });
 }
 

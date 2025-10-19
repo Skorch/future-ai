@@ -2,6 +2,7 @@ import { generateObject } from 'ai';
 import { z } from 'zod';
 import { myProvider } from '@/lib/ai/providers';
 import { getLogger } from '@/lib/logger';
+import type { User } from '@/lib/db/schema';
 
 const logger = getLogger('GenerateTitle');
 
@@ -12,6 +13,7 @@ export interface GenerateTitleOptions {
   maxOutputTokens?: number;
   temperature?: number;
   maxLength?: number;
+  user?: User | null;
 }
 
 /**
@@ -38,12 +40,15 @@ function interpolate(
  * Uses template interpolation for prompts with {variable} syntax
  * Supports rich context and configurable generation parameters
  *
+ * @param options.user - Optional user context for potential interpolation or future features
+ *
  * @example
  * const title = await generateTitle({
  *   context: { objectiveTitle: 'Build feature', documentType: 'spec' },
  *   systemPrompt: 'Generate a document title. Max {maxLength} chars.',
  *   userPrompt: 'Objective: {objectiveTitle}\nType: {documentType}',
- *   maxLength: 80
+ *   maxLength: 80,
+ *   user
  * });
  */
 export async function generateTitle({
@@ -53,6 +58,7 @@ export async function generateTitle({
   maxOutputTokens = 100,
   temperature = 0.3,
   maxLength = 80,
+  user,
 }: GenerateTitleOptions): Promise<string> {
   try {
     const interpolatedSystem = interpolate(systemPrompt, {
@@ -66,6 +72,7 @@ export async function generateTitle({
       userPromptLength: interpolatedUser.length,
       maxOutputTokens,
       temperature,
+      userId: user?.id,
     });
 
     // Use generateObject to enforce structured output (no conversational text)

@@ -1,9 +1,9 @@
 // Re-export core components from new structure
+export { CORE_SYSTEM_PROMPT } from './prompts/system';
 export {
-  getSystemPromptHeader,
-  SYSTEM_PROMPT_BASE,
-  PLAYBOOK_GUIDANCE,
-} from './prompts/system';
+  getCurrentContext,
+  type CurrentContextOptions,
+} from './prompts/current-context';
 
 // Note: composeSystemPrompt has been removed. Builders now compose prompts directly from database.
 import { getLogger } from '@/lib/logger';

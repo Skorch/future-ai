@@ -8,6 +8,7 @@ import {
 } from '@/lib/db/types/document-types';
 import { logger } from '@/lib/logger';
 import { generateKnowledgeMetadata } from '@/lib/ai/prompts/builders/specialized/title-builder';
+import type { User } from '@/lib/db/schema';
 
 /**
  * AI-generated metadata for raw documents
@@ -25,6 +26,7 @@ export interface GenerateDocumentMetadataOptions {
   content: string;
   fileName?: string;
   maxTitleLength?: number;
+  user?: User | null;
 }
 
 /**
@@ -45,20 +47,21 @@ const DocumentMetadataSchema = z.object({
  * If AI generation fails, falls back to safe defaults using filename
  * or generic values. All failures are logged as errors for monitoring.
  *
- * @param options - Content, filename, and configuration
+ * @param options - Content, filename, user, and configuration
  * @returns DocumentMetadata with title, type, and optional summary
  */
 export async function generateDocumentMetadata({
   content,
   fileName,
   maxTitleLength = 80,
+  user = null,
 }: GenerateDocumentMetadataOptions): Promise<DocumentMetadata> {
   try {
     const { object } = await generateObject({
       model: myProvider.languageModel('title-model'), // claude-3-5-haiku-latest
       mode: 'json',
       schema: DocumentMetadataSchema,
-      system: generateKnowledgeMetadata(maxTitleLength),
+      system: generateKnowledgeMetadata(maxTitleLength, user),
       prompt: `Analyze this document and provide metadata:
 
 ${content}${fileName ? `\n\nOriginal filename: ${fileName}` : ''}`,

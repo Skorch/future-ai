@@ -18,6 +18,7 @@ import {
   createStreamId,
   getChatByIdWithWorkspace,
   getMessagesByChatId,
+  getUserById,
   saveChat,
   saveMessages,
   db,
@@ -135,6 +136,9 @@ export async function POST(
       return new ChatSDKError('unauthorized:chat').toResponse();
     }
 
+    // Fetch user for prompt context
+    const user = await getUserById(userId);
+
     // Fetch domain with all artifact type relations (cached)
     const domain = await getDomainByWorkspaceId(workspaceId);
 
@@ -175,6 +179,7 @@ export async function POST(
     if (!chat) {
       const title = await generateTitleFromUserMessage({
         message,
+        user: user || null,
       });
 
       // Use provided objectiveId or fall back to active objective
@@ -274,6 +279,7 @@ export async function POST(
       domain,
       workspaceObject || null,
       objectiveObject as Objective | null,
+      user || null,
     );
 
     // Analyze token usage before streaming

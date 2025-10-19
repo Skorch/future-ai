@@ -8,6 +8,7 @@ import {
   getWorkspaceContext,
   getWorkspaceById,
 } from './queries';
+import { getUserById } from '@/lib/db/queries';
 import {
   WorkspaceContextSchema,
   formatWorkspaceContextAsMarkdown,
@@ -110,11 +111,15 @@ export async function generateWorkspaceContext({
       };
     }
 
+    // Get user for context
+    const user = await getUserById(userId);
+
     // Build system prompt using builder
     const builder = new WorkspaceContextBuilder();
     const systemPrompt = builder.generateContextPrompt(
       workspaceWithRelations.workspaceContextArtifactType,
       domainRecord,
+      user,
     );
 
     // Build user prompt with current context and observations

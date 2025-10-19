@@ -8,6 +8,7 @@ import {
   getObjectiveContext,
   getObjectiveById,
 } from '@/lib/db/objective';
+import { getUserById } from '@/lib/db/queries';
 import {
   ObjectiveContextSchema,
   formatObjectiveContextAsMarkdown,
@@ -109,11 +110,15 @@ export async function generateObjectiveContext({
       };
     }
 
+    // Get user for context
+    const user = await getUserById(userId);
+
     // Build system prompt using builder
     const builder = new ObjectiveContextBuilder();
     const systemPrompt = builder.generateContextPrompt(
       objectiveWithRelations.objectiveContextArtifactType,
       domainRecord,
+      user,
     );
 
     // Build user prompt with current context and observations
