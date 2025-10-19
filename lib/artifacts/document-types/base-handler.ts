@@ -10,7 +10,9 @@ import { getObjectiveDocumentById } from '@/lib/db/objective-document';
 import type { LanguageModel, UIMessageStreamWriter } from 'ai';
 import type { ChatMessage } from '@/lib/types';
 import type { AnthropicProviderOptions } from '@ai-sdk/anthropic';
-import { getSystemPromptHeader } from '@/lib/ai/prompts/system';
+import { CORE_SYSTEM_PROMPT } from '@/lib/ai/prompts/system';
+import { getCurrentContext } from '@/lib/ai/prompts/current-context';
+import { getStreamingAgentPrompt } from '@/lib/ai/prompts/builders/shared/prompts/unified-agent.prompts';
 
 /**
  * Provider options type for AI models
@@ -36,6 +38,8 @@ export interface StreamConfig {
   temperature?: number;
   experimental_transform?: ReturnType<typeof smoothStream>;
   providerOptions?: ProviderOptions;
+  // Tools from AI SDK - use unknown since CoreTool is not exported
+  tools?: Record<string, unknown>;
 }
 
 /**
@@ -66,7 +70,8 @@ export async function processStream(
 ): Promise<string> {
   let content = '';
 
-  const { fullStream } = streamText(config);
+  // Cast tools to satisfy streamText type requirements
+  const { fullStream } = streamText(config as Parameters<typeof streamText>[0]);
 
   for await (const delta of fullStream) {
     const { type } = delta;
@@ -227,6 +232,7 @@ export function composeSystemPrompt(
 /**
  * Build stream configuration with thinking budget support
  * Helper for types that need reasoning capabilities
+ * Prepends full prompt stack: CORE_SYSTEM_PROMPT + getCurrentContext + STREAMING_AGENT_PROMPT + specific system
  */
 export function buildStreamConfig({
   model,
@@ -236,6 +242,7 @@ export function buildStreamConfig({
   thinkingBudget,
   temperature = 0.6,
   prediction,
+  tools,
 }: {
   model: LanguageModel;
   system: string;
@@ -244,9 +251,17 @@ export function buildStreamConfig({
   thinkingBudget?: number;
   temperature?: number;
   prediction?: string;
+  // Tools from AI SDK - use unknown since CoreTool is not exported
+  tools?: Record<string, unknown>;
 }): StreamConfig {
-  // Prepend system prompt header with current date context
-  const systemWithContext = `${getSystemPromptHeader()}\n\n${system}`;
+  // Build full system prompt with standard layers for streamText
+  const systemWithContext = `${CORE_SYSTEM_PROMPT}
+
+${getCurrentContext({ user: null })}
+
+${getStreamingAgentPrompt()}
+
+${system}`;
 
   const config: StreamConfig = {
     model,
@@ -255,6 +270,7 @@ export function buildStreamConfig({
     maxOutputTokens,
     temperature,
     experimental_transform: smoothStream({ chunking: 'word' }),
+    ...(tools && { tools }),
   };
 
   // Add provider-specific options if needed

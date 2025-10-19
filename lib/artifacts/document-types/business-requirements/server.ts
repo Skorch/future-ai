@@ -14,6 +14,7 @@ import type {
   CreateDocumentCallbackProps,
   GeneratePunchlistCallbackProps,
 } from '@/lib/artifacts/server';
+import { buildInvestigationTools } from '@/lib/ai/tools/investigation-tools';
 
 import { db } from '@/lib/db/queries';
 import { workspace, artifactType } from '@/lib/db/schema';
@@ -116,6 +117,15 @@ Date: ${new Date().toISOString().split('T')[0]}
 Meeting Transcripts and Documentation:
 ${transcripts}`;
 
+    // Build investigation tools for AI to discover information
+    const tools = await buildInvestigationTools({
+      session,
+      workspaceId,
+      objectiveId: typedMetadata?.objectiveId || '',
+      domainId: 'project',
+      dataStream,
+    });
+
     // Build configuration with high thinking budget for complex synthesis
     const streamConfig = buildStreamConfig({
       model: myProvider.languageModel('artifact-model'),
@@ -123,6 +133,7 @@ ${transcripts}`;
       prompt: userPrompt,
       maxOutputTokens: metadata.outputSize ?? OutputSize.LARGE,
       thinkingBudget: metadata.thinkingBudget, // HIGH - 12000 tokens
+      tools,
     });
 
     // Process the stream and collect content
@@ -191,7 +202,16 @@ ${transcripts}`;
       knowledgeSummaries,
     );
 
-    // Build configuration for punchlist generation
+    // Build investigation tools for punchlist generation
+    const tools = await buildInvestigationTools({
+      session,
+      workspaceId,
+      objectiveId: objectiveId || '',
+      domainId: 'project',
+      dataStream,
+    });
+
+    // Build configuration for punchlist generation with tools
     const config = buildStreamConfig({
       model: myProvider.languageModel('claude-sonnet-4'),
       system: punchlistSystemPrompt,
@@ -199,6 +219,7 @@ ${transcripts}`;
         'Generate the updated punchlist showing how the new knowledge affects each item.',
       maxOutputTokens: 4000,
       temperature: 0.4,
+      tools,
     });
 
     // Process stream directly
