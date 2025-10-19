@@ -35,6 +35,7 @@ export type CustomUIDataTypes = {
   kind: ArtifactKind;
   clear: null;
   finish: null;
+  reasoning: string;
   continuationRequest: {
     message: string;
   };

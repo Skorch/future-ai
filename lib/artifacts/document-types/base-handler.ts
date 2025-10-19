@@ -13,6 +13,7 @@ import type { AnthropicProviderOptions } from '@ai-sdk/anthropic';
 import { CORE_SYSTEM_PROMPT } from '@/lib/ai/prompts/system';
 import { getCurrentContext } from '@/lib/ai/prompts/current-context';
 import { getStreamingAgentPrompt } from '@/lib/ai/prompts/builders/shared/prompts/unified-agent.prompts';
+import { ThinkingStreamProcessor } from '@/lib/ai/utils/thinking-stream-processor';
 
 /**
  * Provider options type for AI models
@@ -63,12 +64,18 @@ type DocumentMetadata = {
 /**
  * Process a stream of text from the AI model and write deltas to the data stream
  * Returns the complete accumulated content
+ *
+ * Automatically handles thinking tags from Anthropic models:
+ * - Thinking content is streamed as 'data-reasoning' events
+ * - Final content has thinking tags removed
+ * - Regular content is streamed as 'data-textDelta' events
  */
 export async function processStream(
   config: StreamConfig,
   dataStream: UIMessageStreamWriter<ChatMessage>,
 ): Promise<string> {
-  let content = '';
+  // Create processor to handle thinking detection and filtering
+  const processor = new ThinkingStreamProcessor();
 
   // Cast tools to satisfy streamText type requirements
   const { fullStream } = streamText(config as Parameters<typeof streamText>[0]);
@@ -78,17 +85,13 @@ export async function processStream(
 
     if (type === 'text-delta') {
       const { text } = delta;
-      content += text;
-
-      dataStream.write({
-        type: 'data-textDelta',
-        data: text,
-        transient: true,
-      });
+      // Let processor handle all thinking detection and streaming
+      processor.processTextDelta(text, dataStream);
     }
   }
 
-  return content;
+  // Return content with thinking tags filtered out
+  return processor.getFinalContent();
 }
 
 /**

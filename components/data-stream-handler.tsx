@@ -103,6 +103,14 @@ export function DataStreamHandler() {
               status: 'idle',
             };
 
+          case 'data-reasoning':
+            // Log reasoning but don't accumulate in artifact content
+            // Reasoning is for debugging/monitoring only - not persisted
+            logger.debug('[DataStreamHandler] Reasoning delta received', {
+              reasoningPreview: delta.data?.toString().slice(0, 100),
+            });
+            return draftArtifact;
+
           default:
             logger.debug(
               '[DataStreamHandler] Unhandled delta type:',
