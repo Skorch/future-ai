@@ -26,6 +26,7 @@ unit-test-architect
 commit-orchestrator
 build-fixer
 code-reviewer
+nextjs-coder
 
 ALWAYS delegate when instructed - your context window is precious and is the sole limiting factor to you accomplishing your work.  Delegating specialized tasks to subagents minimizes the impact on your context window limitations.
 
@@ -59,9 +60,10 @@ Always turn this workflow into a task list using the `TodoWrite` tool. You never
    - [ ] THINK DEEPLY about the requirements and the scope of changes needed
    - [ ] You always use the Code Plan format described below
 
-- [ ] 3. SubAgent Plan Review
-   - [ ] if instructed by the User: use the `jenny` subagent to create a validation report of your plan
-   - [ ] Summarize report `jenny` and analyze any suggested changes 
+- [ ] 3. Step-By-Step DAG + Delegation Wave Plan
+   - [ ] Generate a list of steps to complete the plan
+   - [ ] Think hard about how to bundle each step into a DAG
+   - [ ] Create a list of Waves and each step within the wave
 
 - [ ] 4. User Review
    - [ ] You ALWAYS ask the User to review and approve your proposed solution
@@ -70,14 +72,10 @@ Always turn this workflow into a task list using the `TodoWrite` tool. You never
       - [ ] rethink your approach
       - [ ] ALWAYS re-request a review of your revised solution
 
-- [ ] 5. Implementation
-   - [ ] Implement code
-   - [ ] Write and Run tests frequently and incrementally to verify progress
-   - [ ] When building, always use the `build-fixer` subagent to build and fix minor build issues
-   - [ ] when testing, always use the `unit-test-architect` subagent to write tests, run tests, fix test issues 
-   - in both cases, be sure to give it context of the changes (ie give it the path to the speec file) so it can make decisions on the fly
+- [ ] 5. Delegate Waves
+   - [ ] For each Wave, delegate each step to concurrent `nextjs-coder` subagent tasks
+      - [ ] For each subagent task prompt, use a consistent prompt format to explain exactly what is in scope and out of scope
    
-
 - [ ] 6. Validation
    - [ ] Run tests to verify functionality
    - [ ] Review test results thoroughly
@@ -91,6 +89,9 @@ Always turn this workflow into a task list using the `TodoWrite` tool. You never
    - [ ] Summarize all changes made
    - [ ] Ask the User to visually verify the fix / perform any manual integration tests
    - [ ] Request final approval for this total batch of work
+   - [ ] Build: always use the `build-fixer` subagent to build and fix minor build issues
+   - [ ] Test: always use the `unit-test-architect` subagent to write tests, run tests, fix test issues 
+   - in both cases, be sure to give it context of the changes (ie give it the path to the speec file) so it can make decisions on the fly
 
 - [ ] 8. Completion 
    - [ ] using the `commit-orchestrator` subagent, instruct it to commit changes
@@ -100,7 +101,6 @@ Always turn this workflow into a task list using the `TodoWrite` tool. You never
 - [ ] 9. Summary
    - [ ] You will always write a completion report so that the next phase has context of what you implemented
    
-
 
 ## Proposal Best Practices
 Always follow this format for quick Human code reviews.  Your aim is to demonstrate WHY, WHERE, HOW in a brief but comprehensive fashion.  Less is more so long as you have highlighted all of the complexities
@@ -222,6 +222,62 @@ async onGenerateDocument(context, params): Promise<{ documentId: string; version
 // WHY: Return structure needs both IDs for complete reference
 ```
 ````
+
+
+## DAG & Wave Design
+
+Your goal is to design a way to maximize the number of **concurrent parallel** tasks[] you can run at once w/o any file or dependency overlaps.  This is why thinking in terms of a DAG is ideal as a DAG must be directional and it must not have any looping depdendencies.
+
+Example Wave Design:
+```
+  🎯 Parallel Execution Strategy
+
+  ┌─────────────────────────────────────────────────────────┐
+  │ WAVE 1: Foundation (Parallel)                           │
+  │  - Group 1a, 1b, 1c (types & utils)                    │
+  │  - Group 3d (prompt actions - no dependencies)         │
+  └─────────────────────────────────────────────────────────┘
+                            ↓
+  ┌─────────────────────────────────────────────────────────┐
+  │ WAVE 2: Auth & Simple Components (Parallel)            │
+  │  - Group 2a, 2b (middleware & DAL)                     │
+  │  - Group 3a, 3b, 3c (UI components)                    │
+  │  - Group 4a (layer editor)                             │
+  │  - Group 6a (sidebar update)                           │
+  └─────────────────────────────────────────────────────────┘
+                            ↓
+  ┌─────────────────────────────────────────────────────────┐
+  │ WAVE 3: Complex Components (Sequential)                │
+  │  - Group 4b (stack view - depends on 4a)               │
+  └─────────────────────────────────────────────────────────┘
+                            ↓
+  ┌─────────────────────────────────────────────────────────┐
+  │ WAVE 4: Server Implementation (Parallel)               │
+  │  - Group 5a (server actions)                           │
+  │  - Group 5b (page component - depends on 4b)           │
+  │  - Group 6b (admin layout)                             │
+  └─────────────────────────────────────────────────────────┘
+
+  ---
+  📊 Dependency Matrix
+
+  | Step           | Depends On | Can Run With                |
+  |----------------|------------|-----------------------------|
+  | 1a, 1b, 1c, 3d | None       | Each other (WAVE 1)         |
+  | 2a             | 1a         | 2b, 3a-c, 4a, 6a (WAVE 2)   |
+  | 2b             | None       | 2a, 3a-c, 4a, 6a (WAVE 2)   |
+  | 3a             | 1c         | 2a-b, 3b-c, 4a, 6a (WAVE 2) |
+  | 3b             | 1c         | 2a-b, 3a,c, 4a, 6a (WAVE 2) |
+  | 3c             | 1b         | 2a-b, 3a-b, 4a, 6a (WAVE 2) |
+  | 4a             | None       | 2a-b, 3a-c, 6a (WAVE 2)     |
+  | 6a             | 1a         | 2a-b, 3a-c, 4a (WAVE 2)     |
+  | 4b             | 4a         | None (WAVE 3)               |
+  | 5a             | 2b         | 5b, 6b (WAVE 4)             |
+  | 5b             | 4b         | 5a, 6b (WAVE 4)             |
+  | 6b             | None       | 5a-b (WAVE 4)               |
+
+```
+
 
 ## Workflow Rules
 These rules are critical to the success of your workflow. 
