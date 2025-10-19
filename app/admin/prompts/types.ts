@@ -2,10 +2,10 @@
  * Prompt layer sources - where the content comes from
  */
 export type LayerSource =
-  | 'base' // SYSTEM_PROMPT_BASE (hardcoded)
-  | 'playbook' // PLAYBOOK_GUIDANCE (hardcoded)
+  | 'core' // CORE_SYSTEM_PROMPT (hardcoded)
+  | 'currentContext' // getCurrentContext() (dynamic)
   | 'domain' // Domain.systemPrompt (database)
-  | 'unified' // UNIFIED_AGENT_PROMPT (hardcoded)
+  | 'streaming' // STREAMING_AGENT_PROMPT (hardcoded, includes playbook)
   | 'artifactType' // ArtifactType.instructionPrompt (database)
   | 'template' // ArtifactType.template (database)
   | 'workspaceContext' // Workspace.context (database)
@@ -58,7 +58,13 @@ export const SCENARIOS: Scenario[] = [
     requiresArtifactType: false,
     artifactCategory: 'context',
     layers: [
-      { source: 'base', label: 'System Base', editable: false, required: true },
+      { source: 'core', label: 'Core System', editable: false, required: true },
+      {
+        source: 'currentContext',
+        label: 'Current Context',
+        editable: false,
+        required: true,
+      },
       {
         source: 'domain',
         label: 'Domain Intelligence',
@@ -83,7 +89,13 @@ export const SCENARIOS: Scenario[] = [
     requiresArtifactType: false,
     artifactCategory: 'context',
     layers: [
-      { source: 'base', label: 'System Base', editable: false, required: true },
+      { source: 'core', label: 'Core System', editable: false, required: true },
+      {
+        source: 'currentContext',
+        label: 'Current Context',
+        editable: false,
+        required: true,
+      },
       {
         source: 'domain',
         label: 'Domain Intelligence',
@@ -109,7 +121,19 @@ export const SCENARIOS: Scenario[] = [
     requiresArtifactType: true,
     artifactCategory: 'objective',
     layers: [
-      { source: 'base', label: 'System Base', editable: false, required: true },
+      { source: 'core', label: 'Core System', editable: false, required: true },
+      {
+        source: 'currentContext',
+        label: 'Current Context',
+        editable: false,
+        required: true,
+      },
+      {
+        source: 'streaming',
+        label: 'Streaming Agent Capabilities',
+        editable: false,
+        required: true,
+      },
       {
         source: 'domain',
         label: 'Domain Intelligence',
@@ -153,7 +177,19 @@ export const SCENARIOS: Scenario[] = [
     requiresArtifactType: true,
     artifactCategory: 'summary',
     layers: [
-      { source: 'base', label: 'System Base', editable: false, required: true },
+      { source: 'core', label: 'Core System', editable: false, required: true },
+      {
+        source: 'currentContext',
+        label: 'Current Context',
+        editable: false,
+        required: true,
+      },
+      {
+        source: 'streaming',
+        label: 'Streaming Agent Capabilities',
+        editable: false,
+        required: true,
+      },
       {
         source: 'domain',
         label: 'Domain Intelligence',
@@ -178,7 +214,19 @@ export const SCENARIOS: Scenario[] = [
     requiresArtifactType: true,
     artifactCategory: 'punchlist',
     layers: [
-      { source: 'base', label: 'System Base', editable: false, required: true },
+      { source: 'core', label: 'Core System', editable: false, required: true },
+      {
+        source: 'currentContext',
+        label: 'Current Context',
+        editable: false,
+        required: true,
+      },
+      {
+        source: 'streaming',
+        label: 'Streaming Agent Capabilities',
+        editable: false,
+        required: true,
+      },
       {
         source: 'domain',
         label: 'Domain Intelligence',
@@ -209,10 +257,10 @@ export const SCENARIOS: Scenario[] = [
     requiresDomain: true,
     requiresArtifactType: false,
     layers: [
-      { source: 'base', label: 'System Base', editable: false, required: true },
+      { source: 'core', label: 'Core System', editable: false, required: true },
       {
-        source: 'playbook',
-        label: 'Playbook Guidance',
+        source: 'currentContext',
+        label: 'Current Context',
         editable: false,
         required: true,
       },
@@ -224,8 +272,8 @@ export const SCENARIOS: Scenario[] = [
         required: true,
       },
       {
-        source: 'unified',
-        label: 'Agent Workflow',
+        source: 'streaming',
+        label: 'Streaming Agent Capabilities',
         editable: false,
         required: true,
       },

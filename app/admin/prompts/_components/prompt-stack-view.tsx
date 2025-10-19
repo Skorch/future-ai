@@ -8,17 +8,16 @@ import {
 import { TokenCounter } from './token-counter';
 import { PromptActions } from './prompt-actions';
 import type { Scenario } from '../types';
-import type { Domain, ArtifactType } from '@/lib/db/schema';
-import {
-  SYSTEM_PROMPT_BASE,
-  PLAYBOOK_GUIDANCE,
-} from '@/lib/ai/prompts/builders/shared/prompts/system.prompts';
-import { getUnifiedAgentPrompt } from '@/lib/ai/prompts/builders/shared/prompts/unified-agent.prompts';
+import type { Domain, ArtifactType, User } from '@/lib/db/schema';
+import { CORE_SYSTEM_PROMPT } from '@/lib/ai/prompts/system';
+import { getStreamingAgentPrompt } from '@/lib/ai/prompts/builders/shared/prompts/unified-agent.prompts';
+import { getCurrentContext } from '@/lib/ai/prompts/current-context';
 
 interface PromptStackViewProps {
   scenario: Scenario;
   domain: Domain | null;
   artifactType: ArtifactType | null;
+  user: User | null;
   workspace?: { context: string | null } | null;
   objective?: { context: string | null } | null;
   expandedLayers: Set<string>;
@@ -42,6 +41,7 @@ export const PromptStackView = forwardRef<
     scenario,
     domain,
     artifactType,
+    user,
     workspace,
     objective,
     expandedLayers,
@@ -62,11 +62,11 @@ export const PromptStackView = forwardRef<
       let onSave: ((content: string) => Promise<void>) | undefined;
 
       switch (layerConfig.source) {
-        case 'base':
-          content = SYSTEM_PROMPT_BASE;
+        case 'core':
+          content = CORE_SYSTEM_PROMPT;
           break;
-        case 'playbook':
-          content = PLAYBOOK_GUIDANCE;
+        case 'currentContext':
+          content = getCurrentContext({ user });
           break;
         case 'domain':
           content = domain?.systemPrompt || '';
@@ -76,8 +76,8 @@ export const PromptStackView = forwardRef<
             };
           }
           break;
-        case 'unified':
-          content = getUnifiedAgentPrompt();
+        case 'streaming':
+          content = getStreamingAgentPrompt();
           break;
         case 'artifactType':
           content = artifactType?.instructionPrompt || '';
@@ -119,6 +119,7 @@ export const PromptStackView = forwardRef<
     scenario,
     domain,
     artifactType,
+    user,
     workspace,
     objective,
     onSaveDomain,

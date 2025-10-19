@@ -6,7 +6,7 @@ import { ScenarioSelector } from './scenario-selector';
 import { ConfigurationPanel } from './configuration-panel';
 import { PromptStackView, type PromptStackViewRef } from './prompt-stack-view';
 import { SCENARIOS, type ScenarioId } from '../types';
-import type { Domain, ArtifactType } from '@/lib/db/schema';
+import type { Domain, ArtifactType, User } from '@/lib/db/schema';
 import { updateDomainPrompt, updateArtifactTypePrompt } from '../actions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,11 +16,13 @@ import { toast } from 'sonner';
 interface PromptsPageClientProps {
   domains: Domain[];
   artifactTypes: ArtifactType[];
+  user: User | null;
 }
 
 export function PromptsPageClient({
   domains,
   artifactTypes,
+  user,
 }: PromptsPageClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -197,6 +199,7 @@ export function PromptsPageClient({
           scenario={scenario}
           domain={domain}
           artifactType={artifactType}
+          user={user}
           expandedLayers={expandedLayers}
           onToggleLayer={handleToggleLayer}
           onSaveDomain={updateDomainPrompt}

@@ -2,6 +2,7 @@ import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { getAllDomains } from '@/lib/db/queries/domain';
 import { getAllArtifactTypes } from '@/lib/db/queries/artifact-type';
+import { getUserById } from '@/lib/db/queries';
 import { PromptsPageClient } from './_components/prompts-page-client';
 
 export const metadata = {
@@ -17,9 +18,10 @@ export default async function AdminPromptsPage() {
   }
 
   // Fetch all data needed for prompt editing
-  const [domains, artifactTypes] = await Promise.all([
+  const [domains, artifactTypes, user] = await Promise.all([
     getAllDomains(),
     getAllArtifactTypes(),
+    getUserById(userId),
   ]);
 
   return (
@@ -32,7 +34,11 @@ export default async function AdminPromptsPage() {
         </p>
       </div>
 
-      <PromptsPageClient domains={domains} artifactTypes={artifactTypes} />
+      <PromptsPageClient
+        domains={domains}
+        artifactTypes={artifactTypes}
+        user={user}
+      />
     </div>
   );
 }
