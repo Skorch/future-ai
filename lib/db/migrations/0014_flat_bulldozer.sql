@@ -1,0 +1,1 @@
+ALTER TABLE "ArtifactType" ADD COLUMN "label" text NOT NULL DEFAULT 'Untitled';

@@ -44,8 +44,9 @@ export const artifactType = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     category: artifactTypeCategoryEnum('category').notNull(),
-    title: text('title').notNull(), // Human-readable (e.g., "Sales Strategy", "Workspace Context")
-    description: text('description').notNull(), // Purpose of this artifact type
+    label: text('label').notNull(), // Short label for tabs/UI (e.g., "Strategy", "Sales Goal")
+    title: text('title').notNull(), // Header text (e.g., "Sales Strategy", "Sales Goal Details")
+    description: text('description').notNull(), // Helper text describing the artifact's purpose
     instructionPrompt: text('instructionPrompt').notNull(), // AI instructions (markdown)
     template: text('template'), // Output template (markdown) - nullable for context artifacts
     createdAt: timestamp('createdAt').defaultNow().notNull(),
