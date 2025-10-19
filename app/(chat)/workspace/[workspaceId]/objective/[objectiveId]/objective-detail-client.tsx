@@ -13,6 +13,8 @@ import {
   ExternalLinkIcon,
   BookOpen,
   FolderOpen,
+  FileEdit,
+  Target,
 } from 'lucide-react';
 import {
   Card,
@@ -71,6 +73,16 @@ interface ObjectiveDetailClientProps {
   objectiveContext: string | null;
   contextUpdatedAt: Date | null;
   objectiveContextPlaceholder: string;
+  contextLabels?: {
+    tab?: string | null;
+    header?: string | null;
+    description?: string | null;
+  };
+  documentLabels?: {
+    tab?: string | null;
+    header?: string | null;
+    description?: string | null;
+  };
 }
 
 export function ObjectiveDetailClient({
@@ -84,6 +96,8 @@ export function ObjectiveDetailClient({
   objectiveContext,
   contextUpdatedAt,
   objectiveContextPlaceholder,
+  contextLabels,
+  documentLabels,
 }: ObjectiveDetailClientProps) {
   const router = useRouter();
   const [isPublished, setIsPublished] = useState(
@@ -92,7 +106,7 @@ export function ObjectiveDetailClient({
   const [isToggling, setIsToggling] = useState(false);
   const [isAddKnowledgeOpen, setIsAddKnowledgeOpen] = useState(false);
   const [isVersionHistoryOpen, setIsVersionHistoryOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('objective');
+  const [activeTab, setActiveTab] = useState('context');
 
   const handleTogglePublish = async (checked: boolean) => {
     setIsToggling(true);
@@ -254,22 +268,22 @@ export function ObjectiveDetailClient({
         <div className="border-b px-6 pt-4">
           <TabsList className="h-auto w-full justify-start gap-2 bg-transparent">
             <TabsTrigger
-              value="objective"
-              className="flex flex-col items-center gap-2 w-32 py-3 data-[state=active]:bg-muted hover:bg-muted/50 rounded-full transition-all"
-            >
-              <FileTextIcon className="size-5" />
-              <span className="text-sm font-medium text-center leading-tight">
-                Objective
-                <br />
-                Document
-              </span>
-            </TabsTrigger>
-            <TabsTrigger
               value="context"
               className="flex flex-col items-center gap-2 w-32 py-3 data-[state=active]:bg-muted hover:bg-muted/50 rounded-full transition-all"
             >
-              <FileTextIcon className="size-5" />
-              <span className="text-sm font-medium">Context</span>
+              <FileEdit className="size-4" />
+              <span className="text-sm font-medium">
+                {contextLabels?.tab || 'Context'}
+              </span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="objective"
+              className="flex flex-col items-center gap-2 w-32 py-3 data-[state=active]:bg-muted hover:bg-muted/50 rounded-full transition-all"
+            >
+              <Target className="size-4" />
+              <span className="text-sm font-medium text-center leading-tight">
+                {documentLabels?.tab || 'Objective Document'}
+              </span>
             </TabsTrigger>
             <TabsTrigger
               value="knowledge"
@@ -293,9 +307,18 @@ export function ObjectiveDetailClient({
         {/* Tab Content */}
         <div className="overflow-auto">
           <TabsContent value="objective" className="mt-0 p-6">
-            {/* Document Viewer */}
-            {document && (
-              <div className="space-y-4">
+            {document?.latestVersion ? (
+              <div className="space-y-6">
+                <div className="mb-6">
+                  <h2 className="text-xl font-semibold mb-2">
+                    {documentLabels?.header || 'Objective Document'}
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    {documentLabels?.description ||
+                      'AI-generated objective document'}
+                  </p>
+                </div>
+                {/* Document Viewer */}
                 <Card className="overflow-hidden">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
@@ -315,36 +338,28 @@ export function ObjectiveDetailClient({
                     )}
                   </CardHeader>
                   <CardContent className="p-0">
-                    {document.latestVersion ? (
-                      <Link
-                        href={`/workspace/${workspaceId}/document/${document.document.id}`}
-                        className="block relative cursor-pointer group"
-                      >
-                        {/* Preview Container with Fixed Height */}
-                        <div className="relative h-[300px] overflow-hidden">
-                          <div className="px-6 pt-4 pb-16">
-                            <DocumentViewer
-                              content={document.latestVersion.content}
-                            />
-                          </div>
-                          {/* Gradient Fade Overlay */}
-                          <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-card to-transparent pointer-events-none" />
+                    <Link
+                      href={`/workspace/${workspaceId}/document/${document.document.id}`}
+                      className="block relative cursor-pointer group"
+                    >
+                      {/* Preview Container with Fixed Height */}
+                      <div className="relative h-[300px] overflow-hidden">
+                        <div className="px-6 pt-4 pb-16">
+                          <DocumentViewer
+                            content={document.latestVersion.content}
+                          />
                         </div>
-                        {/* View Full Document Button */}
-                        <div className="absolute inset-x-0 bottom-0 flex items-center justify-center pb-4 pointer-events-none">
-                          <div className="flex items-center gap-2 px-4 py-2 bg-primary/90 text-primary-foreground rounded-full text-sm font-medium group-hover:bg-primary transition-colors pointer-events-auto">
-                            <ExternalLinkIcon className="size-4" />
-                            View Full Document
-                          </div>
-                        </div>
-                      </Link>
-                    ) : (
-                      <div className="px-6 py-4">
-                        <p className="text-muted-foreground">
-                          No document content yet
-                        </p>
+                        {/* Gradient Fade Overlay */}
+                        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-card to-transparent pointer-events-none" />
                       </div>
-                    )}
+                      {/* View Full Document Button */}
+                      <div className="absolute inset-x-0 bottom-0 flex items-center justify-center pb-4 pointer-events-none">
+                        <div className="flex items-center gap-2 px-4 py-2 bg-primary/90 text-primary-foreground rounded-full text-sm font-medium group-hover:bg-primary transition-colors pointer-events-auto">
+                          <ExternalLinkIcon className="size-4" />
+                          View Full Document
+                        </div>
+                      </div>
+                    </Link>
                   </CardContent>
                 </Card>
 
@@ -396,6 +411,16 @@ export function ObjectiveDetailClient({
                   </Collapsible>
                 )}
               </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <h3 className="text-lg font-semibold mb-2">
+                  No document content yet
+                </h3>
+                <p className="text-muted-foreground">
+                  {documentLabels?.description ||
+                    'The AI-generated objective document will appear here'}
+                </p>
+              </div>
             )}
           </TabsContent>
 
@@ -405,6 +430,10 @@ export function ObjectiveDetailClient({
               initialContext={objectiveContext}
               lastUpdated={contextUpdatedAt}
               placeholder={objectiveContextPlaceholder}
+              customLabels={{
+                header: contextLabels?.header,
+                description: contextLabels?.description,
+              }}
             />
           </TabsContent>
 

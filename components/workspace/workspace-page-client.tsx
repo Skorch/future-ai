@@ -20,6 +20,11 @@ interface WorkspacePageClientProps {
   knowledge: KnowledgeDocument[];
   raw: KnowledgeDocument[];
   workspaceContextPlaceholder: string;
+  contextLabels?: {
+    tab?: string | null;
+    header?: string | null;
+    description?: string | null;
+  };
 }
 
 export function WorkspacePageClient({
@@ -28,6 +33,7 @@ export function WorkspacePageClient({
   knowledge,
   raw,
   workspaceContextPlaceholder,
+  contextLabels,
 }: WorkspacePageClientProps) {
   const [activeTab, setActiveTab] = useState('objectives');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -102,7 +108,9 @@ export function WorkspacePageClient({
               className="flex flex-col items-center gap-2 w-32 py-3 data-[state=active]:bg-muted hover:bg-muted/50 rounded-full transition-all"
             >
               <FileEdit className="size-5" />
-              <span className="text-sm font-medium">Context</span>
+              <span className="text-sm font-medium">
+                {contextLabels?.tab || 'Context'}
+              </span>
             </TabsTrigger>
             <TabsTrigger
               value="knowledge"
@@ -153,6 +161,10 @@ export function WorkspacePageClient({
               initialContext={workspace.context}
               lastUpdated={workspace.contextUpdatedAt}
               placeholder={workspaceContextPlaceholder}
+              customLabels={{
+                header: contextLabels?.header,
+                description: contextLabels?.description,
+              }}
             />
           </TabsContent>
 

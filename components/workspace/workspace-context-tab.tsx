@@ -16,6 +16,10 @@ interface WorkspaceContextTabProps {
   initialContext: string | null;
   lastUpdated: Date | null;
   placeholder: string;
+  customLabels?: {
+    header?: string | null;
+    description?: string | null;
+  };
 }
 
 export function WorkspaceContextTab({
@@ -23,6 +27,7 @@ export function WorkspaceContextTab({
   initialContext,
   lastUpdated: initialLastUpdated,
   placeholder,
+  customLabels,
 }: WorkspaceContextTabProps) {
   // State for save status
   const [isSaving, setIsSaving] = useState(false);
@@ -182,9 +187,10 @@ export function WorkspaceContextTab({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Workspace Context</CardTitle>
+        <CardTitle>{customLabels?.header || 'Workspace Context'}</CardTitle>
         <p className="text-sm text-muted-foreground">
-          AI instructions specific to this workspace, similar to CLAUDE.md
+          {customLabels?.description ||
+            'AI instructions specific to this workspace, similar to CLAUDE.md'}
         </p>
       </CardHeader>
       <CardContent>

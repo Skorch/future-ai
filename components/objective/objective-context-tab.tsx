@@ -16,6 +16,10 @@ interface ObjectiveContextTabProps {
   initialContext: string | null;
   lastUpdated: Date | null;
   placeholder: string;
+  customLabels?: {
+    header?: string | null;
+    description?: string | null;
+  };
 }
 
 export function ObjectiveContextTab({
@@ -23,6 +27,7 @@ export function ObjectiveContextTab({
   initialContext,
   lastUpdated: initialLastUpdated,
   placeholder,
+  customLabels,
 }: ObjectiveContextTabProps) {
   // State for save status
   const [isSaving, setIsSaving] = useState(false);
@@ -182,9 +187,10 @@ export function ObjectiveContextTab({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Objective Context</CardTitle>
+        <CardTitle>{customLabels?.header || 'Objective Context'}</CardTitle>
         <p className="text-sm text-muted-foreground">
-          Details about this specific goal, deal, or project
+          {customLabels?.description ||
+            'Details about this specific goal, deal, or project'}
         </p>
       </CardHeader>
       <CardContent>
