@@ -265,9 +265,13 @@ function PureMultimodalInput({
         .map((a) => a.transcriptMessage || '')
         .filter(Boolean)
         .join('\n\n');
+
+      const playbookInstruction =
+        'Please use the transcript summary playbook to analyze this transcript.';
+
       messageText = input
-        ? `${input}\n\n${transcriptMarkers}`
-        : transcriptMarkers;
+        ? `${input}\n\n${transcriptMarkers}\n\n${playbookInstruction}`
+        : `${transcriptMarkers}\n\n${playbookInstruction}`;
     }
 
     sendMessage({
