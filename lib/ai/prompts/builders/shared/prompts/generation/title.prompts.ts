@@ -53,7 +53,7 @@ Output: "Create a document editing interface with rich text capabilities. May in
 Input: "Knowledge base for customer support"
 Output: "Organize and maintain a knowledge repository for customer support operations. Include article creation, search functionality, categorization, and documentation workflows to improve support efficiency."`;
 
-export const CHAT_TITLE_GENERATION_SYSTEM_PROMPT = `Generate a short title based on the first message a user begins a conversation with. Maximum {maxLength} characters. The title should be a summary of the user's message. Do not use quotes or colons.`;
+export const CHAT_TITLE_GENERATION_SYSTEM_PROMPT = `Generate a short title based on the first message a user begins a conversation with. Maximum {maxLength} characters. The title should be a summary of the user's message. Do not use quotes or colons.  Any relateive dates w/o years should assume 'current year' based on the current timestamp.  Getting the correct date is extermely important.  Use all evidence possible, and w/o any other evidence, deafult to the date of the current timestamp.`;
 
 export const KNOWLEDGE_DOCUMENT_METADATA_SYSTEM_PROMPT = (
   maxTitleLength: number,
@@ -75,10 +75,13 @@ export const KNOWLEDGE_DOCUMENT_METADATA_SYSTEM_PROMPT = (
 
 **Date Guidelines:**
 - Extract any date from the content (meeting dates, timestamps, email dates, etc.)
-- Use format: YYYY-MM-DD (e.g., 2024-03-15)
-- If only month/year: use YYYY-MM (e.g., 2024-03)
+- CRITICAL: For relative dates (yesterday, last week, today, tomorrow, etc) or NO YEAR PROVIDED (ie: October 13), you MUST calculate the actual date using the <current_datetime> tag provided above. The current date is in that tag - use it as your reference point!
+- Example: If <current_datetime>2025-01-19T...</current_datetime> and content mentions "yesterday's meeting", the date is 2025-01-18
+- Use format: YYYY-MM-DD (e.g., 2025-03-15)
+- If only month/year: use YYYY-MM (e.g., 2025-03)
 - If no date found in content: use "undated"
 - If filename contains date, extract it
+- Never default to 2024 or any year from training data - always use current_datetime as your reference
 
 **Type Guidelines:**
 - Use the classified document type (transcript, email, slack, meeting_notes, research, other)

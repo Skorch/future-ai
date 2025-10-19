@@ -72,11 +72,14 @@ export async function generateTitleFromUserMessage({
   message: UIMessage;
   user?: User | null;
 }) {
+  const systemPrompt = generateChatTitle(80, user || null);
+  logger.debug('Generating chat title with prompts:', { systemPrompt });
+
   return generateTitle({
     context: {
       message: JSON.stringify(message),
     },
-    systemPrompt: generateChatTitle(80),
+    systemPrompt: systemPrompt,
     userPrompt: '{message}',
     maxLength: 80,
     user: user || null,

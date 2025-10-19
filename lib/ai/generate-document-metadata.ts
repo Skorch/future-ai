@@ -57,11 +57,14 @@ export async function generateDocumentMetadata({
   user = null,
 }: GenerateDocumentMetadataOptions): Promise<DocumentMetadata> {
   try {
+    const systemPrompt = generateKnowledgeMetadata(maxTitleLength, user);
+    logger.debug('Generating knowledge metadata:', { systemPrompt, fileName });
+
     const { object } = await generateObject({
       model: myProvider.languageModel('title-model'), // claude-3-5-haiku-latest
       mode: 'json',
       schema: DocumentMetadataSchema,
-      system: generateKnowledgeMetadata(maxTitleLength, user),
+      system: systemPrompt,
       prompt: `Analyze this document and provide metadata:
 
 ${content}${fileName ? `\n\nOriginal filename: ${fileName}` : ''}`,
