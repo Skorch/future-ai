@@ -11,6 +11,11 @@ import {
   unpublishObjective,
   getObjectiveById,
 } from '@/lib/db/objective';
+import { auth } from '@clerk/nextjs/server';
+import {
+  getCurrentVersionGoal,
+  updateObjectiveGoal,
+} from '@/lib/db/objective-document';
 
 const logger = getLogger('ObjectiveActions');
 
@@ -276,6 +281,41 @@ export const unpublishObjectiveAction = withAuth(
     }
   },
 );
+
+/**
+ * Server action to update objective goal
+ */
+export async function updateObjectiveGoalAction(
+  objectiveId: string,
+  goal: string,
+): Promise<void> {
+  const session = await auth();
+  if (!session?.userId) {
+    throw new Error('Unauthorized');
+  }
+
+  // Validate length
+  if (goal && goal.length > 5000) {
+    throw new Error('Goal exceeds 5000 characters');
+  }
+
+  // Get current version
+  const versionData = await getCurrentVersionGoal(objectiveId, session.userId);
+  if (!versionData) {
+    throw new Error('No version found for objective');
+  }
+
+  // Update goal in current version
+  await updateObjectiveGoal(versionData.versionId, session.userId, goal);
+
+  // Get objective to find workspaceId for revalidation
+  const objective = await getObjectiveById(objectiveId, session.userId);
+  if (objective) {
+    revalidatePath(
+      `/workspace/${objective.workspaceId}/objective/${objectiveId}`,
+    );
+  }
+}
 
 /**
  * Server action to toggle objective publish status

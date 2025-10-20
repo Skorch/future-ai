@@ -5,6 +5,7 @@ import { db } from './queries';
 import { objective, workspace, domain } from './schema';
 import type { Objective } from './schema';
 import { ChatSDKError } from '@/lib/errors';
+import { getCurrentVersionGoal } from './objective-document';
 
 export type { Objective };
 
@@ -294,114 +295,24 @@ export async function getOrCreateActiveObjective(
 }
 
 /**
- * Get objective context (for reading)
+ * Get objective with goal (for page load)
  */
-export async function getObjectiveContext(
-  objectiveId: string,
-  userId: string,
-): Promise<{ context: string | null; contextUpdatedAt: Date | null } | null> {
-  try {
-    const [obj] = await db
-      .select({
-        context: objective.context,
-        contextUpdatedAt: objective.contextUpdatedAt,
-      })
-      .from(objective)
-      .innerJoin(workspace, eq(objective.workspaceId, workspace.id))
-      .where(
-        and(
-          eq(objective.id, objectiveId),
-          eq(workspace.userId, userId),
-          isNull(workspace.deletedAt),
-        ),
-      )
-      .limit(1);
-
-    return obj || null;
-  } catch (error) {
-    throw new ChatSDKError(
-      'bad_request:database',
-      'Failed to get objective context',
-    );
-  }
-}
-
-/**
- * Update objective context with new content
- */
-export async function updateObjectiveContext(
-  objectiveId: string,
-  userId: string,
-  context: string,
-): Promise<void> {
-  try {
-    // Verify ownership via workspace
-    const existing = await getObjectiveById(objectiveId, userId);
-    if (!existing) {
-      throw new ChatSDKError(
-        'not_found:database',
-        'Objective not found or access denied',
-      );
-    }
-
-    await db
-      .update(objective)
-      .set({
-        context,
-        contextUpdatedAt: new Date(),
-      })
-      .where(eq(objective.id, objectiveId));
-  } catch (error) {
-    if (error instanceof ChatSDKError) {
-      throw error;
-    }
-    throw new ChatSDKError(
-      'bad_request:database',
-      'Failed to update objective context',
-    );
-  }
-}
-
-/**
- * Get objective with context (for page load)
- */
-export async function getObjectiveWithContext(
+export async function getObjectiveWithGoal(
   objectiveId: string,
   userId: string,
 ): Promise<{
   objective: Objective;
-  context: string | null;
-  contextUpdatedAt: Date | null;
+  objectiveGoal: string | null;
+  goalUpdatedAt: Date | null;
 } | null> {
-  try {
-    const [result] = await db
-      .select({
-        objective,
-        context: objective.context,
-        contextUpdatedAt: objective.contextUpdatedAt,
-      })
-      .from(objective)
-      .innerJoin(workspace, eq(objective.workspaceId, workspace.id))
-      .where(
-        and(
-          eq(objective.id, objectiveId),
-          eq(workspace.userId, userId),
-          isNull(workspace.deletedAt),
-        ),
-      )
-      .limit(1);
+  const objective = await getObjectiveById(objectiveId, userId);
+  if (!objective) return null;
 
-    if (!result) return null;
+  const goalData = await getCurrentVersionGoal(objectiveId, userId);
 
-    return {
-      objective: result.objective,
-      context: result.context,
-      contextUpdatedAt: result.contextUpdatedAt,
-    };
-  } catch (error) {
-    throw new ChatSDKError(
-      'bad_request:database',
-      'Failed to get objective with context',
-    );
-  }
+  return {
+    objective,
+    objectiveGoal: goalData?.goal ?? null,
+    goalUpdatedAt: goalData?.updatedAt ?? null,
+  };
 }

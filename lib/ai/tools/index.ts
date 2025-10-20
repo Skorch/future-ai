@@ -9,4 +9,4 @@ export { loadDocuments } from './load-documents';
 export { askUser } from './ask-user';
 export { getPlaybook } from './get-playbook';
 export { updateWorkspaceContext } from './update-workspace-context';
-export { updateObjectiveContext } from './update-objective-context';
+export { updateObjectiveGoal } from './update-objective-goal';

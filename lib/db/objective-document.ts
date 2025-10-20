@@ -17,6 +17,7 @@ import type {
 import { ChatSDKError } from '@/lib/errors';
 import { generateTitle } from '@/lib/ai/utils/generate-title';
 import { generateObjectiveTitle } from '@/lib/ai/prompts/builders/specialized/title-builder';
+import { getObjectiveById } from './objective';
 
 export type { ObjectiveDocument, ObjectiveDocumentVersion };
 
@@ -79,6 +80,7 @@ export async function createDocumentVersion(
   data: {
     content?: string;
     punchlist?: string;
+    objectiveGoal?: string;
     metadata?: Record<string, unknown>;
   },
 ): Promise<ObjectiveDocumentVersion> {
@@ -88,6 +90,7 @@ export async function createDocumentVersion(
       .select({
         content: objectiveDocumentVersion.content,
         punchlist: objectiveDocumentVersion.punchlist,
+        objectiveGoal: objectiveDocumentVersion.objectiveGoal,
       })
       .from(objectiveDocumentVersion)
       .where(eq(objectiveDocumentVersion.documentId, documentId))
@@ -101,6 +104,8 @@ export async function createDocumentVersion(
         documentId,
         content: data.content ?? latestVersion?.content ?? '',
         punchlist: data.punchlist ?? latestVersion?.punchlist ?? null,
+        objectiveGoal:
+          data.objectiveGoal ?? latestVersion?.objectiveGoal ?? null,
         metadata: data.metadata,
         createdByUserId: userId,
       })
@@ -186,6 +191,42 @@ export async function getLatestVersion(
     throw new ChatSDKError(
       'bad_request:database',
       'Failed to get latest version',
+    );
+  }
+}
+
+/**
+ * Get the current (latest) version's goal for an objective
+ * Current version = latest by createdAt timestamp (DESC)
+ */
+export async function getCurrentVersionGoal(
+  objectiveId: string,
+  userId: string,
+): Promise<{ goal: string | null; versionId: string; updatedAt: Date } | null> {
+  try {
+    // Verify ownership
+    const obj = await getObjectiveById(objectiveId, userId);
+    if (!obj || !obj.objectiveDocumentId) {
+      return null;
+    }
+
+    // Get latest version's goal
+    const [latestVersion] = await db
+      .select({
+        versionId: objectiveDocumentVersion.id,
+        goal: objectiveDocumentVersion.objectiveGoal,
+        updatedAt: objectiveDocumentVersion.createdAt,
+      })
+      .from(objectiveDocumentVersion)
+      .where(eq(objectiveDocumentVersion.documentId, obj.objectiveDocumentId))
+      .orderBy(desc(objectiveDocumentVersion.createdAt))
+      .limit(1);
+
+    return latestVersion || null;
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get current goal',
     );
   }
 }
@@ -589,5 +630,74 @@ export async function updateVersionContent(
       'bad_request:database',
       'Failed to update version content',
     );
+  }
+}
+
+/**
+ * Update the objective goal in a specific version
+ * Validates ownership and 5000 char limit
+ */
+export async function updateObjectiveGoal(
+  versionId: string,
+  userId: string,
+  goal: string,
+): Promise<void> {
+  try {
+    // 1. Validate goal length
+    if (goal && goal.length > 5000) {
+      throw new ChatSDKError(
+        'bad_request:database',
+        'Goal exceeds 5000 characters',
+      );
+    }
+
+    // 2. Get version's documentId
+    const [version] = await db
+      .select({ documentId: objectiveDocumentVersion.documentId })
+      .from(objectiveDocumentVersion)
+      .where(eq(objectiveDocumentVersion.id, versionId))
+      .limit(1);
+
+    if (!version) {
+      throw new ChatSDKError('not_found:database', 'Version not found');
+    }
+
+    // 3. Verify ownership by getting the document and checking workspace
+    const [doc] = await db
+      .select({
+        objectiveDocument,
+        objectiveId: objective.id,
+      })
+      .from(objectiveDocument)
+      .innerJoin(workspace, eq(objectiveDocument.workspaceId, workspace.id))
+      .innerJoin(
+        objective,
+        eq(objectiveDocument.id, objective.objectiveDocumentId),
+      )
+      .where(
+        and(
+          eq(objectiveDocument.id, version.documentId),
+          eq(workspace.userId, userId),
+          isNull(workspace.deletedAt),
+        ),
+      )
+      .limit(1);
+
+    if (!doc) {
+      throw new ChatSDKError('forbidden:database', 'Access denied');
+    }
+
+    // 4. Update the objectiveGoal
+    await db
+      .update(objectiveDocumentVersion)
+      .set({ objectiveGoal: goal })
+      .where(eq(objectiveDocumentVersion.id, versionId));
+  } catch (error) {
+    // Re-throw ChatSDKErrors (already have proper surface)
+    if (error instanceof ChatSDKError) {
+      throw error;
+    }
+
+    throw new ChatSDKError('bad_request:database', 'Failed to update goal');
   }
 }
