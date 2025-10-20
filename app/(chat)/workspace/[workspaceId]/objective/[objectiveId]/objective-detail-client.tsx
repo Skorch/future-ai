@@ -41,7 +41,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { KnowledgeTable } from '@/components/knowledge-table';
 import type { KnowledgeDocument } from '@/lib/db/knowledge-document';
-import { ObjectiveContextTab } from '@/components/objective/objective-context-tab';
+import { ObjectiveGoalTab } from '@/components/objective/objective-goal-tab';
 
 interface Chat {
   id: string;
@@ -425,10 +425,10 @@ export function ObjectiveDetailClient({
           </TabsContent>
 
           <TabsContent value="context" className="mt-0 p-6">
-            <ObjectiveContextTab
+            <ObjectiveGoalTab
               objectiveId={objectiveId}
-              initialContext={objectiveContext}
-              lastUpdated={contextUpdatedAt}
+              initialGoal={objectiveContext}
+              goalUpdatedAt={contextUpdatedAt}
               placeholder={objectiveContextPlaceholder}
               customLabels={{
                 header: contextLabels?.header,

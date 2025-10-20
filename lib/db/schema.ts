@@ -209,8 +209,6 @@ export const objective = pgTable(
     summaryArtifactTypeId: uuid('summaryArtifactTypeId')
       .references(() => artifactType.id, { onDelete: 'restrict' })
       .notNull(), // FK for summary/transcript processing
-    context: text('context'), // Objective-specific AI context (markdown, max 5K chars)
-    contextUpdatedAt: timestamp('contextUpdatedAt'), // Last context update timestamp
     createdAt: timestamp('createdAt').defaultNow().notNull(),
     updatedAt: timestamp('updatedAt').defaultNow().notNull(),
     publishedAt: timestamp('publishedAt'),
@@ -277,6 +275,7 @@ export const objectiveDocumentVersion = pgTable(
       .notNull(),
     content: text('content').notNull(),
     punchlist: text('punchlist'), // Markdown-formatted punchlist tracking document evolution
+    objectiveGoal: text('objectiveGoal'),
     kind: text('kind').notNull().default('text'), // Document type (for backwards compatibility)
     metadata: json('metadata').$type<Record<string, unknown>>(),
     createdAt: timestamp('createdAt').defaultNow().notNull(), // Latest = MAX(createdAt)
