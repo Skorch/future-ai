@@ -33,7 +33,7 @@ export interface UpdateDocumentCallbackProps {
   workspaceId: string;
 }
 
-export interface GeneratePunchlistCallbackProps {
+export interface GenerateObjectiveActionsCallbackProps {
   currentVersion: ObjectiveDocumentVersion;
   knowledgeDocIds: string[];
   instruction: string;
@@ -50,8 +50,8 @@ export interface DocumentHandler<T = ArtifactKind> {
     args: CreateDocumentCallbackProps,
   ) => Promise<{ versionId: string } | undefined>;
   onUpdateDocument: (args: UpdateDocumentCallbackProps) => Promise<void>;
-  onGeneratePunchlist?: (
-    args: GeneratePunchlistCallbackProps,
+  onGenerateObjectiveActions?: (
+    args: GenerateObjectiveActionsCallbackProps,
   ) => Promise<string>;
 }
 

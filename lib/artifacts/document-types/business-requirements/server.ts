@@ -1,6 +1,6 @@
 import { myProvider } from '@/lib/ai/providers';
 import { ObjectiveDocumentBuilder } from '@/lib/ai/prompts/builders/objective-document-builder';
-import { PunchlistBuilder } from '@/lib/ai/prompts/builders/punchlist-builder';
+import { ObjectiveActionsBuilder } from '@/lib/ai/prompts/builders/objective-actions-builder';
 import { OutputSize } from '@/lib/artifacts/types';
 import {
   processStream,
@@ -12,7 +12,7 @@ import {
 import type {
   DocumentHandler,
   CreateDocumentCallbackProps,
-  GeneratePunchlistCallbackProps,
+  GenerateObjectiveActionsCallbackProps,
 } from '@/lib/artifacts/server';
 import { buildInvestigationTools } from '@/lib/ai/tools/investigation-tools';
 
@@ -161,7 +161,7 @@ ${transcripts}`;
       'onUpdateDocument is deprecated - use onCreateDocument to update version',
     );
   },
-  onGeneratePunchlist: async ({
+  onGenerateObjectiveActions: async ({
     currentVersion,
     knowledgeDocIds,
     instruction,
@@ -169,48 +169,50 @@ ${transcripts}`;
     workspaceId,
     session,
     objectiveId,
-  }: GeneratePunchlistCallbackProps) => {
+  }: GenerateObjectiveActionsCallbackProps) => {
     // Fetch knowledge documents with full attribution
     const knowledgeSummaries = await fetchKnowledgeDocuments(knowledgeDocIds);
 
     if (!knowledgeSummaries) {
       throw new Error(
-        'No valid knowledge documents found for punchlist generation',
+        'No valid knowledge documents found for objective actions generation',
       );
     }
 
-    // Load objective to get punchlist artifact type
+    // Load objective to get objective actions artifact type
     const objectiveObject = objectiveId
       ? await getObjectiveById(objectiveId, session.user.id)
       : null;
 
-    if (!objectiveObject?.punchlistArtifactTypeId) {
+    if (!objectiveObject?.objectiveActionsArtifactTypeId) {
       throw new Error(
-        'Objective missing punchlistArtifactTypeId - cannot generate punchlist',
+        'Objective missing objectiveActionsArtifactTypeId - cannot generate objective actions',
       );
     }
 
-    // Fetch punchlist artifact type
-    const [punchlistArtifactType] = await db
+    // Fetch objective actions artifact type
+    const [objectiveActionsArtifactType] = await db
       .select()
       .from(artifactType)
-      .where(eq(artifactType.id, objectiveObject.punchlistArtifactTypeId))
+      .where(
+        eq(artifactType.id, objectiveObject.objectiveActionsArtifactTypeId),
+      )
       .limit(1);
 
-    if (!punchlistArtifactType) {
-      throw new Error('PunchlistArtifactType not found');
+    if (!objectiveActionsArtifactType) {
+      throw new Error('ObjectiveActionsArtifactType not found');
     }
 
-    // Use PunchlistBuilder to generate system prompt
-    const punchlistBuilder = new PunchlistBuilder();
-    const punchlistSystemPrompt = punchlistBuilder.generate(
-      punchlistArtifactType,
-      currentVersion.punchlist,
+    // Use ObjectiveActionsBuilder to generate system prompt
+    const objectiveActionsBuilder = new ObjectiveActionsBuilder();
+    const objectiveActionsSystemPrompt = objectiveActionsBuilder.generate(
+      objectiveActionsArtifactType,
+      currentVersion.objectiveActions,
       currentVersion.content,
       knowledgeSummaries,
     );
 
-    // Build investigation tools for punchlist generation
+    // Build investigation tools for objective actions generation
     const tools = await buildInvestigationTools({
       session,
       workspaceId,
@@ -219,26 +221,29 @@ ${transcripts}`;
       dataStream,
     });
 
-    // Build configuration for punchlist generation with tools
+    // Build configuration for objective actions generation with tools
     const config = buildStreamConfig({
       model: myProvider.languageModel('claude-sonnet-4'),
-      system: punchlistSystemPrompt,
+      system: objectiveActionsSystemPrompt,
       prompt:
-        'Generate the updated punchlist showing how the new knowledge affects each item.',
+        'Generate the updated objective actions showing how the new knowledge affects each item.',
       maxOutputTokens: 4000,
       temperature: 0.4,
       tools,
     });
 
     // Process stream directly
-    const punchlistContent = await processStream(config, dataStream);
+    const objectiveActionsContent = await processStream(config, dataStream);
 
-    // Save punchlist to database
-    const { updateVersionPunchlist } = await import(
+    // Save objective actions to database
+    const { updateVersionObjectiveActions } = await import(
       '@/lib/db/objective-document'
     );
-    await updateVersionPunchlist(currentVersion.id, punchlistContent);
+    await updateVersionObjectiveActions(
+      currentVersion.id,
+      objectiveActionsContent,
+    );
 
-    return punchlistContent;
+    return objectiveActionsContent;
   },
 };
