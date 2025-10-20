@@ -10,6 +10,10 @@ import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { updateObjectiveGoalAction } from '@/lib/objective/actions';
 import { debounce } from '@/lib/utils/debounce';
+import {
+  OBJECTIVE_FIELD_MAX_LENGTH,
+  OBJECTIVE_FIELD_WARNING_THRESHOLD,
+} from '@/lib/objective/constants';
 
 interface ObjectiveGoalTabProps {
   objectiveId: string;
@@ -109,11 +113,10 @@ export function ObjectiveGoalTab({
         const potentialNewContent = textBefore + text + textAfter;
 
         // Check if paste would exceed limit
-        const maxLength = 5000;
-        if (potentialNewContent.length > maxLength) {
+        if (potentialNewContent.length > OBJECTIVE_FIELD_MAX_LENGTH) {
           // Truncate the pasted text to fit
           const availableSpace =
-            maxLength - (textBefore.length + textAfter.length);
+            OBJECTIVE_FIELD_MAX_LENGTH - (textBefore.length + textAfter.length);
           if (availableSpace <= 0) {
             toast.error('Cannot paste: character limit reached');
             return true; // Prevent paste
@@ -121,7 +124,7 @@ export function ObjectiveGoalTab({
 
           const truncatedText = text.slice(0, availableSpace);
           toast.warning(
-            `Pasted text truncated to fit ${maxLength} character limit`,
+            `Pasted text truncated to fit ${OBJECTIVE_FIELD_MAX_LENGTH.toLocaleString()} character limit`,
           );
 
           // Insert truncated text manually
@@ -150,12 +153,12 @@ export function ObjectiveGoalTab({
         (editor.storage as any).markdown?.getMarkdown?.() || editor.getText();
 
       // Check character limit
-      if (markdown.length > 5000) {
-        // Truncate to 5000 characters
-        const truncated = markdown.slice(0, 5000);
+      if (markdown.length > OBJECTIVE_FIELD_MAX_LENGTH) {
+        // Truncate to max length
+        const truncated = markdown.slice(0, OBJECTIVE_FIELD_MAX_LENGTH);
         editor.commands.setContent(truncated);
         toast.error(
-          'Character limit reached. Content truncated to 5,000 characters.',
+          `Character limit reached. Content truncated to ${OBJECTIVE_FIELD_MAX_LENGTH.toLocaleString()} characters.`,
         );
         return;
       }
@@ -181,8 +184,11 @@ export function ObjectiveGoalTab({
     : 0;
 
   // Character limit thresholds
-  const isWarning = characterCount > 4750;
-  const isAtLimit = characterCount >= 5000;
+  const warningThreshold = Math.floor(
+    OBJECTIVE_FIELD_MAX_LENGTH * OBJECTIVE_FIELD_WARNING_THRESHOLD,
+  );
+  const isWarning = characterCount > warningThreshold;
+  const isAtLimit = characterCount >= OBJECTIVE_FIELD_MAX_LENGTH;
 
   if (!editor) return null;
 
@@ -218,7 +224,8 @@ export function ObjectiveGoalTab({
                   : ''
             }
           >
-            {characterCount.toLocaleString()} / 5,000 characters
+            {characterCount.toLocaleString()} /{' '}
+            {OBJECTIVE_FIELD_MAX_LENGTH.toLocaleString()} characters
           </div>
         </div>
         {isAtLimit && (
