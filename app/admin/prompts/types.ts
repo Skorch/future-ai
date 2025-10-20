@@ -30,7 +30,7 @@ export type ScenarioId =
   | 'objective-context'
   | 'objective-document'
   | 'knowledge-summary'
-  | 'punchlist'
+  | 'objectiveActions'
   | 'chat-message';
 
 /**
@@ -42,7 +42,7 @@ export interface Scenario {
   description: string;
   requiresDomain: boolean;
   requiresArtifactType: boolean;
-  artifactCategory?: 'objective' | 'summary' | 'punchlist' | 'context';
+  artifactCategory?: 'objective' | 'summary' | 'objectiveActions' | 'context';
   layers: LayerConfig[];
 }
 
@@ -207,12 +207,12 @@ export const SCENARIOS: Scenario[] = [
     ],
   },
   {
-    id: 'punchlist',
-    label: 'Punchlist Creation',
-    description: 'Generate punchlist from objective document',
+    id: 'objectiveActions',
+    label: 'Objective Actions Creation',
+    description: 'Generate objective actions from objective document',
     requiresDomain: true,
     requiresArtifactType: true,
-    artifactCategory: 'punchlist',
+    artifactCategory: 'objectiveActions',
     layers: [
       { source: 'core', label: 'Core System', editable: false, required: true },
       {
@@ -236,14 +236,14 @@ export const SCENARIOS: Scenario[] = [
       },
       {
         source: 'artifactType',
-        label: 'Punchlist Instructions',
+        label: 'Objective Actions Instructions',
         dbField: 'ArtifactType.instructionPrompt',
         editable: true,
         required: true,
       },
       {
         source: 'template',
-        label: 'Punchlist Template',
+        label: 'Objective Actions Template',
         dbField: 'ArtifactType.template',
         editable: true,
         required: false,
