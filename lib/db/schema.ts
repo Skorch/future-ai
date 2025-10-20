@@ -34,7 +34,7 @@ export const sourceTypeEnum = pgEnum('source_type', [
 export const artifactTypeCategoryEnum = pgEnum('artifact_type_category', [
   'objective',
   'summary',
-  'punchlist',
+  'objectiveActions',
   'context',
 ]);
 
@@ -77,9 +77,11 @@ export const domain = pgTable('Domain', {
   defaultSummaryArtifactTypeId: uuid('defaultSummaryArtifactTypeId')
     .references(() => artifactType.id, { onDelete: 'restrict' })
     .notNull(), // Category: summary
-  defaultPunchlistArtifactTypeId: uuid('defaultPunchlistArtifactTypeId')
+  defaultObjectiveActionsArtifactTypeId: uuid(
+    'defaultObjectiveActionsArtifactTypeId',
+  )
     .references(() => artifactType.id, { onDelete: 'restrict' })
-    .notNull(), // Category: punchlist
+    .notNull(), // Category: objectiveActions
   defaultWorkspaceContextArtifactTypeId: uuid(
     'defaultWorkspaceContextArtifactTypeId',
   )
@@ -105,7 +107,7 @@ export type Domain = InferSelectModel<typeof domain>;
 export interface DomainWithRelations extends Domain {
   defaultObjectiveArtifactType?: ArtifactType;
   defaultSummaryArtifactType?: ArtifactType;
-  defaultPunchlistArtifactType?: ArtifactType;
+  defaultObjectiveActionsArtifactType?: ArtifactType;
   defaultWorkspaceContextArtifactType?: ArtifactType;
   defaultObjectiveContextArtifactType?: ArtifactType;
 }
@@ -203,9 +205,9 @@ export const objective = pgTable(
     objectiveDocumentArtifactTypeId: uuid('objectiveDocumentArtifactTypeId')
       .references(() => artifactType.id, { onDelete: 'restrict' })
       .notNull(), // FK for objective document creation
-    punchlistArtifactTypeId: uuid('punchlistArtifactTypeId')
+    objectiveActionsArtifactTypeId: uuid('objectiveActionsArtifactTypeId')
       .references(() => artifactType.id, { onDelete: 'restrict' })
-      .notNull(), // FK for punchlist management
+      .notNull(), // FK for objective actions management
     summaryArtifactTypeId: uuid('summaryArtifactTypeId')
       .references(() => artifactType.id, { onDelete: 'restrict' })
       .notNull(), // FK for summary/transcript processing
@@ -226,9 +228,9 @@ export const objective = pgTable(
     objectiveDocumentArtifactTypeIdx: index(
       'idx_objective_document_artifact_type',
     ).on(table.objectiveDocumentArtifactTypeId),
-    punchlistArtifactTypeIdx: index('idx_objective_punchlist_artifact_type').on(
-      table.punchlistArtifactTypeId,
-    ),
+    objectiveActionsArtifactTypeIdx: index(
+      'idx_objective_objective_actions_artifact_type',
+    ).on(table.objectiveActionsArtifactTypeId),
     summaryArtifactTypeIdx: index('idx_objective_summary_artifact_type').on(
       table.summaryArtifactTypeId,
     ),
@@ -274,7 +276,7 @@ export const objectiveDocumentVersion = pgTable(
       .references(() => objectiveDocument.id, { onDelete: 'cascade' })
       .notNull(),
     content: text('content').notNull(),
-    punchlist: text('punchlist'), // Markdown-formatted punchlist tracking document evolution
+    objectiveActions: text('objectiveActions'), // Markdown-formatted objective actions tracking document evolution
     objectiveGoal: text('objectiveGoal'),
     kind: text('kind').notNull().default('text'), // Document type (for backwards compatibility)
     metadata: json('metadata').$type<Record<string, unknown>>(),
