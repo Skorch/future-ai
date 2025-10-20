@@ -25,6 +25,20 @@ export default function AdminPage() {
             </Button>
           </Link>
         </div>
+
+        {/* Prompts Card */}
+        <div className="border rounded-lg p-6 space-y-3">
+          <h3 className="text-lg font-semibold">Prompts</h3>
+          <p className="text-sm text-muted-foreground">
+            Edit AI prompts for different scenarios. Changes are saved
+            automatically and apply immediately.
+          </p>
+          <Link href="/admin/prompts">
+            <Button variant="outline" className="w-full">
+              Manage Prompts
+            </Button>
+          </Link>
+        </div>
       </div>
     </div>
   );
