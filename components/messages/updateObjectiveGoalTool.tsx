@@ -8,7 +8,7 @@ import {
 } from '@/components/elements/tool';
 import type { ToolUIPart } from 'ai';
 
-interface UpdateWorkspaceContextToolProps {
+interface UpdateObjectiveGoalToolProps {
   toolCallId: string;
   state: ToolUIPart['state'];
   input?: unknown;
@@ -19,18 +19,18 @@ interface UpdateWorkspaceContextToolProps {
   };
 }
 
-export function UpdateWorkspaceContextTool({
+export function UpdateObjectiveGoalTool({
   toolCallId,
   state,
   input,
   output,
-}: UpdateWorkspaceContextToolProps) {
+}: UpdateObjectiveGoalToolProps) {
   return (
     <Tool key={toolCallId} defaultOpen={false}>
       <ToolHeader
-        type="tool-updateWorkspaceContext"
+        type="tool-updateObjectiveGoal"
         state={state}
-        label="Updating Workspace Context"
+        label="Updating Objective Goal"
       />
       <ToolContent>
         {state === 'input-available' && <ToolInput input={input} />}
@@ -40,7 +40,7 @@ export function UpdateWorkspaceContextTool({
               output?.success ? (
                 <div className="space-y-3">
                   <div className="text-sm text-muted-foreground">
-                    Workspace context updated based on new observations
+                    Objective goal updated based on new observations
                   </div>
                   {output.updatedSections &&
                     Array.isArray(output.updatedSections) &&
@@ -65,7 +65,7 @@ export function UpdateWorkspaceContextTool({
                 </div>
               ) : (
                 <div className="text-sm text-muted-foreground">
-                  Context update completed
+                  Goal update completed
                 </div>
               )
             }

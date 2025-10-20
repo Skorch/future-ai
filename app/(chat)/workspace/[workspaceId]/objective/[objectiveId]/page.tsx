@@ -1,7 +1,7 @@
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { eq } from 'drizzle-orm';
-import { getObjectiveWithContext } from '@/lib/db/objective';
+import { getObjectiveWithGoal } from '@/lib/db/objective';
 import { getDocumentByObjectiveId } from '@/lib/db/objective-document';
 import { getChatsByObjectiveId, db } from '@/lib/db/queries';
 import { getKnowledgeByObjectiveId } from '@/lib/db/knowledge-document';
@@ -20,13 +20,13 @@ export default async function ObjectiveDetailPage(props: {
     redirect('/login');
   }
 
-  // Load objective data with context
-  const objectiveData = await getObjectiveWithContext(objectiveId, userId);
+  // Load objective data with goal
+  const objectiveData = await getObjectiveWithGoal(objectiveId, userId);
   if (!objectiveData) {
     redirect(`/workspace/${workspaceId}`);
   }
 
-  const { objective, context, contextUpdatedAt } = objectiveData;
+  const { objective, objectiveGoal, goalUpdatedAt } = objectiveData;
 
   // Verify objective belongs to this workspace
   if (objective.workspaceId !== workspaceId) {
@@ -81,8 +81,8 @@ export default async function ObjectiveDetailPage(props: {
       chats={chats}
       knowledge={knowledge}
       raw={raw}
-      objectiveContext={context}
-      contextUpdatedAt={contextUpdatedAt}
+      objectiveContext={objectiveGoal}
+      contextUpdatedAt={goalUpdatedAt}
       objectiveContextPlaceholder={
         domain?.defaultObjectiveContextArtifactType?.description ||
         'Provide context about this objective...'

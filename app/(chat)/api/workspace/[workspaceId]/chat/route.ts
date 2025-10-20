@@ -24,7 +24,10 @@ import {
   db,
 } from '@/lib/db/queries';
 import { getOrCreateActiveObjective } from '@/lib/db/objective';
-import { initializeVersionForChat } from '@/lib/db/objective-document';
+import {
+  initializeVersionForChat,
+  getCurrentVersionGoal,
+} from '@/lib/db/objective-document';
 import {
   workspace,
   chat as chatTable,
@@ -45,7 +48,7 @@ import { loadDocuments } from '@/lib/ai/tools/load-documents';
 import { askUser } from '@/lib/ai/tools/ask-user';
 import { getPlaybook } from '@/lib/ai/tools/get-playbook';
 import { updateWorkspaceContext } from '@/lib/ai/tools/update-workspace-context';
-import { updateObjectiveContext } from '@/lib/ai/tools/update-objective-context';
+import { updateObjectiveGoal } from '@/lib/ai/tools/update-objective-goal';
 // TODO: Rewire to new DAL - updateDocumentVersionsMessageId stub removed
 // import { updateDocumentVersionsMessageId } from '@/lib/db/documents';
 import { isProductionEnvironment } from '@/lib/constants';
@@ -258,6 +261,7 @@ export async function POST(
 
     // Load full objective object with artifact type relations (needed for builder)
     let objectiveObject = null;
+    let objectiveGoal: string | null = null;
     if (chatObjectiveId) {
       objectiveObject = await db.query.objective.findFirst({
         where: eq(objective.id, chatObjectiveId),
@@ -266,6 +270,12 @@ export async function POST(
           summaryArtifactType: true,
         },
       });
+
+      // Fetch objective goal from current version
+      if (objectiveObject) {
+        const goalData = await getCurrentVersionGoal(chatObjectiveId, userId);
+        objectiveGoal = goalData?.goal ?? null;
+      }
     }
 
     // Process messages BEFORE creating the stream so it's available in onFinish
@@ -280,6 +290,7 @@ export async function POST(
       workspaceObject || null,
       objectiveObject as Objective | null,
       user || null,
+      objectiveGoal,
     );
 
     // Analyze token usage before streaming
@@ -458,8 +469,8 @@ export async function POST(
                 workspaceId,
               }),
 
-              // Objective context update tool
-              updateObjectiveContext: updateObjectiveContext({
+              // Objective goal update tool
+              updateObjectiveGoal: updateObjectiveGoal({
                 session,
                 objectiveId: chatObjectiveId,
                 workspaceId,
