@@ -9,7 +9,7 @@ export type LayerSource =
   | 'artifactType' // ArtifactType.instructionPrompt (database)
   | 'template' // ArtifactType.template (database)
   | 'workspaceContext' // Workspace.context (database)
-  | 'objectiveContext'; // Objective.context (database)
+  | 'objectiveContext'; // Objective.objectiveGoal (database)
 
 /**
  * Configuration for a single layer in the prompt stack

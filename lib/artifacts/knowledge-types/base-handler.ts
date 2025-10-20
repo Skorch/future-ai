@@ -39,6 +39,7 @@ export interface GenerateKnowledgeProps {
   domain: import('@/lib/db/schema').DomainWithRelations;
   workspace: import('@/lib/db/schema').Workspace | null;
   objective: import('@/lib/db/schema').Objective | null;
+  objectiveGoal?: string | null;
   artifactType: import('@/lib/db/schema').ArtifactType;
 }
 

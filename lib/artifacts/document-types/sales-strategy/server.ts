@@ -19,6 +19,7 @@ import { db } from '@/lib/db/queries';
 import { workspace, artifactType } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { getObjectiveById } from '@/lib/db/objective';
+import { getCurrentVersionGoal } from '@/lib/db/objective-document';
 import { metadata } from './metadata';
 
 export const salesStrategyHandler: DocumentHandler<'text'> = {
@@ -138,12 +139,19 @@ ${analyses}
       throw new Error('ArtifactType not found for objective document');
     }
 
+    // Fetch objective goal from current version
+    const goalData = typedMetadata?.objectiveId
+      ? await getCurrentVersionGoal(typedMetadata.objectiveId, session.user.id)
+      : null;
+    const objectiveGoal = goalData?.goal ?? null;
+
     // Use builder to generate system prompt with artifact type, workspace, and objective
     const builder = new ObjectiveDocumentBuilder();
     const systemPrompt = builder.generate(
       artifactTypeData,
       workspaceObject,
       objectiveObject,
+      objectiveGoal,
     );
 
     // Build investigation tools for AI to discover information

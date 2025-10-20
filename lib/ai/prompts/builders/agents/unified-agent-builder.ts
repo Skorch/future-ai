@@ -7,7 +7,7 @@
  * 3. Streaming agent prompt (hardcoded - agentic capabilities for multi-turn interactions)
  * 4. Domain intelligence (database - domain.systemPrompt)
  * 5. Workspace context (database - workspace.context)
- * 6. Objective context (database - objective.context)
+ * 6. Objective goal (from ObjectiveDocumentVersion.objectiveGoal)
  */
 
 import type { AgentBuilder } from '../factories/agent-builder-factory';
@@ -22,6 +22,7 @@ export class UnifiedAgentBuilder implements AgentBuilder {
     workspace: Workspace | null,
     objective: Objective | null,
     user: User | null,
+    objectiveGoal?: string | null,
   ): Promise<string> {
     // Layer 1: Core system prompt
     let systemPrompt = CORE_SYSTEM_PROMPT;
@@ -42,9 +43,9 @@ export class UnifiedAgentBuilder implements AgentBuilder {
       systemPrompt += `\n\n## Workspace Context\n\nUse this context to understand how this team works and their preferences:\n\n${workspace.context}`;
     }
 
-    // Layer 6: Objective context (if exists)
-    if (objective?.context) {
-      systemPrompt += `\n\n## Objective Context\n\nUse this context to understand the current goal and what has been learned so far:\n\n${objective.context}`;
+    // Layer 6: Objective goal (if exists)
+    if (objectiveGoal) {
+      systemPrompt += `\n\n## Objective Goal\n\nUse this goal to understand the current objective and what has been learned so far:\n\n${objectiveGoal}`;
     }
 
     return systemPrompt;

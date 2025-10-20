@@ -25,6 +25,7 @@ export const handler: KnowledgeHandler = {
       props.artifactType,
       props.workspace,
       props.objective,
+      props.objectiveGoal,
     );
 
     return await generateKnowledgeSummary({

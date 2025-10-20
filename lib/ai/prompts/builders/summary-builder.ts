@@ -11,6 +11,7 @@ export class SummaryBuilder {
     artifactType: ArtifactType,
     workspace: Workspace | null,
     objective: Objective | null,
+    objectiveGoal?: string | null,
   ): string {
     // Layer 1: Artifact instructions from database
     let systemPrompt = artifactType.instructionPrompt;
@@ -25,9 +26,9 @@ export class SummaryBuilder {
       systemPrompt += `\n\n## Workspace Context\n\n${workspace.context}`;
     }
 
-    // Layer 4: Objective context (if exists)
-    if (objective?.context) {
-      systemPrompt += `\n\n## Objective Context\n\n${objective.context}`;
+    // Layer 4: Objective goal (if exists)
+    if (objectiveGoal) {
+      systemPrompt += `\n\n## Objective Goal\n\n${objectiveGoal}`;
     }
 
     return systemPrompt;

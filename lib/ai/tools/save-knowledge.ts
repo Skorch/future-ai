@@ -6,6 +6,7 @@ import {
   createKnowledgeDocument,
   getKnowledgeDocumentById,
 } from '@/lib/db/knowledge-document';
+import { getCurrentVersionGoal } from '@/lib/db/objective-document';
 import { getObjectiveById } from '@/lib/db/objective';
 import type { UIMessageStreamWriter } from 'ai';
 import type { ChatMessage } from '@/lib/types';
@@ -99,7 +100,14 @@ IMPORTANT:
           throw new Error('Objective not found or access denied');
         }
 
-        // 2.5. Load workspace and domain for context
+        // 2.5. Load objective goal from current version
+        const goalData = await getCurrentVersionGoal(
+          objectiveId,
+          session.user.id,
+        );
+        const objectiveGoal = goalData?.goal ?? null;
+
+        // 3. Load workspace and domain for context
         const { db } = await import('@/lib/db/queries');
         const { workspace: workspaceSchema, objective: objectiveSchema } =
           await import('@/lib/db/schema');
@@ -183,6 +191,7 @@ IMPORTANT:
           domain,
           workspace,
           objective,
+          objectiveGoal,
           artifactType: objectiveWithArtifactType.summaryArtifactType,
         });
 

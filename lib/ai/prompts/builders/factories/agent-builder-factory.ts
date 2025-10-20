@@ -14,7 +14,7 @@ import { UnifiedAgentBuilder } from '../agents/unified-agent-builder';
  * 3. Streaming agent prompt (hardcoded - agentic capabilities for multi-turn interactions)
  * 4. Domain intelligence (database - domain.systemPrompt)
  * 5. Workspace context (database - workspace.context)
- * 6. Objective context (database - objective.context)
+ * 6. Objective goal (from ObjectiveDocumentVersion.objectiveGoal)
  */
 export interface AgentBuilder {
   generate(
@@ -22,6 +22,7 @@ export interface AgentBuilder {
     workspace: Workspace | null,
     objective: Objective | null,
     user: User | null,
+    objectiveGoal?: string | null,
   ): Promise<string>;
 }
 
