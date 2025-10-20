@@ -2,7 +2,10 @@ import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { eq } from 'drizzle-orm';
 import { getObjectiveWithGoal } from '@/lib/db/objective';
-import { getDocumentByObjectiveId } from '@/lib/db/objective-document';
+import {
+  getDocumentByObjectiveId,
+  getCurrentVersionObjectiveActions,
+} from '@/lib/db/objective-document';
 import { getChatsByObjectiveId, db } from '@/lib/db/queries';
 import { getKnowledgeByObjectiveId } from '@/lib/db/knowledge-document';
 import { getByWorkspaceId as getDomainByWorkspaceId } from '@/lib/db/queries/domain';
@@ -41,12 +44,14 @@ export default async function ObjectiveDetailPage(props: {
     knowledgeDocs,
     objectiveContextArtifactType,
     objectiveDocumentArtifactType,
+    objectiveActionsArtifactType,
+    objectiveActionsData,
   ] = await Promise.all([
     getDomainByWorkspaceId(workspaceId),
     getDocumentByObjectiveId(objectiveId),
     getChatsByObjectiveId(objectiveId, userId),
     getKnowledgeByObjectiveId(objectiveId),
-    // Fetch context artifact type labels
+    // Fetch context artifact type labels (goal labels)
     db.query.artifactType.findFirst({
       where: eq(artifactType.id, objective.objectiveContextArtifactTypeId),
       columns: { label: true, title: true, description: true },
@@ -56,6 +61,13 @@ export default async function ObjectiveDetailPage(props: {
       where: eq(artifactType.id, objective.objectiveDocumentArtifactTypeId),
       columns: { label: true, title: true, description: true },
     }),
+    // Fetch actions artifact type labels
+    db.query.artifactType.findFirst({
+      where: eq(artifactType.id, objective.objectiveActionsArtifactTypeId),
+      columns: { label: true, title: true, description: true },
+    }),
+    // Fetch current objective actions
+    getCurrentVersionObjectiveActions(objectiveId, userId),
   ]);
 
   // Array safety - ensure we always have an array
@@ -96,6 +108,13 @@ export default async function ObjectiveDetailPage(props: {
         tab: objectiveDocumentArtifactType?.label,
         header: objectiveDocumentArtifactType?.title,
         description: objectiveDocumentArtifactType?.description,
+      }}
+      objectiveActions={objectiveActionsData?.objectiveActions ?? null}
+      actionsUpdatedAt={objectiveActionsData?.updatedAt ?? null}
+      actionsLabels={{
+        tab: objectiveActionsArtifactType?.label || 'Action Items',
+        header: objectiveActionsArtifactType?.title,
+        description: objectiveActionsArtifactType?.description,
       }}
     />
   );

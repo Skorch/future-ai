@@ -35,6 +35,7 @@ import { Badge } from './ui/badge';
 import { LLMRAGQueryResult } from './llm-rag-result';
 import { UpdateWorkspaceContextTool } from './messages/updateWorkspaceContextTool';
 import { UpdateObjectiveGoalTool } from './messages/updateObjectiveGoalTool';
+import { UpdateObjectiveActionsTool } from './messages/updateObjectiveActionsTool';
 
 // Type narrowing is handled by TypeScript's control flow analysis
 // The AI SDK provides proper discriminated unions for tool calls
@@ -647,6 +648,34 @@ const PurePreviewMessage = ({
 
                 return (
                   <UpdateObjectiveGoalTool
+                    key={toolCallId}
+                    toolCallId={toolCallId}
+                    state={state}
+                    input={toolPart.input}
+                    output={
+                      toolPart.output && typeof toolPart.output === 'object'
+                        ? (toolPart.output as {
+                            success?: boolean;
+                            updatedSections?: string[];
+                            error?: string;
+                          })
+                        : undefined
+                    }
+                  />
+                );
+              }
+
+              if ((type as string) === 'tool-updateObjectiveActions') {
+                const toolPart = part as {
+                  toolCallId: string;
+                  state: ToolUIPart['state'];
+                  input?: unknown;
+                  output?: unknown;
+                };
+                const { toolCallId, state } = toolPart;
+
+                return (
+                  <UpdateObjectiveActionsTool
                     key={toolCallId}
                     toolCallId={toolCallId}
                     state={state}

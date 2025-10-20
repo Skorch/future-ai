@@ -8,13 +8,13 @@ import {
   PlusIcon,
   FileTextIcon,
   MessageSquare,
-  ChevronRightIcon,
   ChevronDownIcon,
   ExternalLinkIcon,
   BookOpen,
   FolderOpen,
   FileEdit,
   Target,
+  CheckSquare,
 } from 'lucide-react';
 import {
   Card,
@@ -42,6 +42,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { KnowledgeTable } from '@/components/knowledge-table';
 import type { KnowledgeDocument } from '@/lib/db/knowledge-document';
 import { ObjectiveGoalTab } from '@/components/objective/objective-goal-tab';
+import { ObjectiveActionsTab } from '@/components/objective/objective-actions-tab';
+import { TaskHistoryTab } from '@/components/objective/task-history-tab';
 
 interface Chat {
   id: string;
@@ -83,6 +85,13 @@ interface ObjectiveDetailClientProps {
     header?: string | null;
     description?: string | null;
   };
+  objectiveActions: string | null;
+  actionsUpdatedAt: Date | null;
+  actionsLabels?: {
+    tab?: string | null;
+    header?: string | null;
+    description?: string | null;
+  };
 }
 
 export function ObjectiveDetailClient({
@@ -98,6 +107,9 @@ export function ObjectiveDetailClient({
   objectiveContextPlaceholder,
   contextLabels,
   documentLabels,
+  objectiveActions,
+  actionsUpdatedAt,
+  actionsLabels,
 }: ObjectiveDetailClientProps) {
   const router = useRouter();
   const [isPublished, setIsPublished] = useState(
@@ -140,7 +152,9 @@ export function ObjectiveDetailClient({
       hash === 'knowledge' ||
       hash === 'raw' ||
       hash === 'objective' ||
-      hash === 'context'
+      hash === 'context' ||
+      hash === 'actions' ||
+      hash === 'taskHistory'
     ) {
       setActiveTab(hash);
     }
@@ -277,12 +291,30 @@ export function ObjectiveDetailClient({
               </span>
             </TabsTrigger>
             <TabsTrigger
+              value="actions"
+              className="flex flex-col items-center gap-2 w-32 py-3 data-[state=active]:bg-muted hover:bg-muted/50 rounded-full transition-all"
+            >
+              <CheckSquare className="size-4" />
+              <span className="text-sm font-medium">
+                {actionsLabels?.tab || 'Action Items'}
+              </span>
+            </TabsTrigger>
+            <TabsTrigger
               value="objective"
               className="flex flex-col items-center gap-2 w-32 py-3 data-[state=active]:bg-muted hover:bg-muted/50 rounded-full transition-all"
             >
               <Target className="size-4" />
               <span className="text-sm font-medium text-center leading-tight">
                 {documentLabels?.tab || 'Objective Document'}
+              </span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="taskHistory"
+              className="flex flex-col items-center gap-2 w-32 py-3 data-[state=active]:bg-muted hover:bg-muted/50 rounded-full transition-all"
+            >
+              <MessageSquare className="size-4" />
+              <span className="text-sm font-medium">
+                Task History ({chats.length})
               </span>
             </TabsTrigger>
             <TabsTrigger
@@ -437,6 +469,30 @@ export function ObjectiveDetailClient({
             />
           </TabsContent>
 
+          <TabsContent value="actions" className="mt-0 p-6">
+            <ObjectiveActionsTab
+              objectiveId={objectiveId}
+              initialActions={objectiveActions}
+              actionsUpdatedAt={actionsUpdatedAt}
+              placeholder={
+                actionsLabels?.description ||
+                'Track action items, risks, and blockers...'
+              }
+              customLabels={{
+                header: actionsLabels?.header,
+                description: actionsLabels?.description,
+              }}
+            />
+          </TabsContent>
+
+          <TabsContent value="taskHistory" className="mt-0 p-6">
+            <TaskHistoryTab
+              workspaceId={workspaceId}
+              objectiveId={objectiveId}
+              chats={chats}
+            />
+          </TabsContent>
+
           <TabsContent value="knowledge" className="mt-0 p-6">
             {knowledge.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -477,79 +533,6 @@ export function ObjectiveDetailClient({
           </TabsContent>
         </div>
       </Tabs>
-
-      {/* Task History Section - Always Visible */}
-      <div className="border-t px-6 pt-4 pb-6">
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold tracking-tight">Task History</h2>
-            <span className="text-sm font-medium text-muted-foreground">
-              {chats.length} {chats.length === 1 ? 'task' : 'tasks'}
-            </span>
-          </div>
-
-          {chats.length === 0 ? (
-            <Card className="border-dashed">
-              <CardContent className="flex flex-col items-center justify-center py-16">
-                <div className="rounded-full bg-muted p-4 mb-4">
-                  <MessageSquare className="size-8 text-muted-foreground" />
-                </div>
-                <h3 className="text-lg font-semibold mb-2">No tasks yet</h3>
-                <p className="text-sm text-muted-foreground mb-6 text-center max-w-sm">
-                  Start your first task to begin working on this objective
-                </p>
-                <Button asChild className="rounded-full">
-                  <Link
-                    href={`/workspace/${workspaceId}/chat/new?objectiveId=${objectiveId}`}
-                  >
-                    <PlusIcon className="size-4 mr-2" />
-                    New Task
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-3">
-              {chats.map((chat) => (
-                <Link
-                  key={chat.id}
-                  href={`/workspace/${workspaceId}/chat/${chat.id}`}
-                  className="group"
-                >
-                  <Card className="hover:shadow-lg transition-all duration-200 cursor-pointer group-hover:translate-y-[-2px]">
-                    <CardHeader>
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <CardTitle className="text-base font-semibold mb-1 truncate">
-                            {chat.title}
-                          </CardTitle>
-                          <CardDescription className="flex items-center gap-2 flex-wrap text-sm">
-                            <span className="flex items-center gap-1">
-                              <MessageSquare className="size-3.5" />
-                              {chat.messageCount || 0}{' '}
-                              {chat.messageCount === 1 ? 'message' : 'messages'}
-                            </span>
-                            <span className="text-muted-foreground/40">•</span>
-                            <span>
-                              Updated{' '}
-                              {formatDistanceToNow(new Date(chat.createdAt), {
-                                addSuffix: true,
-                              })}
-                            </span>
-                          </CardDescription>
-                        </div>
-
-                        {/* Hover indicator */}
-                        <ChevronRightIcon className="size-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-                      </div>
-                    </CardHeader>
-                  </Card>
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
     </div>
   );
 }

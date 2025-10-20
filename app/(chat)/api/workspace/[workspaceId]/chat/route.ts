@@ -39,7 +39,6 @@ import { eq } from 'drizzle-orm';
 import { convertToUIMessages, generateUUID } from '@/lib/utils';
 import { generateTitleFromUserMessage } from '@/app/(chat)/actions';
 import { generateDocumentVersion } from '@/lib/ai/tools/generate-document-version';
-import { updatePunchlist } from '@/lib/ai/tools/update-punchlist';
 import { saveKnowledge } from '@/lib/ai/tools/save-knowledge';
 import { queryRAG } from '@/lib/ai/tools/query-rag';
 import { listDocuments } from '@/lib/ai/tools/list-documents';
@@ -49,6 +48,7 @@ import { askUser } from '@/lib/ai/tools/ask-user';
 import { getPlaybook } from '@/lib/ai/tools/get-playbook';
 import { updateWorkspaceContext } from '@/lib/ai/tools/update-workspace-context';
 import { updateObjectiveGoal } from '@/lib/ai/tools/update-objective-goal';
+import { updateObjectiveActions } from '@/lib/ai/tools/update-objective-actions';
 // TODO: Rewire to new DAL - updateDocumentVersionsMessageId stub removed
 // import { updateDocumentVersionsMessageId } from '@/lib/db/documents';
 import { isProductionEnvironment } from '@/lib/constants';
@@ -447,14 +447,6 @@ export async function POST(
                 documentType,
               }),
 
-              // Punchlist update tool (Phase 4)
-              updatePunchlist: updatePunchlist({
-                session,
-                dataStream,
-                workspaceId,
-                chatId: id,
-              }),
-
               // Knowledge processing tool (Phase 3)
               saveKnowledge: saveKnowledge({
                 session,
@@ -474,6 +466,14 @@ export async function POST(
                 session,
                 objectiveId: chatObjectiveId,
                 workspaceId,
+              }),
+
+              // Objective actions update tool
+              updateObjectiveActions: updateObjectiveActions({
+                session,
+                dataStream,
+                workspaceId,
+                chatId: id,
               }),
 
               // Query and load tools
