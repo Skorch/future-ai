@@ -17,6 +17,7 @@ import {
   getCurrentVersionGoal,
   updateObjectiveGoal,
 } from '@/lib/db/objective-document';
+import { OBJECTIVE_FIELD_MAX_LENGTH } from './constants';
 
 const logger = getLogger('ObjectiveGoal');
 
@@ -155,16 +156,15 @@ Update the objective goal by incorporating these new observations. Focus on THIS
     // Convert structured context to markdown
     const formattedGoal = formatObjectiveContextAsMarkdown(structuredContext);
 
-    // Validate length (5K max)
-    const maxLength = 5000;
-    if (formattedGoal.length > maxLength) {
+    // Validate length
+    if (formattedGoal.length > OBJECTIVE_FIELD_MAX_LENGTH) {
       logger.error('Generated goal exceeds limit', {
         length: formattedGoal.length,
-        maxLength,
+        maxLength: OBJECTIVE_FIELD_MAX_LENGTH,
       });
       return {
         success: false,
-        error: `Generated goal exceeds ${maxLength} character limit (${formattedGoal.length} chars)`,
+        error: `Generated goal exceeds ${OBJECTIVE_FIELD_MAX_LENGTH} character limit (${formattedGoal.length} chars)`,
       };
     }
 
@@ -219,10 +219,10 @@ export async function updateObjectiveContextAction(
     return { error: 'Unauthorized' };
   }
 
-  const maxLength = 5000;
-
-  if (context.length > maxLength) {
-    return { error: `Context exceeds ${maxLength} character limit` };
+  if (context.length > OBJECTIVE_FIELD_MAX_LENGTH) {
+    return {
+      error: `Context exceeds ${OBJECTIVE_FIELD_MAX_LENGTH} character limit`,
+    };
   }
 
   try {

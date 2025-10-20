@@ -62,7 +62,8 @@ export async function createObjective(
           domainData.defaultObjectiveContextArtifactTypeId,
         objectiveDocumentArtifactTypeId:
           domainData.defaultObjectiveArtifactTypeId,
-        punchlistArtifactTypeId: domainData.defaultPunchlistArtifactTypeId,
+        objectiveActionsArtifactTypeId:
+          domainData.defaultObjectiveActionsArtifactTypeId,
         summaryArtifactTypeId: domainData.defaultSummaryArtifactTypeId,
       })
       .returning();

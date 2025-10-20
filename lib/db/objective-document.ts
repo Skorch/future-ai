@@ -79,17 +79,17 @@ export async function createDocumentVersion(
   userId: string,
   data: {
     content?: string;
-    punchlist?: string;
+    objectiveActions?: string;
     objectiveGoal?: string;
     metadata?: Record<string, unknown>;
   },
 ): Promise<ObjectiveDocumentVersion> {
   try {
-    // Get latest version to copy content and punchlist (if not provided in data)
+    // Get latest version to copy content and objectiveActions (if not provided in data)
     const [latestVersion] = await db
       .select({
         content: objectiveDocumentVersion.content,
-        punchlist: objectiveDocumentVersion.punchlist,
+        objectiveActions: objectiveDocumentVersion.objectiveActions,
         objectiveGoal: objectiveDocumentVersion.objectiveGoal,
       })
       .from(objectiveDocumentVersion)
@@ -97,13 +97,14 @@ export async function createDocumentVersion(
       .orderBy(desc(objectiveDocumentVersion.createdAt))
       .limit(1);
 
-    // Create new version - copy content and punchlist from latest if not provided
+    // Create new version - copy content and objectiveActions from latest if not provided
     const [version] = await db
       .insert(objectiveDocumentVersion)
       .values({
         documentId,
         content: data.content ?? latestVersion?.content ?? '',
-        punchlist: data.punchlist ?? latestVersion?.punchlist ?? null,
+        objectiveActions:
+          data.objectiveActions ?? latestVersion?.objectiveActions ?? null,
         objectiveGoal:
           data.objectiveGoal ?? latestVersion?.objectiveGoal ?? null,
         metadata: data.metadata,
@@ -227,6 +228,46 @@ export async function getCurrentVersionGoal(
     throw new ChatSDKError(
       'bad_request:database',
       'Failed to get current goal',
+    );
+  }
+}
+
+/**
+ * Get the current (latest) version's objective actions for an objective
+ * Current version = latest by createdAt timestamp (DESC)
+ */
+export async function getCurrentVersionObjectiveActions(
+  objectiveId: string,
+  userId: string,
+): Promise<{
+  objectiveActions: string | null;
+  versionId: string;
+  updatedAt: Date;
+} | null> {
+  try {
+    // Verify ownership
+    const obj = await getObjectiveById(objectiveId, userId);
+    if (!obj || !obj.objectiveDocumentId) {
+      return null;
+    }
+
+    // Get latest version's objective actions
+    const [latestVersion] = await db
+      .select({
+        versionId: objectiveDocumentVersion.id,
+        objectiveActions: objectiveDocumentVersion.objectiveActions,
+        updatedAt: objectiveDocumentVersion.createdAt,
+      })
+      .from(objectiveDocumentVersion)
+      .where(eq(objectiveDocumentVersion.documentId, obj.objectiveDocumentId))
+      .orderBy(desc(objectiveDocumentVersion.createdAt))
+      .limit(1);
+
+    return latestVersion || null;
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get current objective actions',
     );
   }
 }
@@ -498,7 +539,7 @@ export async function initializeVersionForChat(
         versionId = result.version.id;
         isFirstVersion = true;
       } else {
-        // 4. Create new version (copies both content and punchlist from latest)
+        // 4. Create new version (copies both content and objectiveActions from latest)
         const newVersion = await createDocumentVersion(documentId, userId, {});
         versionId = newVersion.id;
       }
@@ -569,22 +610,22 @@ export async function getVersionByChatId(
 }
 
 /**
- * Update the punchlist field of an existing version
- * Used by punchlist generation to update tracking without creating a new version
+ * Update the objectiveActions field of an existing version
+ * Used by objective actions generation to update tracking without creating a new version
  */
-export async function updateVersionPunchlist(
+export async function updateVersionObjectiveActions(
   versionId: string,
-  punchlist: string,
+  objectiveActions: string,
 ): Promise<void> {
   try {
     await db
       .update(objectiveDocumentVersion)
-      .set({ punchlist })
+      .set({ objectiveActions })
       .where(eq(objectiveDocumentVersion.id, versionId));
   } catch (error) {
     throw new ChatSDKError(
       'bad_request:database',
-      'Failed to update version punchlist',
+      'Failed to update version objective actions',
     );
   }
 }

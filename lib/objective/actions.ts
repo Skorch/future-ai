@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 import { getLogger } from '@/lib/logger';
 import { withAuth, type ActionResult } from '@/lib/with-auth';
 import {
@@ -15,7 +16,11 @@ import { auth } from '@clerk/nextjs/server';
 import {
   getCurrentVersionGoal,
   updateObjectiveGoal,
+  getCurrentVersionObjectiveActions,
+  updateVersionObjectiveActions,
 } from '@/lib/db/objective-document';
+import { ChatSDKError } from '@/lib/errors';
+import { OBJECTIVE_FIELD_MAX_LENGTH } from './constants';
 
 const logger = getLogger('ObjectiveActions');
 
@@ -295,8 +300,8 @@ export async function updateObjectiveGoalAction(
   }
 
   // Validate length
-  if (goal && goal.length > 5000) {
-    throw new Error('Goal exceeds 5000 characters');
+  if (goal && goal.length > OBJECTIVE_FIELD_MAX_LENGTH) {
+    throw new Error(`Goal exceeds ${OBJECTIVE_FIELD_MAX_LENGTH} characters`);
   }
 
   // Get current version
@@ -314,6 +319,63 @@ export async function updateObjectiveGoalAction(
     revalidatePath(
       `/workspace/${objective.workspaceId}/objective/${objectiveId}`,
     );
+  }
+}
+
+/**
+ * Server action to update objective actions
+ */
+export async function updateObjectiveActionsAction(
+  objectiveId: string,
+  objectiveActions: string,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { userId } = await auth();
+    if (!userId) {
+      redirect('/login');
+    }
+
+    // Validate length
+    if (
+      objectiveActions &&
+      objectiveActions.length > OBJECTIVE_FIELD_MAX_LENGTH
+    ) {
+      return {
+        success: false,
+        error: `Actions exceed ${OBJECTIVE_FIELD_MAX_LENGTH} characters`,
+      };
+    }
+
+    // Get current version to update
+    const versionData = await getCurrentVersionObjectiveActions(
+      objectiveId,
+      userId,
+    );
+
+    if (!versionData) {
+      return { success: false, error: 'Version not found' };
+    }
+
+    // Update the version's objectiveActions field
+    await updateVersionObjectiveActions(
+      versionData.versionId,
+      objectiveActions,
+    );
+
+    // Get objective to find workspaceId for revalidation
+    const objective = await getObjectiveById(objectiveId, userId);
+    if (objective) {
+      revalidatePath(
+        `/workspace/${objective.workspaceId}/objective/${objectiveId}`,
+      );
+    }
+
+    return { success: true };
+  } catch (error) {
+    if (error instanceof ChatSDKError) {
+      return { success: false, error: error.message };
+    }
+    throw error;
   }
 }
 

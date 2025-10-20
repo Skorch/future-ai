@@ -26,7 +26,7 @@ export const getAllDomains = unstable_cache(
         const [
           defaultObjectiveArtifactType,
           defaultSummaryArtifactType,
-          defaultPunchlistArtifactType,
+          defaultObjectiveActionsArtifactType,
           defaultWorkspaceContextArtifactType,
           defaultObjectiveContextArtifactType,
         ] = await Promise.all([
@@ -45,7 +45,7 @@ export const getAllDomains = unstable_cache(
           db
             .select()
             .from(artifactType)
-            .where(eq(artifactType.id, d.defaultPunchlistArtifactTypeId))
+            .where(eq(artifactType.id, d.defaultObjectiveActionsArtifactTypeId))
             .limit(1)
             .then((r) => r[0] || undefined),
           db
@@ -66,7 +66,7 @@ export const getAllDomains = unstable_cache(
           ...d,
           defaultObjectiveArtifactType,
           defaultSummaryArtifactType,
-          defaultPunchlistArtifactType,
+          defaultObjectiveActionsArtifactType,
           defaultWorkspaceContextArtifactType,
           defaultObjectiveContextArtifactType,
         };
@@ -100,7 +100,7 @@ export const getDomainById = (id: string) =>
       const [
         defaultObjectiveArtifactType,
         defaultSummaryArtifactType,
-        defaultPunchlistArtifactType,
+        defaultObjectiveActionsArtifactType,
         defaultWorkspaceContextArtifactType,
         defaultObjectiveContextArtifactType,
       ] = await Promise.all([
@@ -119,7 +119,12 @@ export const getDomainById = (id: string) =>
         db
           .select()
           .from(artifactType)
-          .where(eq(artifactType.id, domainData.defaultPunchlistArtifactTypeId))
+          .where(
+            eq(
+              artifactType.id,
+              domainData.defaultObjectiveActionsArtifactTypeId,
+            ),
+          )
           .limit(1)
           .then((r) => r[0] || undefined),
         db
@@ -150,7 +155,7 @@ export const getDomainById = (id: string) =>
         ...domainData,
         defaultObjectiveArtifactType,
         defaultSummaryArtifactType,
-        defaultPunchlistArtifactType,
+        defaultObjectiveActionsArtifactType,
         defaultWorkspaceContextArtifactType,
         defaultObjectiveContextArtifactType,
       };

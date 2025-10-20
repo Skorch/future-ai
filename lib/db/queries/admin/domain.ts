@@ -22,7 +22,7 @@ export async function updateDomain(
     systemPrompt?: string;
     defaultObjectiveArtifactTypeId?: string;
     defaultSummaryArtifactTypeId?: string;
-    defaultPunchlistArtifactTypeId?: string;
+    defaultObjectiveActionsArtifactTypeId?: string;
     defaultWorkspaceContextArtifactTypeId?: string;
     defaultObjectiveContextArtifactTypeId?: string;
   },
@@ -37,7 +37,7 @@ export async function updateDomain(
   const artifactTypeIds = [
     data.defaultObjectiveArtifactTypeId,
     data.defaultSummaryArtifactTypeId,
-    data.defaultPunchlistArtifactTypeId,
+    data.defaultObjectiveActionsArtifactTypeId,
     data.defaultWorkspaceContextArtifactTypeId,
     data.defaultObjectiveContextArtifactTypeId,
   ].filter(Boolean) as string[];
@@ -68,8 +68,9 @@ export async function updateDomain(
       ...(data.defaultSummaryArtifactTypeId && {
         defaultSummaryArtifactTypeId: data.defaultSummaryArtifactTypeId,
       }),
-      ...(data.defaultPunchlistArtifactTypeId && {
-        defaultPunchlistArtifactTypeId: data.defaultPunchlistArtifactTypeId,
+      ...(data.defaultObjectiveActionsArtifactTypeId && {
+        defaultObjectiveActionsArtifactTypeId:
+          data.defaultObjectiveActionsArtifactTypeId,
       }),
       ...(data.defaultWorkspaceContextArtifactTypeId && {
         defaultWorkspaceContextArtifactTypeId:
