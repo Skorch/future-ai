@@ -1,6 +1,6 @@
 // Export all AI tools for easy import
 export { generateDocumentVersion } from './generate-document-version';
-export { updatePunchlist } from './update-punchlist';
+export { updateObjectiveActions } from './update-objective-actions';
 export { saveKnowledge } from './save-knowledge';
 export { queryRAG } from './query-rag';
 export { listDocuments } from './list-documents';

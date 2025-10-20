@@ -1,15 +1,15 @@
 /**
- * Punchlist Builder
+ * Objective Actions Builder
  * Generic builder for category='punchlist' generation
  * Uses database-stored prompts via ArtifactType
  */
 
 import type { ArtifactType } from '@/lib/db/schema';
 
-export class PunchlistBuilder {
+export class ObjectiveActionsBuilder {
   generate(
     artifactType: ArtifactType,
-    currentPunchlist: string | null,
+    currentObjectiveActions: string | null,
     currentContent: string,
     knowledgeSummaries: string,
   ): string {
@@ -27,14 +27,14 @@ export class PunchlistBuilder {
 ### Current Document Content
 ${currentContent}
 
-### Current Punchlist
-${currentPunchlist || 'No punchlist yet - this is the first knowledge input. Generate an initial punchlist based on the current document content and new knowledge.'}
+### Current Objective Actions
+${currentObjectiveActions || 'No objective actions yet - this is the first knowledge input. Generate initial objective actions based on the current document content and new knowledge.'}
 
 ### New Knowledge to Process
 ${knowledgeSummaries}
 
 ## Your Task
-Analyze the new knowledge and update the punchlist to show:
+Analyze the new knowledge and update the objective actions to show:
 1. Which items are now RESOLVED (knowledge fully addresses them)
 2. Which items are MODIFIED (knowledge partially addresses or updates them)
 3. NEW items discovered from the knowledge

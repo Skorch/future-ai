@@ -12,7 +12,7 @@ export { UnifiedAgentBuilder } from './agents/unified-agent-builder';
 // Category Builders (generic, database-driven)
 export { ObjectiveDocumentBuilder } from './objective-document-builder';
 export { SummaryBuilder } from './summary-builder';
-export { PunchlistBuilder } from './punchlist-builder';
+export { ObjectiveActionsBuilder } from './objective-actions-builder';
 
 // Specialized Builders
 export { WorkspaceContextBuilder } from './specialized/workspace-context-builder';

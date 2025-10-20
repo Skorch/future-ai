@@ -6,7 +6,7 @@ import { getVersionByChatId } from '@/lib/db/objective-document';
 import { getLogger } from '@/lib/logger';
 import type { ChatMessage } from '@/lib/types';
 
-const logger = getLogger('update-punchlist');
+const logger = getLogger('update-objective-actions');
 
 interface ToolContext {
   session: { user: { id: string } };
@@ -15,7 +15,7 @@ interface ToolContext {
   chatId: string;
 }
 
-export const updatePunchlist = ({
+export const updateObjectiveActions = ({
   session,
   dataStream,
   workspaceId,
@@ -23,7 +23,7 @@ export const updatePunchlist = ({
 }: ToolContext) =>
   tool({
     description:
-      "Update the punchlist for the current chat's document version based on new knowledge. The punchlist tracks risks, unknowns, blockers, gaps, and contradictions that need to be resolved. Use this after processing knowledge to show what was resolved, modified, or newly discovered.",
+      "Update the objective actions for the current chat's document version based on new knowledge. The objective actions track risks, unknowns, blockers, gaps, and contradictions that need to be resolved. Use this after processing knowledge to show what was resolved, modified, or newly discovered.",
 
     inputSchema: z.object({
       documentType: z
@@ -35,20 +35,20 @@ export const updatePunchlist = ({
         .array(z.string().uuid())
         .min(1)
         .describe(
-          'Knowledge document IDs to process for punchlist updates (e.g., sales call summaries, meeting notes)',
+          'Knowledge document IDs to process for objective actions updates (e.g., sales call summaries, meeting notes)',
         ),
       instruction: z
         .string()
         .optional()
         .describe(
-          'Optional specific instructions for punchlist analysis (e.g., "focus on technical risks")',
+          'Optional specific instructions for objective actions analysis (e.g., "focus on technical risks")',
         ),
     }),
 
     execute: async ({
       documentType,
       knowledgeDocumentIds,
-      instruction = 'Analyze how this knowledge affects the punchlist items',
+      instruction = 'Analyze how this knowledge affects the objective actions items',
     }) => {
       const startTime = Date.now();
 
@@ -64,7 +64,7 @@ export const updatePunchlist = ({
 
         const { version, objectiveId } = result;
 
-        logger.info('Starting punchlist update', {
+        logger.info('Starting objective actions update', {
           versionId: version.id,
           objectiveId,
           documentType,
@@ -82,15 +82,15 @@ export const updatePunchlist = ({
           };
         }
 
-        // 3. Check if handler supports punchlist generation
-        if (!documentDef.handler.onGeneratePunchlist) {
+        // 3. Check if handler supports objective actions generation
+        if (!documentDef.handler.onGenerateObjectiveActions) {
           return {
             success: false,
-            error: `Document type ${documentType} doesn't support punchlist tracking`,
+            error: `Document type ${documentType} doesn't support objective actions tracking`,
           };
         }
 
-        // 4. Initialize punchlist stream
+        // 4. Initialize objective actions stream
         dataStream.write({
           type: 'data-kind',
           data: 'text',
@@ -103,18 +103,18 @@ export const updatePunchlist = ({
         });
         dataStream.write({
           type: 'data-title',
-          data: 'Punchlist Update',
+          data: 'Objective Actions Update',
           transient: true,
         });
         dataStream.write({ type: 'data-clear', data: null, transient: true });
 
-        logger.info('Calling punchlist handler', {
+        logger.info('Calling objective actions handler', {
           handler: documentDef.metadata.type,
           knowledgeDocIds: knowledgeDocumentIds,
         });
 
-        // 5. Generate punchlist via handler
-        await documentDef.handler.onGeneratePunchlist({
+        // 5. Generate objective actions via handler
+        await documentDef.handler.onGenerateObjectiveActions({
           currentVersion: version,
           knowledgeDocIds: knowledgeDocumentIds,
           instruction,
@@ -127,7 +127,7 @@ export const updatePunchlist = ({
         dataStream.write({ type: 'data-finish', data: null, transient: true });
 
         const duration = Date.now() - startTime;
-        logger.info('Punchlist updated successfully', {
+        logger.info('Objective actions updated successfully', {
           versionId: version.id,
           duration,
         });
@@ -135,15 +135,19 @@ export const updatePunchlist = ({
         return {
           id: version.documentId,
           versionId: version.id,
-          title: 'Punchlist Update',
+          title: 'Objective Actions Update',
           kind: 'text' as const,
           documentType: documentType || 'text',
           success: true,
-          message: `Punchlist has been updated and is displayed above. Review the changes to see what was resolved, modified, or newly discovered from the knowledge.`,
+          message: `Objective actions have been updated and are displayed above. Review the changes to see what was resolved, modified, or newly discovered from the knowledge.`,
         };
       } catch (error: unknown) {
         const duration = Date.now() - startTime;
-        logger.error('Punchlist update failed', { error, duration, chatId });
+        logger.error('Objective actions update failed', {
+          error,
+          duration,
+          chatId,
+        });
 
         return {
           success: false,
