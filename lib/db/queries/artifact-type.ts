@@ -10,6 +10,7 @@ const CACHE_TAG = 'artifact-types';
 
 /**
  * Fetch all artifact types (cached)
+ * NOTE: Cache key includes version to allow cache busting after schema migrations
  */
 export const getAllArtifactTypes = unstable_cache(
   async (): Promise<ArtifactType[]> => {
@@ -18,7 +19,7 @@ export const getAllArtifactTypes = unstable_cache(
       .from(artifactType)
       .orderBy(artifactType.category, artifactType.title);
   },
-  ['all-artifact-types'],
+  ['all-artifact-types-v2'],
   {
     tags: [CACHE_TAG],
     revalidate: false, // Cache until explicitly invalidated
@@ -50,7 +51,7 @@ export const getArtifactTypeById = (id: string) =>
  * Fetch artifact types by category (leverages cache, filtered in-memory)
  */
 export async function getArtifactTypesByCategory(
-  category: 'objective' | 'summary' | 'punchlist' | 'context',
+  category: 'objective' | 'summary' | 'objectiveActions' | 'context',
 ): Promise<ArtifactType[]> {
   const all = await getAllArtifactTypes();
   return all.filter((at) => at.category === category);
