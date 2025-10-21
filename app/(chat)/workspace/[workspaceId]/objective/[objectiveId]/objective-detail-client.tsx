@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import {
@@ -46,6 +46,7 @@ import type { KnowledgeDocument } from '@/lib/db/knowledge-document';
 import { ObjectiveGoalTab } from '@/components/objective/objective-goal-tab';
 import { ObjectiveActionsTab } from '@/components/objective/objective-actions-tab';
 import { TaskHistoryTab } from '@/components/objective/task-history-tab';
+import { ObjectiveEmptyState } from '@/components/objective/empty-state/objective-empty-state';
 
 interface Chat {
   id: string;
@@ -114,6 +115,7 @@ export function ObjectiveDetailClient({
   actionsLabels,
 }: ObjectiveDetailClientProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isPublished, setIsPublished] = useState(
     objective.status === 'published',
   );
@@ -121,6 +123,7 @@ export function ObjectiveDetailClient({
   const [isAddKnowledgeOpen, setIsAddKnowledgeOpen] = useState(false);
   const [isVersionHistoryOpen, setIsVersionHistoryOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('context');
+  const [showEmptyState, setShowEmptyState] = useState(false);
 
   const handleTogglePublish = async (checked: boolean) => {
     setIsToggling(true);
@@ -147,6 +150,17 @@ export function ObjectiveDetailClient({
     }
   };
 
+  // Check for new objective query parameter
+  useEffect(() => {
+    if (searchParams.get('new') === 'true') {
+      setShowEmptyState(true);
+      // Clean URL immediately to prevent re-triggering on refresh
+      router.replace(`/workspace/${workspaceId}/objective/${objectiveId}`, {
+        scroll: false,
+      });
+    }
+  }, [searchParams, router, workspaceId, objectiveId]);
+
   // Initialize from URL hash on mount
   useEffect(() => {
     const hash = window.location.hash.slice(1); // Remove '#'
@@ -167,6 +181,17 @@ export function ObjectiveDetailClient({
     setActiveTab(value);
     window.history.replaceState(null, '', `#${value}`);
   };
+
+  // Show empty state if triggered by ?new=true
+  if (showEmptyState) {
+    return (
+      <ObjectiveEmptyState
+        workspaceId={workspaceId}
+        objectiveId={objectiveId}
+        onDismiss={() => setShowEmptyState(false)}
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col h-full">

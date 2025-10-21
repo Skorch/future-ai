@@ -147,8 +147,13 @@ export function KnowledgeProvider({
 
       // Navigate to chat if summary requested
       if (summarize && data.shouldCreateSummary) {
-        // Simple instruction for AI to load and summarize the document
-        const summaryPrompt = `Please load and create a summary of the document I just created titled "${data.document.title}".  Use the appropriate Playbook.`;
+        // Check if this is the first document for the objective
+        const isFirstDocument = data.isFirstDocument || false;
+
+        // Customize prompt based on whether it's a new objective
+        const summaryPrompt = isFirstDocument
+          ? 'Please run the New Objective Playbook to initialize this objective with the transcript I just uploaded.'
+          : `Please load and create a summary of the document I just created titled "${data.document.title}". Use the appropriate Playbook.`;
 
         const queryParam = encodeURIComponent(summaryPrompt);
         const url = `/workspace/${workspaceId}/chat/new?objectiveId=${objectiveId}&query=${queryParam}&autoSubmit=true`;

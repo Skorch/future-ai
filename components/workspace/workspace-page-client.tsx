@@ -215,7 +215,9 @@ export function WorkspacePageClient({
         open={showCreateDialog}
         onOpenChange={setShowCreateDialog}
         onCreated={(objectiveId) => {
-          router.push(`/workspace/${workspace.id}/objective/${objectiveId}`);
+          router.push(
+            `/workspace/${workspace.id}/objective/${objectiveId}?new=true`,
+          );
         }}
       />
     </div>
