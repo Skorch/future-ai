@@ -69,16 +69,6 @@ const logger = getLogger('ChatRoute');
 
 export const maxDuration = 300; // 5 minutes (300 seconds)
 
-// Temporary legacy type until tools are updated
-type DomainId = 'sales' | 'project';
-/**
- * Map database domain title to legacy DomainId
- * TODO: Remove this mapping once tools are updated to use domain UUIDs
- */
-function getLegacyDomainId(domainTitle: string): DomainId {
-  return domainTitle === 'Sales Intelligence' ? 'sales' : 'project';
-}
-
 let globalStreamContext: ResumableStreamContext | null = null;
 
 function getStreamContext() {
@@ -259,7 +249,7 @@ export async function POST(
     // Use default chat model
     const selectedModel = DEFAULT_CHAT_MODEL;
 
-    // Load full objective object with artifact type relations (needed for builder)
+    // Load full objective object with artifact type relations (needed for builder and tools)
     let objectiveObject = null;
     let objectiveGoal: string | null = null;
     if (chatObjectiveId) {
@@ -268,6 +258,7 @@ export async function POST(
         with: {
           objectiveContextArtifactType: true,
           summaryArtifactType: true,
+          objectiveDocumentArtifactType: true, // For document generation
         },
       });
 
@@ -422,19 +413,14 @@ export async function POST(
 
           let result: ReturnType<typeof streamText>;
           try {
-            // Map domain title to legacy DomainId for tools
-            const legacyDomainId = getLegacyDomainId(domain.title);
-
             // Build tools object (with async tool building)
             const playbookTool = await getPlaybook({
-              domainId: legacyDomainId,
+              domainId: domain.id, // Use domain UUID directly
             });
 
-            // Map domain title to legacy documentType for tool
-            const documentType =
-              domain.title === 'Sales Intelligence'
-                ? 'sales-strategy'
-                : 'business-requirements';
+            // Get artifact type for document generation from objective
+            const objectiveDocumentArtifactType =
+              objectiveObject?.objectiveDocumentArtifactType ?? null;
 
             const tools = {
               // Document generation tool (replaces create/update)
@@ -444,7 +430,7 @@ export async function POST(
                 workspaceId,
                 chatId: id,
                 objectiveId: chatObjectiveId,
-                documentType,
+                artifactType: objectiveDocumentArtifactType,
               }),
 
               // Knowledge processing tool (Phase 3)
@@ -481,12 +467,12 @@ export async function POST(
                 session,
                 dataStream,
                 workspaceId,
-                domainId: legacyDomainId,
+                domainId: domain.id,
               }),
               listDocuments: await listDocuments({
                 session,
                 workspaceId,
-                domainId: legacyDomainId,
+                domainId: domain.id,
                 objectiveId: chatObjectiveId,
               }),
               loadDocument: loadDocument({ session, workspaceId }),
