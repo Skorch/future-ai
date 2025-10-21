@@ -17,6 +17,8 @@ This is a Next.js AI chatbot application built with the AI SDK, featuring modern
 - `pnpm format` - Format code with Biome
 
 ### Database Operations
+DO NOT EVER genreate a migration manually
+
 - `pnpm db:generate` - Generate Drizzle schema migrations
 - `pnpm db:migrate` - Run pending database migrations
 - `pnpm db:studio` - Open Drizzle Studio for database inspection
