@@ -293,32 +293,46 @@ export const unpublishObjectiveAction = withAuth(
 export async function updateObjectiveGoalAction(
   objectiveId: string,
   goal: string,
-): Promise<void> {
-  const session = await auth();
-  if (!session?.userId) {
-    throw new Error('Unauthorized');
-  }
+): Promise<undefined | { error: string }> {
+  try {
+    const session = await auth();
+    if (!session?.userId) {
+      return { error: 'Unauthorized' };
+    }
 
-  // Validate length
-  if (goal && goal.length > OBJECTIVE_FIELD_MAX_LENGTH) {
-    throw new Error(`Goal exceeds ${OBJECTIVE_FIELD_MAX_LENGTH} characters`);
-  }
+    // Validate length
+    if (goal && goal.length > OBJECTIVE_FIELD_MAX_LENGTH) {
+      return {
+        error: `Goal exceeds ${OBJECTIVE_FIELD_MAX_LENGTH} characters`,
+      };
+    }
 
-  // Get current version
-  const versionData = await getCurrentVersionGoal(objectiveId, session.userId);
-  if (!versionData) {
-    throw new Error('No version found for objective');
-  }
-
-  // Update goal in current version
-  await updateObjectiveGoal(versionData.versionId, session.userId, goal);
-
-  // Get objective to find workspaceId for revalidation
-  const objective = await getObjectiveById(objectiveId, session.userId);
-  if (objective) {
-    revalidatePath(
-      `/workspace/${objective.workspaceId}/objective/${objectiveId}`,
+    // Get current version
+    const versionData = await getCurrentVersionGoal(
+      objectiveId,
+      session.userId,
     );
+    if (!versionData) {
+      return { error: 'No version found for objective' };
+    }
+
+    // Update goal in current version
+    await updateObjectiveGoal(versionData.versionId, session.userId, goal);
+
+    // Get objective to find workspaceId for revalidation
+    const objective = await getObjectiveById(objectiveId, session.userId);
+    if (objective) {
+      revalidatePath(
+        `/workspace/${objective.workspaceId}/objective/${objectiveId}`,
+      );
+    }
+
+    return undefined;
+  } catch (error) {
+    if (error instanceof ChatSDKError) {
+      return { error: error.message };
+    }
+    throw error;
   }
 }
 
@@ -328,7 +342,7 @@ export async function updateObjectiveGoalAction(
 export async function updateObjectiveActionsAction(
   objectiveId: string,
   objectiveActions: string,
-): Promise<{ success: boolean; error?: string }> {
+): Promise<undefined | { error: string }> {
   try {
     const { userId } = await auth();
     if (!userId) {
@@ -341,7 +355,6 @@ export async function updateObjectiveActionsAction(
       objectiveActions.length > OBJECTIVE_FIELD_MAX_LENGTH
     ) {
       return {
-        success: false,
         error: `Actions exceed ${OBJECTIVE_FIELD_MAX_LENGTH} characters`,
       };
     }
@@ -353,7 +366,7 @@ export async function updateObjectiveActionsAction(
     );
 
     if (!versionData) {
-      return { success: false, error: 'Version not found' };
+      return { error: 'Version not found' };
     }
 
     // Update the version's objectiveActions field
@@ -370,10 +383,10 @@ export async function updateObjectiveActionsAction(
       );
     }
 
-    return { success: true };
+    return undefined;
   } catch (error) {
     if (error instanceof ChatSDKError) {
-      return { success: false, error: error.message };
+      return { error: error.message };
     }
     throw error;
   }

@@ -11,7 +11,7 @@ import { ChatSDKError } from '@/lib/errors';
 export async function updateObjectiveActionsAction(
   objectiveId: string,
   objectiveActions: string,
-): Promise<{ success: boolean; error?: string }> {
+): Promise<undefined | { error: string }> {
   try {
     const { userId } = await auth();
     if (!userId) {
@@ -25,7 +25,7 @@ export async function updateObjectiveActionsAction(
     );
 
     if (!versionData) {
-      return { success: false, error: 'Version not found' };
+      return { error: 'Version not found' };
     }
 
     // Update the version's objectiveActions field
@@ -34,10 +34,10 @@ export async function updateObjectiveActionsAction(
       objectiveActions,
     );
 
-    return { success: true };
+    return undefined;
   } catch (error) {
     if (error instanceof ChatSDKError) {
-      return { success: false, error: error.message };
+      return { error: error.message };
     }
     throw error;
   }

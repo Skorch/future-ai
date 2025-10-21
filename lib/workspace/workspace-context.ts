@@ -222,7 +222,7 @@ Ensure:
 export async function updateWorkspaceContextAction(
   workspaceId: string,
   context: string,
-): Promise<{ error?: string }> {
+): Promise<undefined | { error: string }> {
   const { userId } = await auth();
   if (!userId) {
     return { error: 'Unauthorized' };
@@ -246,7 +246,7 @@ export async function updateWorkspaceContextAction(
       contextLength: context.length,
     });
 
-    return {};
+    return undefined;
   } catch (error) {
     logger.error('Error updating workspace context manually', {
       error,
