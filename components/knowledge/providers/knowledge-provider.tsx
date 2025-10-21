@@ -1,13 +1,6 @@
 'use client';
 
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { createContext, useContext, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { logger } from '@/lib/logger';
 
@@ -29,13 +22,17 @@ interface KnowledgeCreationContext {
 
 const KnowledgeContext = createContext<KnowledgeCreationContext | null>(null);
 
+interface Document {
+  id: string;
+  title: string;
+  // Add other fields as needed
+}
+
 interface KnowledgeProviderProps {
   children: React.ReactNode;
   workspaceId: string;
   objectiveId: string;
-  open: boolean; // NEW: track modal open state for content clearing
-  onClose: (didCreate: boolean) => void;
-  onNavigate: (url: string) => void;
+  onClose: (document?: Document, summaryRequested?: boolean) => void;
 }
 
 const MAX_SIZE = 400 * 1024; // 400KB in bytes
@@ -44,9 +41,7 @@ export function KnowledgeProvider({
   children,
   workspaceId,
   objectiveId,
-  open, // NEW
   onClose,
-  onNavigate,
 }: KnowledgeProviderProps) {
   const [content, setContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -55,13 +50,6 @@ export function KnowledgeProvider({
   >(null);
   const [isReadingFile, setIsReadingFile] = useState(false);
   const isSubmittingRef = useRef(false);
-
-  // Clear content when modal closes
-  useEffect(() => {
-    if (!open) {
-      setContent('');
-    }
-  }, [open]);
 
   // Calculate byte size using UTF-8 encoding
   const byteSize = useMemo(
@@ -139,29 +127,12 @@ export function KnowledgeProvider({
           : 'Knowledge document created successfully!',
       );
 
-      // Close dialog first, passing didCreateDocument=true so parent can refresh
-      onClose(true);
+      // Call onClose with document and whether summary was requested
+      // Parent decides what to do (navigate, refresh, etc.)
+      onClose(data.document, summarize);
 
-      // Wait for dialog animation to complete (150ms)
-      await new Promise((resolve) => setTimeout(resolve, 150));
-
-      // Navigate to chat if summary requested
-      if (summarize && data.shouldCreateSummary) {
-        // Check if this is the first document for the objective
-        const isFirstDocument = data.isFirstDocument || false;
-
-        // Customize prompt based on whether it's a new objective
-        const summaryPrompt = isFirstDocument
-          ? 'Please run the New Objective Playbook to initialize this objective with the transcript I just uploaded.'
-          : `Please load and create a summary of the document I just created titled "${data.document.title}". Use the appropriate Playbook.`;
-
-        const queryParam = encodeURIComponent(summaryPrompt);
-        const url = `/workspace/${workspaceId}/chat/new?objectiveId=${objectiveId}&query=${queryParam}&autoSubmit=true`;
-
-        // Let parent handle navigation (which will call router.refresh() ONCE)
-        onNavigate(url);
-      }
-      // Parent will call router.refresh() for non-summary case via onClose(true)
+      // Clear content for next use
+      setContent('');
     } catch (error) {
       // Distinguish network errors from API errors
       if (error instanceof TypeError && error.message.includes('fetch')) {
@@ -215,7 +186,7 @@ export function useKnowledge() {
  * FUTURE EXTENSIONS:
  *
  * For sidebar quick-add (no modal, no summarize):
- * <KnowledgeProvider onNavigate={() => {}} onClose={() => {}}>
+ * <KnowledgeProvider onClose={(doc) => doc && router.refresh()}>
  *   <div className="p-2">
  *     <KnowledgeInput compact />
  *     <AddButton size="sm" />
@@ -223,7 +194,9 @@ export function useKnowledge() {
  * </KnowledgeProvider>
  *
  * For bulk upload (multiple files):
- * <KnowledgeProvider mode="bulk" onBatchComplete={...}>
+ * <KnowledgeProvider onClose={(doc, summarize) => {
+ *   if (doc) router.refresh();
+ * }}>
  *   <KnowledgeMultiUpload />
  *   <KnowledgeBatchList />
  *   <ProcessAllButton />
