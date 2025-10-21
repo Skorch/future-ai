@@ -226,6 +226,113 @@ Remember: The best code is code that doesn't exist. Every line you write is a li
 - when adding new node modules, always default to the latest version (not
   your KNOWLEDGE of what the latest version is)
 
+### React Composition Pattern (For SOLID Principle Violations)
+
+**Use this pattern when you see SOLID violations:**
+- **Single Responsibility violated**: Parent and child both handling same concern (routing, API calls, state updates)
+- **Open/Closed violated**: Adding boolean props to existing component instead of extending through composition
+- **Multiple boolean props** controlling which components render (isEditing, isModal, showFooter, etc.)
+- **Same component needs different behavior** in different contexts (modal vs sidebar vs bulk)
+
+**Important**: You should use composition even with a single use case if it clearly violates SOLID principles. Don't wait for a second use case when the architecture is already wrong.
+
+**DON'T use this pattern when:**
+- You only have ONE implementation AND no SOLID violations (wait for the second use case)
+- A simple callback prop would suffice
+- The component has no state or complex behavior to share
+- You're tempted to create unused "future-ready" code without clear violations
+
+#### The Pattern: Provider + Primitives + Parent
+
+```
+Parent Component
+  ├─ Owns side effects (routing, toasts, error handling)
+  └─ <Provider> (business logic, state, API calls)
+       └─ <Composition> (assembles UI)
+            ├─ <Primitive /> (uses context for state/actions)
+            └─ <Primitive /> (pure UI, no business logic)
+```
+
+**Layer Responsibilities:**
+
+1. **Provider (Brain)** - Pure business logic, no framework dependencies
+   - Owns ALL state (form data, loading states, validation)
+   - Handles API calls and data transformations
+   - Provides callbacks: `onSuccess(data)`, `onNavigate(url)`, `onError(err)`
+   - Does NOT call router, show toasts, or handle side effects
+   - Can be tested without Next.js or routing
+
+2. **Primitives (Muscles)** - Pure UI, use context
+   - Read from context via `useContext()` hook
+   - Trigger context actions (no direct API calls)
+   - Reusable across different compositions
+   - Example: `<KnowledgeInput />`, `<SubmitButton />`
+
+3. **Composition (Assembly)** - Picks which pieces to render
+   - Chooses which primitives to include (no booleans needed)
+   - Different compositions = different UIs with same provider
+   - Example: Modal has upload + summarize, Sidebar just has quick-add
+
+4. **Parent (Decision Maker)** - Owns ALL side effects
+   - Wraps composition with provider
+   - Implements provider callbacks (routing, refresh, toasts)
+   - Handles errors with try/catch + logger + toast
+   - Single source of truth for navigation
+
+#### Key Principle: Lift State Higher
+
+When components outside your UI frame need access to state/actions, lift the provider above both:
+
+```tsx
+// ❌ Before: Button outside modal can't access state
+<ObjectiveKnowledgeModal>
+  <Provider>
+    <Dialog>
+      <SubmitButton />  {/* Can access context */}
+    </Dialog>
+  </Provider>
+</ObjectiveKnowledgeModal>
+<SaveDraftButton />     {/* Can't access context - wrong scope */}
+
+// ✅ After: Lift provider to include both
+<Provider>
+  <ObjectiveKnowledgeModal>
+    <Dialog>
+      <SubmitButton />      {/* Can access context */}
+    </Dialog>
+  </ObjectiveKnowledgeModal>
+  <SaveDraftButton />       {/* Can access context - same scope */}
+</Provider>
+```
+
+This is the Slack composer pattern - components don't need to be visually nested to share state.
+
+#### Anti-Patterns to Avoid
+
+- **Don't create providers "just in case"** - Wait until you have SOLID violations or 2+ use cases
+- **Don't put routing in providers** - That's a side effect, belongs in parent
+- **Don't make primitives with business logic** - They should only use context
+- **Don't compose when a callback prop would work** - Keep it simple
+- **Don't skip the provider and put everything in parent** - Lose testability
+
+#### When You Need This Pattern
+
+Ask these questions in order:
+1. **Is there a SOLID violation?** (Parent + child both handle routing/API/state) → **Use composition now**
+2. Do I have 3+ boolean props controlling what renders? → **Consider composition**
+3. Do I need the same logic with different UIs? → **Share provider**
+4. Is my component 200+ lines with complex conditionals? → **Decompose it**
+
+The first question overrides all others. SOLID violations should be fixed immediately, even with a single use case.
+
+#### Reference Implementation
+
+- See `components/knowledge/` for complete example
+- Fixed bug: Double router.refresh() causing duplicate chats
+- Modal reduced 56% (195 → 86 lines) after refactor
+- Search codebase for "FUTURE EXTENSIONS" comments showing how to extend
+- Pattern inspired by [Slack's composer architecture](https://www.youtube.com/watch?v=XsjcB_VuSkU)
+
 
 # Subagents
 
@@ -260,15 +367,3 @@ Any time you need to work on your Agent prompts or tool descriptions you ALWAYS 
 
 - if the User points out a gap in your thinking or corrects a plan (or other things like that), your goal is to LEARN from this interaction.  Instead of merely saying 'you are absolutely right', have a GROWTH MINDSET and state your original thinking (you had a reason afterall) and extra steps you may take next time to arrive at this conclusion in the first place.
 
-# Markdown and Specs
-When you generate specs that contain mermaid diagrams, you will 'render' the SVG using the mmdc command.  
-You will render into a 'rendered' folder so that the original is preserved
-When making edits, you will always edit the original and then re-render.
-
-You can always check the options for mmdc by using the `-h` flag
-
-Usage:
-`mmdc -i {filename}.md -a rendered/{filename} -o rendered/{filename}.md`
-
-example:
-`mmdc -i architecture_spec_objective_container.md -a rendered/architecture_spec_objective_container -o rendered/architecture_spec_objective_container.md`
