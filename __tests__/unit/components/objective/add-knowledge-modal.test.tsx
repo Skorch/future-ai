@@ -11,7 +11,7 @@ import React from 'react';
 //   1. KnowledgeProvider tests (business logic, state, API calls)
 //   2. ObjectiveKnowledgeModal tests (pure UI rendering)
 //   3. Integration tests (parent + provider + modal)
-import { ObjectiveKnowledgeModal as AddKnowledgeModal } from '@/components/knowledge/objective-knowledge-modal';
+import { ObjectiveKnowledgeModal as AddKnowledgeModal } from '@/components/knowledge/compositions/modal';
 
 // Helper function to set textarea value directly (for large content)
 const setTextareaValue = (textarea: HTMLElement, value: string) => {
