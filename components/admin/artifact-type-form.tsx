@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useEditor, EditorContent } from '@tiptap/react';
+import { useEditor, EditorContent, type Editor } from '@tiptap/react';
 import TiptapStarterKit from '@tiptap/starter-kit';
 import { Markdown } from 'tiptap-markdown';
 import {
@@ -200,10 +200,7 @@ export function ArtifactTypeForm({
     }
   };
 
-  const renderToolbar = (
-    editor: ReturnType<typeof useEditor>,
-    editorName: string,
-  ) => {
+  const renderToolbar = (editor: Editor | null, editorName: string) => {
     if (!editor) return null;
     return (
       <div className="flex gap-1 p-2 border-b bg-muted/50">
