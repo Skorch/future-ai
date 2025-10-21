@@ -1,7 +1,7 @@
 import { myProvider } from '@/lib/ai/providers';
 import { ObjectiveDocumentBuilder } from '@/lib/ai/prompts/builders/objective-document-builder';
 import { ObjectiveActionsBuilder } from '@/lib/ai/prompts/builders/objective-actions-builder';
-import { OutputSize } from '@/lib/artifacts/types';
+import { OutputSize, ThinkingBudget } from '@/lib/artifacts/types';
 import {
   processStream,
   saveGeneratedDocument,
@@ -14,7 +14,6 @@ import type {
   CreateDocumentCallbackProps,
   GenerateObjectiveActionsCallbackProps,
 } from '@/lib/artifacts/server';
-import { buildInvestigationTools } from '@/lib/ai/tools/investigation-tools';
 
 import { db } from '@/lib/db/queries';
 import { workspace, artifactType } from '@/lib/db/schema';
@@ -125,15 +124,6 @@ Date: ${new Date().toISOString().split('T')[0]}
 Meeting Transcripts and Documentation:
 ${transcripts}`;
 
-    // Build investigation tools for AI to discover information
-    const tools = await buildInvestigationTools({
-      session,
-      workspaceId,
-      objectiveId: typedMetadata?.objectiveId || '',
-      domainId: 'project',
-      dataStream,
-    });
-
     // Build configuration with high thinking budget for complex synthesis
     const streamConfig = buildStreamConfig({
       model: myProvider.languageModel('artifact-model'),
@@ -141,7 +131,6 @@ ${transcripts}`;
       prompt: userPrompt,
       maxOutputTokens: metadata.outputSize ?? OutputSize.LARGE,
       thinkingBudget: metadata.thinkingBudget, // HIGH - 12000 tokens
-      tools,
     });
 
     // Process the stream and collect content
@@ -212,16 +201,7 @@ ${transcripts}`;
       knowledgeSummaries,
     );
 
-    // Build investigation tools for objective actions generation
-    const tools = await buildInvestigationTools({
-      session,
-      workspaceId,
-      objectiveId: objectiveId || '',
-      domainId: 'project',
-      dataStream,
-    });
-
-    // Build configuration for objective actions generation with tools
+    // Build configuration for objective actions generation
     const config = buildStreamConfig({
       model: myProvider.languageModel('claude-sonnet-4'),
       system: objectiveActionsSystemPrompt,
@@ -229,7 +209,7 @@ ${transcripts}`;
         'Generate the updated objective actions showing how the new knowledge affects each item.',
       maxOutputTokens: 4000,
       temperature: 0.4,
-      tools,
+      thinkingBudget: ThinkingBudget.MEDIUM, // 8000 tokens for objective analysis
     });
 
     // Process stream directly

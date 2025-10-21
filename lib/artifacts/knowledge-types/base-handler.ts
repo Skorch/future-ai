@@ -9,6 +9,7 @@ import {
   processStream,
   buildStreamConfig,
 } from '../document-types/base-handler';
+import { ThinkingBudget } from '@/lib/artifacts/types';
 
 /**
  * Knowledge handler interface
@@ -101,6 +102,7 @@ ${rawContent}
     prompt: userPrompt,
     temperature: 0.4, // Lower for consistent summaries
     maxOutputTokens: 4096,
+    thinkingBudget: ThinkingBudget.MEDIUM, // 8000 tokens for knowledge analysis
   });
 
   const content = await processStream(config, dataStream);

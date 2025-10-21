@@ -3,6 +3,7 @@ import type { UIMessageStreamWriter } from 'ai';
 import { z } from 'zod';
 import { getDocumentTypeDefinition } from '@/lib/artifacts';
 import { fetchSourceDocuments } from '@/lib/artifacts/document-types/base-handler';
+import { ThinkingBudget } from '@/lib/artifacts/types';
 import { getVersionByChatId } from '@/lib/db/objective-document';
 import { getLogger } from '@/lib/logger';
 import type { ChatMessage } from '@/lib/types';
@@ -167,6 +168,7 @@ The tool will use the objective's document type automatically.`,
             primarySourceDocumentId,
             objectiveId, // Moved to metadata for context (no longer creates document)
             documentId: version.documentId, // Document envelope ID for reference
+            thinkingBudget: ThinkingBudget.HIGH, // 12000 tokens for complex documents
           },
         });
 

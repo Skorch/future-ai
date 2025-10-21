@@ -11,9 +11,8 @@ import {
   saveGeneratedDocument,
   fetchKnowledgeDocuments,
 } from '@/lib/artifacts/document-types/base-handler';
-import { OutputSize } from '@/lib/artifacts/types';
+import { OutputSize, ThinkingBudget } from '@/lib/artifacts/types';
 import { myProvider } from '@/lib/ai/providers';
-import { buildInvestigationTools } from '@/lib/ai/tools/investigation-tools';
 
 import { db } from '@/lib/db/queries';
 import { workspace, artifactType } from '@/lib/db/schema';
@@ -154,16 +153,7 @@ ${analyses}
       objectiveGoal,
     );
 
-    // Build investigation tools for AI to discover information
-    const tools = await buildInvestigationTools({
-      session,
-      workspaceId,
-      objectiveId: typedMetadata?.objectiveId || '',
-      domainId: 'sales',
-      dataStream,
-    });
-
-    // Build stream configuration with tools
+    // Build stream configuration
     const streamConfig = buildStreamConfig({
       model: myProvider.languageModel('artifact-model'),
       system: systemPrompt,
@@ -171,7 +161,6 @@ ${analyses}
       maxOutputTokens: metadata.outputSize ?? OutputSize.MEDIUM,
       thinkingBudget: metadata.thinkingBudget,
       temperature: metadata.temperature,
-      tools,
     });
 
     // Process stream and save
@@ -242,16 +231,7 @@ ${analyses}
       knowledgeSummaries,
     );
 
-    // Build investigation tools for objective actions generation
-    const tools = await buildInvestigationTools({
-      session,
-      workspaceId,
-      objectiveId: objectiveId || '',
-      domainId: 'sales',
-      dataStream,
-    });
-
-    // Build configuration for objective actions generation with tools
+    // Build configuration for objective actions generation
     const config = buildStreamConfig({
       model: myProvider.languageModel('claude-sonnet-4'),
       system: objectiveActionsSystemPrompt,
@@ -259,7 +239,7 @@ ${analyses}
         'Generate the updated objective actions showing how the new knowledge affects each item.',
       maxOutputTokens: 4000,
       temperature: 0.4,
-      tools,
+      thinkingBudget: ThinkingBudget.MEDIUM, // 8000 tokens for objective analysis
     });
 
     // Process stream directly
