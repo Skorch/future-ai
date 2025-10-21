@@ -5,6 +5,7 @@ import { db } from '@/lib/db/queries';
 import {
   playbook,
   playbookStep,
+  playbookDomain,
   type Playbook,
   type PlaybookWithSteps,
   type PlaybookMetadata,
@@ -23,7 +24,6 @@ export const getAllPlaybooks = unstable_cache(
         name: playbook.name,
         description: playbook.description,
         whenToUse: playbook.whenToUse,
-        domains: playbook.domains,
       })
       .from(playbook)
       .orderBy(playbook.name);
@@ -40,12 +40,21 @@ export async function listPlaybooks(): Promise<PlaybookMetadata[]> {
   return await getAllPlaybooks();
 }
 
-// Filter playbooks by domain (in-memory, leverages cache)
+// Filter playbooks by domain (using junction table join)
 export async function getPlaybooksForDomain(
   domainId: string,
 ): Promise<PlaybookMetadata[]> {
-  const allPlaybooks = await getAllPlaybooks();
-  return allPlaybooks.filter((p) => p.domains.includes(domainId));
+  return await db
+    .select({
+      id: playbook.id,
+      name: playbook.name,
+      description: playbook.description,
+      whenToUse: playbook.whenToUse,
+    })
+    .from(playbook)
+    .innerJoin(playbookDomain, eq(playbookDomain.playbookId, playbook.id))
+    .where(eq(playbookDomain.domainId, domainId))
+    .orderBy(playbook.name);
 }
 
 // Fetch single playbook with all steps (cached per playbook)
@@ -83,7 +92,7 @@ export async function createPlaybook(data: {
   name: string;
   description?: string;
   whenToUse?: string;
-  domains: string[];
+  domainIds: string[]; // Now using domain UUIDs
   steps: { sequence: number; instruction: string }[];
 }): Promise<Playbook> {
   const result = await db.transaction(async (tx) => {
@@ -94,9 +103,18 @@ export async function createPlaybook(data: {
         name: data.name,
         description: data.description,
         whenToUse: data.whenToUse,
-        domains: data.domains,
       })
       .returning();
+
+    // Insert domain associations via junction table
+    if (data.domainIds.length > 0) {
+      await tx.insert(playbookDomain).values(
+        data.domainIds.map((domainId) => ({
+          playbookId: newPlaybook.id,
+          domainId,
+        })),
+      );
+    }
 
     // Insert steps
     if (data.steps.length > 0) {
@@ -123,7 +141,7 @@ export async function updatePlaybook(
     name?: string;
     description?: string;
     whenToUse?: string;
-    domains?: string[];
+    domainIds?: string[]; // Now using domain UUIDs
     steps?: { sequence: number; instruction: string }[];
   },
 ): Promise<Playbook | null> {
@@ -137,13 +155,28 @@ export async function updatePlaybook(
           description: data.description,
         }),
         ...(data.whenToUse !== undefined && { whenToUse: data.whenToUse }),
-        ...(data.domains && { domains: data.domains }),
         updatedAt: new Date(),
       })
       .where(eq(playbook.id, id))
       .returning();
 
     if (!updated) return null;
+
+    // Update domain associations if provided
+    if (data.domainIds) {
+      // Delete existing domain associations
+      await tx.delete(playbookDomain).where(eq(playbookDomain.playbookId, id));
+
+      // Insert new domain associations
+      if (data.domainIds.length > 0) {
+        await tx.insert(playbookDomain).values(
+          data.domainIds.map((domainId) => ({
+            playbookId: id,
+            domainId,
+          })),
+        );
+      }
+    }
 
     // Update steps if provided
     if (data.steps) {

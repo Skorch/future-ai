@@ -401,18 +401,38 @@ export const stream = pgTable(
 
 export type Stream = InferSelectModel<typeof stream>;
 
-// Playbook table (unchanged)
+// Playbook table - workflow guidance for specific domain tasks
 export const playbook = pgTable('Playbook', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: varchar('name', { length: 255 }).unique().notNull(),
   description: text('description'),
   whenToUse: text('whenToUse'),
-  domains: text('domains').array().notNull(),
   createdAt: timestamp('createdAt').defaultNow().notNull(),
   updatedAt: timestamp('updatedAt').defaultNow().notNull(),
 });
 
 export type Playbook = InferSelectModel<typeof playbook>;
+
+// PlaybookDomain junction table - many-to-many relationship between Playbooks and Domains
+export const playbookDomain = pgTable(
+  'PlaybookDomain',
+  {
+    playbookId: uuid('playbookId')
+      .references(() => playbook.id, { onDelete: 'cascade' })
+      .notNull(),
+    domainId: uuid('domainId')
+      .references(() => domain.id, { onDelete: 'cascade' })
+      .notNull(),
+    createdAt: timestamp('createdAt').defaultNow().notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.playbookId, table.domainId] }),
+    playbookIdx: index('idx_playbook_domain_playbook').on(table.playbookId),
+    domainIdx: index('idx_playbook_domain_domain').on(table.domainId),
+  }),
+);
+
+export type PlaybookDomain = InferSelectModel<typeof playbookDomain>;
 
 // PlaybookStep table (unchanged)
 export const playbookStep = pgTable(
@@ -453,7 +473,10 @@ export interface PlaybookMetadata {
   name: string;
   description: string | null;
   whenToUse: string | null;
-  domains: string[];
+}
+
+export interface PlaybookWithDomains extends PlaybookMetadata {
+  domainIds: string[];
 }
 
 // Relations (for Drizzle ORM query builder)
@@ -490,6 +513,14 @@ export const objectiveRelations = relations(objective, ({ one, many }) => ({
   }),
   objectiveContextArtifactType: one(artifactType, {
     fields: [objective.objectiveContextArtifactTypeId],
+    references: [artifactType.id],
+  }),
+  objectiveDocumentArtifactType: one(artifactType, {
+    fields: [objective.objectiveDocumentArtifactTypeId],
+    references: [artifactType.id],
+  }),
+  objectiveActionsArtifactType: one(artifactType, {
+    fields: [objective.objectiveActionsArtifactTypeId],
     references: [artifactType.id],
   }),
   summaryArtifactType: one(artifactType, {
