@@ -341,6 +341,8 @@ The first question overrides all others. SOLID violations should be fixed immedi
 NEVER EVER delegate coding tasks not explicitly to a subagent outside of their specific purpose!!
 Subagents may NEVER call other subagents
 
+IMPORTANT:  Subagents start with a CLEAN CONTEXT - which means they don't know anything about your chat history.  The ONLY thing it knows is what you pass in as your prompt (as well as its own internal instructions).  Be sure to be clear in your Subagent Prompt and never refernece your own chat, instead be specific about that 'reference'.
+
 ## Searching for Files
 
 Unless you know exactly what you need to search for, you will NEVER use the search tool directly, instead you will ALWAYS use the `code-searcher` subagent.  If you have more than one 'topic' or broad search pattern, ALWAYS use parallel concurrent `code-searcher` subagents.

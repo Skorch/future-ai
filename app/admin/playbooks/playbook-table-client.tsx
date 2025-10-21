@@ -2,16 +2,12 @@
 
 import { useRouter } from 'next/navigation';
 import { PlaybookTable } from '@/components/admin/playbook-table';
-import type { Playbook } from '@/lib/db/schema';
-
-interface PlaybookRow extends Playbook {
-  stepCount: number;
-}
+import type { AdminPlaybook } from '@/lib/db/queries/admin/playbooks';
 
 export function PlaybookTableClient({
   playbooks,
 }: {
-  playbooks: PlaybookRow[];
+  playbooks: AdminPlaybook[];
 }) {
   const router = useRouter();
 

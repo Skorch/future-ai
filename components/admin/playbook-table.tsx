@@ -1,9 +1,3 @@
-/**
- * @deprecated This component references legacy domains field
- * TODO: Update to query PlaybookDomain junction table for domain display
- * - Remove 'domains' column or query domain names via junction table
- * - Update PlaybookRow type to include domainIds or domain objects
- */
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -12,6 +6,7 @@ import 'react-data-grid/lib/styles.css';
 import { formatDistanceToNow } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,15 +26,10 @@ import {
 import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { deletePlaybook } from '@/app/admin/playbooks/actions';
-import type { Playbook } from '@/lib/db/schema';
-
-interface PlaybookRow extends Playbook {
-  stepCount: number;
-  // TODO: Add domainNames: string[] when implementing junction table query
-}
+import type { AdminPlaybook } from '@/lib/db/queries/admin/playbooks';
 
 interface PlaybookTableProps {
-  playbooks: PlaybookRow[];
+  playbooks: AdminPlaybook[];
   onUpdate: () => void;
 }
 
@@ -47,9 +37,8 @@ export function PlaybookTable({ playbooks, onUpdate }: PlaybookTableProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [playbookToDelete, setPlaybookToDelete] = useState<PlaybookRow | null>(
-    null,
-  );
+  const [playbookToDelete, setPlaybookToDelete] =
+    useState<AdminPlaybook | null>(null);
 
   const handleDelete = async () => {
     if (!playbookToDelete) return;
@@ -81,7 +70,7 @@ export function PlaybookTable({ playbooks, onUpdate }: PlaybookTableProps) {
     }
   };
 
-  const columns: Column<PlaybookRow>[] = useMemo(
+  const columns: Column<AdminPlaybook>[] = useMemo(
     () => [
       {
         key: 'name',
@@ -107,24 +96,19 @@ export function PlaybookTable({ playbooks, onUpdate }: PlaybookTableProps) {
           </span>
         ),
       },
-      // TODO: Re-enable domains column after implementing PlaybookDomain junction table query
-      // {
-      //   key: 'domains',
-      //   name: 'Domains',
-      //   width: 150,
-      //   renderCell: ({ row }) => (
-      //     <div className="flex gap-1">
-      //       {row.domainNames?.map((domain: string) => (
-      //         <span
-      //           key={domain}
-      //           className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold"
-      //         >
-      //           {domain}
-      //         </span>
-      //       ))}
-      //     </div>
-      //   ),
-      // },
+      {
+        key: 'domains',
+        name: 'Domains',
+        renderCell: ({ row }: { row: AdminPlaybook }) => (
+          <div className="flex flex-wrap gap-1">
+            {row.domains.map((domain) => (
+              <Badge key={domain.id} variant="secondary">
+                {domain.title}
+              </Badge>
+            ))}
+          </div>
+        ),
+      },
       {
         key: 'createdAt',
         name: 'Created',
@@ -138,11 +122,11 @@ export function PlaybookTable({ playbooks, onUpdate }: PlaybookTableProps) {
         ),
       },
       {
-        key: 'stepCount',
-        name: '# Steps',
+        key: 'steps',
+        name: 'Steps',
         width: 100,
-        renderCell: ({ row }) => (
-          <span className="text-sm">{row.stepCount}</span>
+        renderCell: ({ row }: { row: AdminPlaybook }) => (
+          <span className="text-sm">{row.steps.length}</span>
         ),
       },
       {

@@ -4,19 +4,25 @@ import {
   createPlaybook as dbCreatePlaybook,
   updatePlaybook as dbUpdatePlaybook,
   deletePlaybook as dbDeletePlaybook,
-} from '@/lib/db/queries/playbooks';
+} from '@/lib/db/queries/admin/playbooks';
+import { getAllDomains } from '@/lib/db/queries/domain';
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 
-/**
- * @deprecated This action uses legacy domain field. Needs update to use domain UUIDs.
- * TODO: Update admin UI to select domain UUIDs instead of legacy string IDs
- */
+export async function getDomainsForForm() {
+  const domains = await getAllDomains();
+  return domains.map((d) => ({
+    id: d.id,
+    title: d.title,
+    description: d.description,
+  }));
+}
+
 export async function createPlaybook(data: {
   name: string;
   description?: string;
   whenToUse?: string;
-  domainIds: string[]; // Changed from 'domains' to 'domainIds' to match new schema
+  domainIds: string[];
   steps: { sequence: number; instruction: string }[];
 }) {
   const { userId } = await auth();
@@ -27,17 +33,13 @@ export async function createPlaybook(data: {
   return await dbCreatePlaybook(data);
 }
 
-/**
- * @deprecated This action uses legacy domain field. Needs update to use domain UUIDs.
- * TODO: Update admin UI to select domain UUIDs instead of legacy string IDs
- */
 export async function updatePlaybook(
   id: string,
   data: {
     name?: string;
     description?: string;
     whenToUse?: string;
-    domainIds?: string[]; // Changed from 'domains' to 'domainIds' to match new schema
+    domainIds?: string[];
     steps?: { sequence: number; instruction: string }[];
   },
 ) {

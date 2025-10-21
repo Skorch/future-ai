@@ -1,10 +1,13 @@
 import { PlaybookForm } from '@/components/admin/playbook-form';
+import { getDomainsForForm } from '../actions';
 
-export default function NewPlaybookPage() {
+export default async function NewPlaybookPage() {
+  const domains = await getDomainsForForm();
+
   return (
     <div>
       <h2 className="text-2xl font-semibold mb-6">Create New Playbook</h2>
-      <PlaybookForm />
+      <PlaybookForm domains={domains} />
     </div>
   );
 }

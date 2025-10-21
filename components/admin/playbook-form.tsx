@@ -1,10 +1,3 @@
-/**
- * @deprecated This component uses legacy domain field and needs significant updates
- * TODO: Update to use PlaybookDomain junction table and domain UUIDs
- * - Change form schema to use domainIds instead of domains
- * - Update UI to select from actual Domain records via API
- * - Update default values to load domain IDs from PlaybookDomain table
- */
 'use client';
 
 import { useState } from 'react';
@@ -17,7 +10,6 @@ import { GripVertical, Trash2, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import {
   Tooltip,
@@ -27,7 +19,7 @@ import {
 } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { createPlaybook, updatePlaybook } from '@/app/admin/playbooks/actions';
-import type { PlaybookWithSteps } from '@/lib/db/schema';
+import type { AdminPlaybook } from '@/lib/db/queries/admin/playbooks';
 
 const playbookSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -47,10 +39,9 @@ const playbookSchema = z.object({
 type PlaybookFormData = z.infer<typeof playbookSchema>;
 
 interface PlaybookFormProps {
-  playbook?: PlaybookWithSteps;
+  playbook?: AdminPlaybook | null;
+  domains: Array<{ id: string; title: string; description: string | null }>;
 }
-
-const AVAILABLE_DOMAINS = ['sales', 'meeting'];
 
 const FIELD_INFO = {
   name: 'Unique identifier for this playbook. Used by agents to reference this workflow.',
@@ -64,7 +55,7 @@ const FIELD_INFO = {
     'Sequential instructions the agent follows. Supports markdown formatting. Drag to reorder.',
 };
 
-export function PlaybookForm({ playbook }: PlaybookFormProps) {
+export function PlaybookForm({ playbook, domains }: PlaybookFormProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -81,7 +72,7 @@ export function PlaybookForm({ playbook }: PlaybookFormProps) {
       name: playbook?.name || '',
       description: playbook?.description || '',
       whenToUse: playbook?.whenToUse || '',
-      domainIds: [], // TODO: Load from PlaybookDomain junction table
+      domainIds: playbook?.domains.map((d) => d.id) || [],
       steps: playbook?.steps.map((step, index) => ({
         id: step.id,
         instruction: step.instruction,
@@ -235,21 +226,23 @@ export function PlaybookForm({ playbook }: PlaybookFormProps) {
             </Label>
             <InfoTooltip content={FIELD_INFO.domains} />
           </div>
-          <div className="flex gap-4">
-            {AVAILABLE_DOMAINS.map((domain) => (
-              <div key={domain} className="flex items-center space-x-2">
-                <Checkbox
-                  id={`domain-${domain}`}
-                  checked={domainIds.includes(domain)}
-                  onCheckedChange={() => toggleDomain(domain)}
+          <div className="space-y-2">
+            {domains.map((domain) => (
+              <label key={domain.id} className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  value={domain.id}
+                  checked={domainIds.includes(domain.id)}
+                  onChange={() => toggleDomain(domain.id)}
+                  className="rounded"
                 />
-                <label
-                  htmlFor={`domain-${domain}`}
-                  className="text-sm capitalize cursor-pointer"
-                >
-                  {domain}
-                </label>
-              </div>
+                <span className="font-medium">{domain.title}</span>
+                {domain.description && (
+                  <span className="text-sm text-muted-foreground">
+                    - {domain.description}
+                  </span>
+                )}
+              </label>
             ))}
           </div>
           {errors.domainIds && (
