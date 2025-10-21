@@ -32,6 +32,7 @@ export default async function AdminLayout({
           {/* Sidebar Navigation */}
           <aside className="w-48 shrink-0">
             <nav className="space-y-1">
+              <NavLink href="/admin/domains">Domains</NavLink>
               <NavLink href="/admin/playbooks">Playbooks</NavLink>
               <NavLink href="/admin/prompts">Prompts</NavLink>
             </nav>
