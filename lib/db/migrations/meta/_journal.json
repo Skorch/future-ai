@@ -134,6 +134,13 @@
       "when": 1761016311719,
       "tag": "0018_careful_blizzard",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1761020830742,
+      "tag": "0019_furry_squirrel_girl",
+      "breakpoints": true
     }
   ]
 }
