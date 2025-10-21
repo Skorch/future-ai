@@ -6,6 +6,7 @@ import {
 } from '@/lib/db/queries/playbooks';
 import type { PlaybookMetadata, PlaybookStep } from '@/lib/db/schema';
 import { GET_PLAYBOOK_PROMPT } from '@/lib/ai/prompts/builders/shared/prompts/tools/get-playbook.prompts';
+import { logger } from '@/lib/logger';
 
 interface GetPlaybookProps {
   domainId: string; // Domain UUID
@@ -16,6 +17,10 @@ interface GetPlaybookProps {
  * Returns null if no playbooks are available for the domain.
  */
 export async function getPlaybook({ domainId }: GetPlaybookProps) {
+  logger.debug(
+    '[getPlaybook] Initializing getPlaybook tool for domain:',
+    domainId,
+  );
   // Fetch available playbooks for this domain
   const availablePlaybooks = await getPlaybooksForDomain(domainId);
 
