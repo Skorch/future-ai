@@ -29,9 +29,11 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 import { toggleObjectivePublishAction } from '@/lib/objective/actions';
 import type { Objective } from '@/lib/db/objective';
-import { AddKnowledgeModal } from '@/components/objective/add-knowledge-modal';
+import { ObjectiveKnowledgeModal } from '@/components/knowledge/objective-knowledge-modal';
+import { KnowledgeProvider } from '@/components/knowledge/providers/knowledge-provider';
 import { DocumentViewer } from '@/components/document-viewer';
 import {
   Collapsible,
@@ -261,16 +263,31 @@ export function ObjectiveDetailClient({
       </div>
 
       {/* Add Knowledge Modal */}
-      <AddKnowledgeModal
+      <KnowledgeProvider
         workspaceId={workspaceId}
         objectiveId={objectiveId}
         open={isAddKnowledgeOpen}
-        onOpenChange={setIsAddKnowledgeOpen}
-        onSuccess={() => {
-          // Modal handles toast, just refresh
-          router.refresh();
+        onClose={(didCreate) => {
+          setIsAddKnowledgeOpen(false);
+          if (didCreate) {
+            router.refresh();
+          }
         }}
-      />
+        onNavigate={(url) => {
+          try {
+            router.refresh();
+            router.push(url);
+          } catch (error) {
+            logger.error('Navigation failed:', error);
+            toast.error('Failed to navigate to chat');
+          }
+        }}
+      >
+        <ObjectiveKnowledgeModal
+          open={isAddKnowledgeOpen}
+          onOpenChange={setIsAddKnowledgeOpen}
+        />
+      </KnowledgeProvider>
 
       {/* Content Area with Tabs */}
       <Tabs
