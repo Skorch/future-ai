@@ -29,10 +29,9 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { logger } from '@/lib/logger';
 import { toggleObjectivePublishAction } from '@/lib/objective/actions';
 import type { Objective } from '@/lib/db/objective';
-import { ObjectiveKnowledgeModal } from '@/components/knowledge/objective-knowledge-modal';
+import { ObjectiveKnowledgeModal } from '@/components/knowledge/compositions/modal';
 import { KnowledgeProvider } from '@/components/knowledge/providers/knowledge-provider';
 import { DocumentViewer } from '@/components/document-viewer';
 import {
@@ -46,7 +45,7 @@ import type { KnowledgeDocument } from '@/lib/db/knowledge-document';
 import { ObjectiveGoalTab } from '@/components/objective/objective-goal-tab';
 import { ObjectiveActionsTab } from '@/components/objective/objective-actions-tab';
 import { TaskHistoryTab } from '@/components/objective/task-history-tab';
-import { ObjectiveEmptyState } from '@/components/objective/empty-state/objective-empty-state';
+import { ObjectiveEmptyState } from '@/components/knowledge/compositions/empty-state';
 
 interface Chat {
   id: string;
@@ -291,21 +290,19 @@ export function ObjectiveDetailClient({
       <KnowledgeProvider
         workspaceId={workspaceId}
         objectiveId={objectiveId}
-        open={isAddKnowledgeOpen}
-        onClose={(didCreate) => {
+        onClose={(document, summaryRequested) => {
           setIsAddKnowledgeOpen(false);
-          if (didCreate) {
-            router.refresh();
-          }
-        }}
-        onNavigate={(url) => {
-          try {
-            router.refresh();
+
+          if (document && summaryRequested) {
+            // Navigate to chat with summary prompt
+            const prompt = `Please load and create a summary of the document "${document.title}". Use the appropriate Playbook.`;
+            const url = `/workspace/${workspaceId}/chat/new?objectiveId=${objectiveId}&query=${encodeURIComponent(prompt)}&autoSubmit=true`;
             router.push(url);
-          } catch (error) {
-            logger.error('Navigation failed:', error);
-            toast.error('Failed to navigate to chat');
+          } else if (document) {
+            // Just refresh to show new document in the list
+            router.refresh();
           }
+          // else: cancelled - nothing to do
         }}
       >
         <ObjectiveKnowledgeModal
