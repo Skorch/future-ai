@@ -380,3 +380,12 @@ When to avoid CoD:
 ## PRO TIPS
 - Always wrap file paths in double-quotes.  NextJS usually has (routes) in parenthesis and will cause your commands to fail
 
+## Restrictions
+- Never use BASH commands which will trigger the User to approve.  EG:
+  - `Bash(cat << 'EOF' > /tmp/search_ai_tools.md ...`
+
+this pattern also causes a user review (think of why):
+``` 
+  find "/Users/drew/Source/mammoth-growth/future-ai" -type f \( -name     │
+│   "*knowledge*.test*" -o -name "*knowledge*.spec*" \) | head -10  
+```
