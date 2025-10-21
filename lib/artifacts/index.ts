@@ -1,6 +1,19 @@
 import type { ArtifactDefinition } from './types';
 
-// Artifact registry - single source of truth for all document types
+/**
+ * @deprecated This hardcoded artifact registry is being replaced by the database-driven ArtifactType system.
+ *
+ * **Migration Status**: The system now uses the ArtifactType table for document generation.
+ * - New code should query the ArtifactType table and use generateFromArtifactType() instead.
+ * - See: lib/db/queries/artifact-handler.ts for the new implementation
+ * - See: lib/db/schema.ts for the ArtifactType table definition
+ *
+ * **Keeping temporarily for**:
+ * - Backward compatibility during migration
+ * - Any legacy code paths that haven't been updated yet
+ *
+ * **TODO**: Remove this entirely once all code paths use database-driven artifacts
+ */
 export const artifactRegistry = {
   'business-requirements': () =>
     import('./document-types/business-requirements'),
@@ -30,11 +43,20 @@ export async function getDocumentTypeDefinition(
   };
 }
 
-// Load all definitions (for prompts, UI, etc.)
-// TODO: This should be replaced with database-driven artifact type queries
-// For now, returns all types unfiltered
+/**
+ * @deprecated Use database queries to fetch ArtifactType records instead.
+ *
+ * Load all definitions (for prompts, UI, etc.)
+ * This function is deprecated - new code should query the ArtifactType table directly.
+ *
+ * For domain-specific artifact types, use:
+ * ```typescript
+ * const domain = await getDomainById(domainId);
+ * const artifactType = domain.defaultObjectiveArtifactType;
+ * ```
+ */
 export async function getAllDocumentTypes(
-  _domainId?: string, // Ignored for now - domain filtering should come from database
+  _domainId?: string, // Ignored - domain filtering should come from database
 ): Promise<ArtifactDefinition[]> {
   return getAllDocumentTypesUnfiltered();
 }

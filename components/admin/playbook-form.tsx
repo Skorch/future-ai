@@ -1,3 +1,10 @@
+/**
+ * @deprecated This component uses legacy domain field and needs significant updates
+ * TODO: Update to use PlaybookDomain junction table and domain UUIDs
+ * - Change form schema to use domainIds instead of domains
+ * - Update UI to select from actual Domain records via API
+ * - Update default values to load domain IDs from PlaybookDomain table
+ */
 'use client';
 
 import { useState } from 'react';
@@ -26,7 +33,7 @@ const playbookSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   description: z.string().optional(),
   whenToUse: z.string().optional(),
-  domains: z.array(z.string()).min(1, 'At least one domain is required'),
+  domainIds: z.array(z.string()).min(1, 'At least one domain is required'),
   steps: z
     .array(
       z.object({
@@ -74,7 +81,7 @@ export function PlaybookForm({ playbook }: PlaybookFormProps) {
       name: playbook?.name || '',
       description: playbook?.description || '',
       whenToUse: playbook?.whenToUse || '',
-      domains: playbook?.domains || ['sales'],
+      domainIds: [], // TODO: Load from PlaybookDomain junction table
       steps: playbook?.steps.map((step, index) => ({
         id: step.id,
         instruction: step.instruction,
@@ -82,18 +89,18 @@ export function PlaybookForm({ playbook }: PlaybookFormProps) {
     },
   });
 
-  const domains = watch('domains');
+  const domainIds = watch('domainIds');
   const steps = watch('steps');
 
   const toggleDomain = (domain: string) => {
-    const current = domains || [];
+    const current = domainIds || [];
     if (current.includes(domain)) {
       setValue(
-        'domains',
+        'domainIds',
         current.filter((d) => d !== domain),
       );
     } else {
-      setValue('domains', [...current, domain]);
+      setValue('domainIds', [...current, domain]);
     }
   };
 
@@ -127,7 +134,7 @@ export function PlaybookForm({ playbook }: PlaybookFormProps) {
         name: data.name,
         description: data.description || undefined,
         whenToUse: data.whenToUse || undefined,
-        domains: data.domains,
+        domainIds: data.domainIds,
         steps: data.steps.map((step, index) => ({
           sequence: index + 1,
           instruction: step.instruction,
@@ -233,7 +240,7 @@ export function PlaybookForm({ playbook }: PlaybookFormProps) {
               <div key={domain} className="flex items-center space-x-2">
                 <Checkbox
                   id={`domain-${domain}`}
-                  checked={domains.includes(domain)}
+                  checked={domainIds.includes(domain)}
                   onCheckedChange={() => toggleDomain(domain)}
                 />
                 <label
@@ -245,8 +252,10 @@ export function PlaybookForm({ playbook }: PlaybookFormProps) {
               </div>
             ))}
           </div>
-          {errors.domains && (
-            <p className="text-sm text-destructive">{errors.domains.message}</p>
+          {errors.domainIds && (
+            <p className="text-sm text-destructive">
+              {errors.domainIds.message}
+            </p>
           )}
         </div>
 

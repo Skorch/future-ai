@@ -8,11 +8,15 @@ import {
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 
+/**
+ * @deprecated This action uses legacy domain field. Needs update to use domain UUIDs.
+ * TODO: Update admin UI to select domain UUIDs instead of legacy string IDs
+ */
 export async function createPlaybook(data: {
   name: string;
   description?: string;
   whenToUse?: string;
-  domains: string[];
+  domainIds: string[]; // Changed from 'domains' to 'domainIds' to match new schema
   steps: { sequence: number; instruction: string }[];
 }) {
   const { userId } = await auth();
@@ -23,13 +27,17 @@ export async function createPlaybook(data: {
   return await dbCreatePlaybook(data);
 }
 
+/**
+ * @deprecated This action uses legacy domain field. Needs update to use domain UUIDs.
+ * TODO: Update admin UI to select domain UUIDs instead of legacy string IDs
+ */
 export async function updatePlaybook(
   id: string,
   data: {
     name?: string;
     description?: string;
     whenToUse?: string;
-    domains?: string[];
+    domainIds?: string[]; // Changed from 'domains' to 'domainIds' to match new schema
     steps?: { sequence: number; instruction: string }[];
   },
 ) {

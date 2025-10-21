@@ -1,3 +1,9 @@
+/**
+ * @deprecated This component references legacy domains field
+ * TODO: Update to query PlaybookDomain junction table for domain display
+ * - Remove 'domains' column or query domain names via junction table
+ * - Update PlaybookRow type to include domainIds or domain objects
+ */
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -29,6 +35,7 @@ import type { Playbook } from '@/lib/db/schema';
 
 interface PlaybookRow extends Playbook {
   stepCount: number;
+  // TODO: Add domainNames: string[] when implementing junction table query
 }
 
 interface PlaybookTableProps {
@@ -100,23 +107,24 @@ export function PlaybookTable({ playbooks, onUpdate }: PlaybookTableProps) {
           </span>
         ),
       },
-      {
-        key: 'domains',
-        name: 'Domains',
-        width: 150,
-        renderCell: ({ row }) => (
-          <div className="flex gap-1">
-            {row.domains.map((domain) => (
-              <span
-                key={domain}
-                className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold"
-              >
-                {domain}
-              </span>
-            ))}
-          </div>
-        ),
-      },
+      // TODO: Re-enable domains column after implementing PlaybookDomain junction table query
+      // {
+      //   key: 'domains',
+      //   name: 'Domains',
+      //   width: 150,
+      //   renderCell: ({ row }) => (
+      //     <div className="flex gap-1">
+      //       {row.domainNames?.map((domain: string) => (
+      //         <span
+      //           key={domain}
+      //           className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold"
+      //         >
+      //           {domain}
+      //         </span>
+      //       ))}
+      //     </div>
+      //   ),
+      // },
       {
         key: 'createdAt',
         name: 'Created',
