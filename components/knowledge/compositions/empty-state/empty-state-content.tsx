@@ -11,7 +11,7 @@ import { StartObjectiveButton } from './start-objective-button';
 
 interface EmptyStateContentProps {
   workspaceId: string;
-  onDismiss: () => void;
+  onClose: () => void;
 }
 
 /**
@@ -22,7 +22,7 @@ interface EmptyStateContentProps {
  */
 export function EmptyStateContent({
   workspaceId,
-  onDismiss,
+  onClose,
 }: EmptyStateContentProps) {
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-background">
@@ -36,7 +36,7 @@ export function EmptyStateContent({
             </a>
           </Button>
 
-          <Button variant="ghost" size="sm" onClick={onDismiss}>
+          <Button variant="ghost" size="sm" onClick={onClose}>
             <XIcon className="mr-2 size-4" />
             Skip
           </Button>

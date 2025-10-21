@@ -8,13 +8,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
 import {
   AddButton,
   KnowledgeInput,
   KnowledgeUploadButton,
   SummarizeButton,
-} from './primitives';
+} from '../primitives';
 
 interface ObjectiveKnowledgeModalProps {
   open: boolean;
@@ -40,7 +39,6 @@ export function ObjectiveKnowledgeModal({
           <KnowledgeUploadButton />
 
           <div className="grid gap-2">
-            <Label htmlFor="content">Content</Label>
             <KnowledgeInput />
           </div>
         </div>

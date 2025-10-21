@@ -33,7 +33,7 @@ export function KnowledgeInput() {
       <Label htmlFor="content">Content</Label>
       <Textarea
         id="content"
-        placeholder="Paste your content here or upload a file above..."
+        placeholder="Paste your content here or upload a file..."
         value={content}
         onChange={(e) => setContent(e.target.value)}
         rows={12}
