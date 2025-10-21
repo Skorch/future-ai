@@ -166,7 +166,6 @@ export async function POST(
     return NextResponse.json(
       {
         document,
-        shouldCreateSummary: request.headers.get('X-Create-Summary') === 'true',
         // Include warning if AI analysis failed and fallback was used
         ...(usedFallback && {
           warning: 'AI analysis unavailable - using basic classification',
