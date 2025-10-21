@@ -1,10 +1,16 @@
 import { tool } from 'ai';
 import type { UIMessageStreamWriter } from 'ai';
 import { z } from 'zod';
-import { getDocumentTypeDefinition } from '@/lib/artifacts';
 import { fetchSourceDocuments } from '@/lib/artifacts/document-types/base-handler';
-import { ThinkingBudget } from '@/lib/artifacts/types';
-import { getVersionByChatId } from '@/lib/db/objective-document';
+import {
+  getVersionByChatId,
+  updateVersionContent,
+} from '@/lib/db/objective-document';
+import {
+  generateFromArtifactType,
+  validateArtifactTypeForGeneration,
+} from '@/lib/db/queries/artifact-handler';
+import type { ArtifactType } from '@/lib/db/schema';
 import { getLogger } from '@/lib/logger';
 import type { ChatMessage } from '@/lib/types';
 
@@ -16,7 +22,7 @@ interface ToolContext {
   workspaceId: string;
   chatId: string;
   objectiveId: string;
-  documentType: string;
+  artifactType: ArtifactType | null;
 }
 
 export const generateDocumentVersion = ({
@@ -25,13 +31,13 @@ export const generateDocumentVersion = ({
   workspaceId,
   chatId,
   objectiveId,
-  documentType,
+  artifactType,
 }: ToolContext) =>
   tool({
     description: `Generate or update document content for the current chat's version.
 
 IMPORTANT: The document type is ALREADY DETERMINED by the objective this chat belongs to.
-You do not need to specify the document type - it's automatically retrieved from the objective.
+You do not need to specify the document type - it's automatically retrieved from the objective's artifact type configuration.
 
 Use this tool when the user asks to:
 - "Create a draft"
@@ -39,7 +45,7 @@ Use this tool when the user asks to:
 - "Update the document with new information"
 - "Regenerate based on new sources"
 
-The tool will use the objective's document type automatically.`,
+The tool will use the objective's configured artifact type automatically.`,
 
     inputSchema: z.object({
       instruction: z
@@ -66,7 +72,18 @@ The tool will use the objective's document type automatically.`,
       const startTime = Date.now();
 
       try {
-        // 1. Get version for this chat
+        // 1. Validate artifact type configuration
+        const validation = validateArtifactTypeForGeneration(artifactType);
+        if (!validation.valid) {
+          return {
+            success: false,
+            error: validation.error,
+          };
+        }
+
+        const validArtifactType = validation.artifactType;
+
+        // 2. Get version for this chat
         const result = await getVersionByChatId(chatId);
         if (!result) {
           return {
@@ -77,17 +94,6 @@ The tool will use the objective's document type automatically.`,
 
         const { version } = result;
 
-        // 2. Get document handler (documentType provided by tool context)
-        const documentDef = await getDocumentTypeDefinition(
-          documentType as Parameters<typeof getDocumentTypeDefinition>[0],
-        );
-        if (!documentDef?.handler) {
-          return {
-            success: false,
-            error: `Unknown document type: ${documentType}`,
-          };
-        }
-
         // 3. Combine source document IDs
         const sourceDocumentIds = [
           ...(primarySourceDocumentId ? [primarySourceDocumentId] : []),
@@ -96,7 +102,7 @@ The tool will use the objective's document type automatically.`,
 
         logger.info('Starting document generation', {
           versionId: version.id,
-          documentType,
+          artifactTypeLabel: validArtifactType.label,
           objectiveId,
           sourceCount: sourceDocumentIds.length,
           sourceIds: sourceDocumentIds,
@@ -122,7 +128,7 @@ The tool will use the objective's document type automatically.`,
           });
         } else {
           logger.warn('No source documents provided', {
-            documentType,
+            artifactTypeLabel: validArtifactType.label,
             instruction: instruction.substring(0, 100),
           });
         }
@@ -141,36 +147,30 @@ The tool will use the objective's document type automatically.`,
         });
         dataStream.write({
           type: 'data-title',
-          data: 'Document',
+          data: validArtifactType.title,
           transient: true,
         });
         dataStream.write({ type: 'data-clear', data: null, transient: true });
 
-        // 6. Generate content via handler
-        logger.info('Calling handler', {
-          handler: documentDef.metadata.type,
+        // 6. Generate content using database-driven artifact type
+        logger.info('Generating content from artifact type', {
+          artifactTypeId: validArtifactType.id,
+          artifactTypeLabel: validArtifactType.label,
           hasSourceContent: !!sourceContent,
           sourceContentLength: sourceContent.length,
         });
 
-        await documentDef.handler.onCreateDocument({
-          versionId: version.id, // Version ID to update (one chat = one version)
-          title: 'Document',
-          dataStream,
-          session,
-          workspaceId,
-          metadata: {
-            documentType,
-            sourceContent, // ← Pre-loaded text content
-            instruction, // ← Single instruction field
-            // Keep IDs for audit/metadata purposes only
-            sourceDocumentIds,
-            primarySourceDocumentId,
-            objectiveId, // Moved to metadata for context (no longer creates document)
-            documentId: version.documentId, // Document envelope ID for reference
-            thinkingBudget: ThinkingBudget.HIGH, // 12000 tokens for complex documents
+        const generatedContent = await generateFromArtifactType(
+          validArtifactType,
+          {
+            sourceContent,
+            instruction,
+            dataStream,
           },
-        });
+        );
+
+        // 7. Save generated content to document version
+        await updateVersionContent(version.id, generatedContent);
 
         dataStream.write({ type: 'data-finish', data: null, transient: true });
 
@@ -178,15 +178,17 @@ The tool will use the objective's document type automatically.`,
         logger.info('Content generated successfully', {
           documentId: version.documentId,
           versionId: version.id,
+          artifactTypeLabel: validArtifactType.label,
+          contentLength: generatedContent.length,
           duration,
         });
 
         return {
           id: version.documentId, // Document envelope ID (for routing)
           versionId: version.id, // Version ID (for tracking)
-          title: 'Document',
+          title: validArtifactType.title,
           kind: 'text' as const,
-          documentType: documentType || 'text',
+          documentType: validArtifactType.label,
           success: true,
           message: `Document content has been generated and is displayed above. Use loadDocument to review the full content, then ask the user for feedback.`,
         };
