@@ -20,6 +20,40 @@
     .text-balance {
         text-wrap: balance;
     }
+
+    /* Font size aliases - bump everything up one level */
+    .text-xs {
+        font-size: 0.875rem;    /* was 0.75rem, now sm */
+        line-height: 1.25rem;
+    }
+    .text-sm {
+        font-size: 1rem;        /* was 0.875rem, now base */
+        line-height: 1.5rem;
+    }
+    .text-base {
+        font-size: 1.125rem;    /* was 1rem, now lg */
+        line-height: 1.75rem;
+    }
+    .text-lg {
+        font-size: 1.25rem;     /* was 1.125rem, now xl */
+        line-height: 1.75rem;
+    }
+    .text-xl {
+        font-size: 1.5rem;      /* was 1.25rem, now 2xl */
+        line-height: 2rem;
+    }
+    .text-2xl {
+        font-size: 1.875rem;    /* was 1.5rem, now 3xl */
+        line-height: 2.25rem;
+    }
+    .text-3xl {
+        font-size: 2.25rem;     /* was 1.875rem, now 4xl */
+        line-height: 2.5rem;
+    }
+    .text-4xl {
+        font-size: 3rem;        /* was 2.25rem, now 5xl */
+        line-height: 1;
+    }
 }
 
 @layer base {
@@ -30,19 +64,19 @@
         --card-foreground: 240 10% 3.9%;
         --popover: 0 0% 100%;
         --popover-foreground: 240 10% 3.9%;
-        --primary: 240 5.9% 10%;
+        --primary: 168 50% 45%;
         --primary-foreground: 0 0% 98%;
         --secondary: 240 4.8% 95.9%;
         --secondary-foreground: 240 5.9% 10%;
         --muted: 240 4.8% 95.9%;
         --muted-foreground: 240 3.8% 46.1%;
-        --accent: 240 4.8% 95.9%;
-        --accent-foreground: 240 5.9% 10%;
+        --accent: 168 45% 92%;
+        --accent-foreground: 168 50% 25%;
         --destructive: 0 84.2% 60.2%;
         --destructive-foreground: 0 0% 98%;
         --border: 240 5.9% 90%;
         --input: 240 5.9% 90%;
-        --ring: 240 10% 3.9%;
+        --ring: 168 50% 45%;
         --chart-1: 12 76% 61%;
         --chart-2: 173 58% 39%;
         --chart-3: 197 37% 24%;
@@ -51,12 +85,20 @@
         --radius: 0.5rem;
         --sidebar-background: 0 0% 98%;
         --sidebar-foreground: 240 5.3% 26.1%;
-        --sidebar-primary: 240 5.9% 10%;
+        --sidebar-primary: 168 50% 45%;
         --sidebar-primary-foreground: 0 0% 98%;
         --sidebar-accent: 240 4.8% 95.9%;
         --sidebar-accent-foreground: 240 5.9% 10%;
         --sidebar-border: 220 13% 91%;
-        --sidebar-ring: 217.2 91.2% 59.8%;
+        --sidebar-ring: 168 50% 45%;
+
+        /* Special purpose variables */
+        --suggestion-bg: 168 50% 45%;
+        --suggestion-fg: 0 0% 98%;
+        --console-bg: 240 4.8% 95.9%;
+        --console-fg: 240 10% 3.9%;
+        --editor-bg: 240 3.7% 15.9%;
+        --editor-selection: 240 5% 64.9%;
     }
     .dark {
         --background: 240 10% 3.9%;
@@ -65,19 +107,19 @@
         --card-foreground: 0 0% 98%;
         --popover: 240 10% 3.9%;
         --popover-foreground: 0 0% 98%;
-        --primary: 0 0% 98%;
+        --primary: 320 60% 65%;
         --primary-foreground: 240 5.9% 10%;
         --secondary: 240 3.7% 15.9%;
         --secondary-foreground: 0 0% 98%;
         --muted: 240 3.7% 15.9%;
         --muted-foreground: 240 5% 64.9%;
-        --accent: 240 3.7% 15.9%;
+        --accent: 270 60% 70%;
         --accent-foreground: 0 0% 98%;
         --destructive: 0 62.8% 30.6%;
         --destructive-foreground: 0 0% 98%;
         --border: 240 3.7% 15.9%;
         --input: 240 3.7% 15.9%;
-        --ring: 240 4.9% 83.9%;
+        --ring: 230 80% 70%;
         --chart-1: 220 70% 50%;
         --chart-2: 160 60% 45%;
         --chart-3: 30 80% 55%;
@@ -85,12 +127,20 @@
         --chart-5: 340 75% 55%;
         --sidebar-background: 240 5.9% 10%;
         --sidebar-foreground: 240 4.8% 95.9%;
-        --sidebar-primary: 224.3 76.3% 48%;
-        --sidebar-primary-foreground: 0 0% 100%;
+        --sidebar-primary: 270 60% 70%;
+        --sidebar-primary-foreground: 240 5.9% 10%;
         --sidebar-accent: 240 3.7% 15.9%;
         --sidebar-accent-foreground: 240 4.8% 95.9%;
         --sidebar-border: 240 3.7% 15.9%;
-        --sidebar-ring: 217.2 91.2% 59.8%;
+        --sidebar-ring: 230 70% 65%;
+
+        /* Special purpose variables - dark mode */
+        --suggestion-bg: 320 60% 65%;
+        --suggestion-fg: 240 5.9% 10%;
+        --console-bg: 240 10% 3.9%;
+        --console-fg: 0 0% 98%;
+        --editor-bg: 240 3.7% 15.9%;
+        --editor-selection: 240 5% 64.9%;
     }
 }
 
@@ -160,7 +210,7 @@
 }
 
 .suggestion-highlight {
-    @apply bg-blue-200 hover:bg-blue-300 dark:hover:bg-blue-400/50 dark:text-blue-50 dark:bg-blue-500/40;
+    @apply bg-primary/20 hover:bg-primary/30 dark:hover:bg-primary/50 dark:text-primary-foreground dark:bg-primary/40;
 }
 
 /* Tiptap Editor Styling */
@@ -215,4 +265,32 @@
 
 .rdg .rdg-row:hover {
     @apply bg-muted/50;
+}
+
+/* React Data Grid - Light Mode */
+.rdg-light {
+  --rdg-background-color: hsl(var(--background));
+  --rdg-header-background-color: hsl(var(--muted));
+  --rdg-row-hover-background-color: hsl(var(--muted) / 0.5);
+  --rdg-row-selected-background-color: hsl(var(--primary) / 0.1);
+  --rdg-row-selected-hover-background-color: hsl(var(--primary) / 0.15);
+  --rdg-border-color: hsl(var(--border));
+  --rdg-summary-border-color: hsl(var(--border));
+  --rdg-color: hsl(var(--foreground));
+  --rdg-header-color: hsl(var(--foreground));
+  --rdg-font-size: 0.875rem;
+}
+
+/* React Data Grid - Dark Mode */
+.rdg-dark {
+  --rdg-background-color: hsl(var(--background));
+  --rdg-header-background-color: hsl(var(--muted));
+  --rdg-row-hover-background-color: hsl(var(--muted) / 0.5);
+  --rdg-row-selected-background-color: hsl(var(--primary) / 0.1);
+  --rdg-row-selected-hover-background-color: hsl(var(--primary) / 0.15);
+  --rdg-border-color: hsl(var(--border));
+  --rdg-summary-border-color: hsl(var(--border));
+  --rdg-color: hsl(var(--foreground));
+  --rdg-header-color: hsl(var(--foreground));
+  --rdg-font-size: 0.875rem;
 }

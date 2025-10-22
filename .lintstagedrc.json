@@ -3,5 +3,5 @@
     "bash -c 'files=\"$@\"; filtered=$(echo \"$files\" | tr \" \" \"\\n\" | grep -v \"components/ui/\" | tr \"\\n\" \" \"); [ -n \"$filtered\" ] && eslint --max-warnings 0 $filtered || true' --",
     "biome check --write --unsafe --error-on-warnings"
   ],
-  "!(lib/db/migrations/**).{json,css}": ["biome format --write"]
+  "!(lib/db/migrations/**).json": ["biome format --write"]
 }
