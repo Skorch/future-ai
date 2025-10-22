@@ -418,7 +418,7 @@ function PureMultimodalInput({
 
       <div className="relative">
         <PromptInput
-          className={`bg-gray-50 border border-gray-300 shadow-none transition-all duration-200 dark:bg-sidebar dark:border-sidebar-border hover:ring-1 hover:ring-primary/30 focus-within:ring-1 focus-within:ring-primary/50 rounded-3xl
+          className={`bg-muted border border-border shadow-none transition-all duration-200 hover:ring-1 hover:ring-primary/30 focus-within:ring-1 focus-within:ring-primary/50 rounded-3xl
           }`}
           onSubmit={(event) => {
             event.preventDefault();
@@ -479,7 +479,7 @@ function PureMultimodalInput({
             rows={1}
             autoFocus
           />
-          <PromptInputToolbar className="px-4 py-2 !border-t-0 !border-top-0 shadow-none dark:!border-transparent dark:border-0">
+          <PromptInputToolbar className="px-4 py-2 !border-t-0 !border-top-0 shadow-none !border-transparent">
             <PromptInputTools className="gap-2">
               <AttachmentsButton fileInputRef={fileInputRef} status={status} />
             </PromptInputTools>
@@ -489,7 +489,7 @@ function PureMultimodalInput({
               <PromptInputSubmit
                 status={status}
                 disabled={!input.trim() || uploadQueue.length > 0}
-                className="p-3 text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 dark:bg-sidebar-accent dark:hover:bg-sidebar-accent/80 dark:text-gray-300"
+                className="p-3 bg-accent rounded-full hover:bg-accent/80"
               >
                 <ArrowUpIcon size={20} />
               </PromptInputSubmit>
@@ -523,7 +523,7 @@ function PureAttachmentsButton({
   return (
     <Button
       data-testid="attachments-button"
-      className="rounded-md rounded-bl-lg p-[7px] h-fit dark:border-zinc-700 hover:dark:bg-zinc-900 hover:bg-zinc-200"
+      className="rounded-md rounded-bl-lg p-[7px] h-fit border-border hover:bg-muted"
       onClick={(event) => {
         event.preventDefault();
         fileInputRef.current?.click();
@@ -550,7 +550,7 @@ function PureStopButton({
   return (
     <Button
       data-testid="stop-button"
-      className="rounded-full p-1.5 h-fit border dark:border-zinc-600"
+      className="rounded-full p-1.5 h-fit border border-border"
       onClick={(event) => {
         event.preventDefault();
         stop();
@@ -576,7 +576,7 @@ function PureSendButton({
   return (
     <Button
       data-testid="send-button"
-      className="rounded-full p-1.5 h-fit border dark:border-zinc-600"
+      className="rounded-full p-1.5 h-fit border border-border"
       onClick={(event) => {
         event.preventDefault();
         submitForm();

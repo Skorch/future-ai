@@ -9,18 +9,17 @@ export default function LoginPage() {
         appearance={{
           elements: {
             rootBox: 'mx-auto',
-            card: 'shadow-none border-zinc-200 dark:border-zinc-800',
+            card: 'shadow-none border-border',
             headerTitle: 'text-2xl',
             headerSubtitle: 'text-sm text-muted-foreground',
             formButtonPrimary:
-              'bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-50 dark:hover:bg-zinc-200 dark:text-zinc-900',
-            footerActionLink:
-              'text-zinc-900 hover:text-zinc-700 dark:text-zinc-100 dark:hover:text-zinc-300',
-            formFieldInput: 'border-zinc-200 dark:border-zinc-800',
-            formFieldLabel: 'text-zinc-700 dark:text-zinc-300',
-            identityPreviewText: 'text-zinc-700 dark:text-zinc-300',
+              'bg-foreground hover:bg-foreground/90 text-background',
+            footerActionLink: 'text-foreground hover:text-foreground/80',
+            formFieldInput: 'border-border',
+            formFieldLabel: 'text-foreground/80',
+            identityPreviewText: 'text-foreground/80',
             identityPreviewEditButton:
-              'text-zinc-900 hover:text-zinc-700 dark:text-zinc-100 dark:hover:text-zinc-300',
+              'text-foreground hover:text-foreground/80',
           },
         }}
       />

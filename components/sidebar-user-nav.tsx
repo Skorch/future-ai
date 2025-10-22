@@ -36,12 +36,12 @@ export function SidebarUserNav() {
             {!isLoaded ? (
               <SidebarMenuButton className="data-[state=open]:bg-sidebar-accent bg-background data-[state=open]:text-sidebar-accent-foreground h-10 justify-between">
                 <div className="flex flex-row gap-2">
-                  <div className="size-6 bg-zinc-500/30 rounded-full animate-pulse" />
-                  <span className="bg-zinc-500/30 text-transparent rounded-md animate-pulse">
+                  <div className="size-6 bg-muted-foreground/30 rounded-full animate-pulse" />
+                  <span className="bg-muted-foreground/30 text-transparent rounded-md animate-pulse">
                     Loading auth status
                   </span>
                 </div>
-                <div className="animate-spin text-zinc-500">
+                <div className="animate-spin text-muted-foreground">
                   <LoaderIcon />
                 </div>
               </SidebarMenuButton>

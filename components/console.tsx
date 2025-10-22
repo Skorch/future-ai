@@ -89,15 +89,15 @@ export function Console({ consoleOutputs, setConsoleOutputs }: ConsoleProps) {
 
       <div
         className={cn(
-          'flex overflow-x-hidden overflow-y-scroll fixed bottom-0 z-40 flex-col w-full border-t dark:bg-zinc-900 bg-zinc-50 dark:border-zinc-700 border-zinc-200',
+          'flex overflow-x-hidden overflow-y-scroll fixed bottom-0 z-40 flex-col w-full border-t bg-[hsl(var(--console-bg))] border-border',
           {
             'select-none': isResizing,
           },
         )}
         style={{ height }}
       >
-        <div className="flex sticky top-0 z-50 flex-row justify-between items-center px-2 py-1 w-full border-b h-fit dark:border-zinc-700 border-zinc-200 bg-muted">
-          <div className="flex flex-row gap-3 items-center pl-2 text-sm dark:text-zinc-50 text-zinc-800">
+        <div className="flex sticky top-0 z-50 flex-row justify-between items-center px-2 py-1 w-full border-b h-fit border-border bg-muted">
+          <div className="flex flex-row gap-3 items-center pl-2 text-sm text-[hsl(var(--console-fg))]">
             <div className="text-muted-foreground">
               <TerminalWindowIcon />
             </div>
@@ -105,7 +105,7 @@ export function Console({ consoleOutputs, setConsoleOutputs }: ConsoleProps) {
           </div>
           <Button
             variant="ghost"
-            className="p-1 size-fit hover:dark:bg-zinc-700 hover:bg-zinc-200"
+            className="p-1 size-fit hover:bg-muted"
             size="icon"
             onClick={() => setConsoleOutputs([])}
           >
@@ -117,7 +117,7 @@ export function Console({ consoleOutputs, setConsoleOutputs }: ConsoleProps) {
           {consoleOutputs.map((consoleOutput, index) => (
             <div
               key={consoleOutput.id}
-              className="flex flex-row px-4 py-2 font-mono text-sm border-b dark:border-zinc-700 border-zinc-200 dark:bg-zinc-900 bg-zinc-50"
+              className="flex flex-row px-4 py-2 font-mono text-sm border-b border-border bg-[hsl(var(--console-bg))]"
             >
               <div
                 className={cn('w-12 shrink-0', {
@@ -149,7 +149,7 @@ export function Console({ consoleOutputs, setConsoleOutputs }: ConsoleProps) {
                   </div>
                 </div>
               ) : (
-                <div className="flex overflow-x-scroll flex-col gap-2 w-full dark:text-zinc-50 text-zinc-900">
+                <div className="flex overflow-x-scroll flex-col gap-2 w-full text-[hsl(var(--console-fg))]">
                   {consoleOutput.contents.map((content, index) =>
                     content.type === 'image' ? (
                       <picture key={`${consoleOutput.id}-${index}`}>

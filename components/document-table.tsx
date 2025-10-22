@@ -189,9 +189,9 @@ export function DocumentTable({
         renderCell: ({ row }) => (
           <div className="flex items-center justify-center py-2">
             {row.isSearchable ? (
-              <Check className="size-4 text-green-600 dark:text-green-500" />
+              <Check className="size-4 text-success" />
             ) : (
-              <X className="size-4 text-gray-400 dark:text-gray-600" />
+              <X className="size-4 text-muted-foreground" />
             )}
           </div>
         ),
@@ -304,7 +304,7 @@ export function DocumentTable({
         columns={columns}
         rows={documents}
         rowKeyGetter={(row) => row.id}
-        className="rdg-light dark:rdg-dark"
+        className="rdg-light dark:rdg-dark [&_.rdg-row:hover]:bg-muted/50 [&_.rdg-row]:transition-colors [&_.rdg-cell]:py-2 [&_.rdg-header-row]:text-sm [&_.rdg-header-row]:font-bold"
         style={{
           // Calculate height based on number of rows
           // Header is ~35px, each row is ~53px (based on py-2 padding)

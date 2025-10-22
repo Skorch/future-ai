@@ -18,7 +18,7 @@ export function ArtifactTypeTable({ artifactTypes }: ArtifactTypeTableProps) {
 
   const getCategoryBadge = (category: ArtifactType['category']) => {
     const variants = {
-      objective: 'bg-blue-500/10 text-blue-700 border-blue-200',
+      objective: 'bg-primary/10 text-primary border-primary/20',
       summary: 'bg-green-500/10 text-green-700 border-green-200',
       objectiveActions: 'bg-purple-500/10 text-purple-700 border-purple-200',
       context: 'bg-orange-500/10 text-orange-700 border-orange-200',

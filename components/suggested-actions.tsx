@@ -21,7 +21,7 @@ function Suggestion({
     <button
       type="button"
       onClick={() => onClick(suggestion)}
-      className={`bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-300 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer ${className || ''}`}
+      className={`bg-muted text-foreground rounded-lg px-3 py-2 text-sm transition-colors hover:bg-muted/80 cursor-pointer ${className || ''}`}
     >
       {children}
     </button>

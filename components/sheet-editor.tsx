@@ -53,8 +53,9 @@ const PureSpreadsheetEditor = ({
       frozen: true,
       width: 50,
       renderCell: ({ rowIdx }: { rowIdx: number }) => rowIdx + 1,
-      cellClass: 'border-t border-r dark:bg-zinc-950 dark:text-zinc-50',
-      headerCellClass: 'border-t border-r dark:bg-zinc-900 dark:text-zinc-50',
+      cellClass: 'border-t border-r bg-[hsl(var(--editor-bg))] text-foreground',
+      headerCellClass:
+        'border-t border-r bg-[hsl(var(--editor-bg))] text-foreground',
     };
 
     const dataColumns = Array.from({ length: MIN_COLS }, (_, i) => ({
@@ -62,12 +63,15 @@ const PureSpreadsheetEditor = ({
       name: String.fromCharCode(65 + i),
       renderEditCell: textEditor,
       width: 120,
-      cellClass: cn(`border-t dark:bg-zinc-950 dark:text-zinc-50`, {
+      cellClass: cn(`border-t bg-[hsl(var(--editor-bg))] text-foreground`, {
         'border-l': i !== 0,
       }),
-      headerCellClass: cn(`border-t dark:bg-zinc-900 dark:text-zinc-50`, {
-        'border-l': i !== 0,
-      }),
+      headerCellClass: cn(
+        `border-t bg-[hsl(var(--editor-bg))] text-foreground`,
+        {
+          'border-l': i !== 0,
+        },
+      ),
     }));
 
     return [rowNumberColumn, ...dataColumns];

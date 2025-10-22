@@ -220,7 +220,7 @@ const PureHitboxLayer = ({
       aria-hidden="true"
     >
       <div className="w-full p-4 flex justify-end items-center">
-        <div className="absolute right-[9px] top-[13px] p-2 hover:dark:bg-zinc-700 rounded-md hover:bg-zinc-100">
+        <div className="absolute right-[9px] top-[13px] p-2 hover:bg-muted rounded-md">
           <FullscreenIcon />
         </div>
       </div>
