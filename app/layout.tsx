@@ -7,9 +7,65 @@ import './globals.css';
 import { ClerkProvider } from '@clerk/nextjs';
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://chat.vercel.ai'),
-  title: 'Next.js Chatbot Template',
-  description: 'Next.js chatbot template using the AI SDK.',
+  metadataBase: new URL(
+    process.env.NODE_ENV === 'production'
+      ? 'https://futureproject.ai' // TODO: Replace with actual production domain
+      : 'http://localhost:3000',
+  ),
+
+  title: {
+    default: 'The Future | Future Project',
+    template: '%s | The Future',
+  },
+  description: "The human brain wasn't designed for 8 weeks of zoom calls",
+  applicationName: 'The Future',
+
+  authors: [{ name: 'Future Project' }],
+  creator: 'Future Project',
+  publisher: 'Future Project',
+  category: 'productivity',
+
+  keywords: [
+    'AI',
+    'chatbot',
+    'productivity',
+    'meetings',
+    'workflow',
+    'automation',
+  ],
+
+  openGraph: {
+    type: 'website',
+    siteName: 'The Future',
+    title: 'The Future',
+    description: "The human brain wasn't designed for 8 weeks of zoom calls",
+    locale: 'en_US',
+  },
+
+  twitter: {
+    card: 'summary_large_image',
+    title: 'The Future',
+    description: "The human brain wasn't designed for 8 weeks of zoom calls",
+  },
+
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+
+  formatDetection: {
+    telephone: false,
+    email: false,
+  },
+
+  referrer: 'origin-when-cross-origin',
 };
 
 export const viewport = {

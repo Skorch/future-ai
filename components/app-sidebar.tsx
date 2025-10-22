@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Home } from 'lucide-react';
+import Image from 'next/image';
 
 import { SidebarObjectives } from '@/components/sidebar-objectives';
 import { SidebarUserNav } from '@/components/sidebar-user-nav';
@@ -25,16 +25,23 @@ export function AppSidebar({ workspaceId }: { workspaceId: string }) {
     <Sidebar className="group-data-[side=left]:border-r-0">
       <SidebarHeader className="pt-6 pb-4 border-b border-sidebar-border">
         <SidebarMenu className="gap-4">
-          {/* Home Button */}
+          {/* Brand / Home Button */}
           <SidebarMenuItem>
             <SidebarMenuButton
-              className="justify-center py-6"
+              className="justify-start gap-3 py-6"
               onClick={() => {
                 setOpenMobile(false);
                 router.push('/');
               }}
             >
-              <Home className="size-5" />
+              <Image
+                src="/icon.png"
+                alt="The Future"
+                width={24}
+                height={24}
+                className="shrink-0"
+              />
+              <span className="font-semibold text-base">The Future</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
 
