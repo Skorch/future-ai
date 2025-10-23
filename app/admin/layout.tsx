@@ -24,7 +24,9 @@ export default async function AdminLayout({
   return (
     <SidebarProvider defaultOpen={!isCollapsed}>
       <AdminSidebar />
-      <SidebarInsetWithTrigger>{children}</SidebarInsetWithTrigger>
+      <SidebarInsetWithTrigger>
+        <div className="container mx-auto px-4 py-8 max-w-7xl">{children}</div>
+      </SidebarInsetWithTrigger>
     </SidebarProvider>
   );
 }
