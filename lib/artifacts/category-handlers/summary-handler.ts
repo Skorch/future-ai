@@ -14,6 +14,9 @@ import { workspace } from '@/lib/db/schema';
 import { eq, and, isNull } from 'drizzle-orm';
 import { getObjectiveById } from '@/lib/db/objective';
 import { getCurrentVersionGoal } from '@/lib/db/objective-document';
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('summary-handler');
 
 /**
  * Summary Category Handler
@@ -67,6 +70,7 @@ export class SummaryHandler implements CategoryHandler {
 
     // Use SummaryBuilder to generate system prompt with all context layers
     const builder = new SummaryBuilder();
+
     const systemPrompt = builder.generate(
       artifactType,
       workspaceObject,
@@ -86,6 +90,7 @@ export class SummaryHandler implements CategoryHandler {
       model: myProvider.languageModel('artifact-model'),
       system: systemPrompt,
       prompt: userPrompt,
+      context: context,
       maxOutputTokens: 4000,
       temperature: 0.6,
       chatId: context.chatId,
@@ -95,6 +100,12 @@ export class SummaryHandler implements CategoryHandler {
     if (!context.dataStream) {
       throw new Error('dataStream is required for summary generation');
     }
+
+    logger.debug('Starting Summary with streamConfig.prompt and userPrompt', {
+      artifactType: artifactType.title,
+      prompt: streamConfig.prompt,
+      userPrompt,
+    });
 
     return processStream(streamConfig, context.dataStream);
   }

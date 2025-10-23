@@ -81,6 +81,7 @@ export class ObjectiveHandler implements CategoryHandler {
       model: myProvider.languageModel('artifact-model'),
       system: systemPrompt,
       prompt: userPrompt,
+      context: context,
       maxOutputTokens: 4000,
       temperature: 0.4,
       chatId: context.chatId,

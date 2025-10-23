@@ -62,17 +62,13 @@ export class ActionsHandler implements CategoryHandler {
 
     // 5. Build prompt using ObjectiveActionsBuilder
     const builder = new ObjectiveActionsBuilder();
-    const systemPrompt = builder.generate(
-      artifactType,
-      currentObjectiveActions,
-      currentContent,
-      knowledgeSummaries,
-    );
+    const systemPrompt = builder.generate(artifactType);
 
     // 6. Build final user prompt
     const userPrompt = this.buildPromptWithContext(
       context.instruction,
       context.currentVersion,
+      knowledgeSummaries,
     );
 
     // 7. Create stream config with artifact model
@@ -81,8 +77,9 @@ export class ActionsHandler implements CategoryHandler {
       model,
       system: systemPrompt,
       prompt: userPrompt,
-      maxOutputTokens: 16000,
-      temperature: 0.6,
+      context: context,
+      maxOutputTokens: 2000,
+      temperature: 0.3,
       chatId: context.chatId,
     });
 
@@ -100,6 +97,7 @@ export class ActionsHandler implements CategoryHandler {
   private buildPromptWithContext(
     instruction?: string,
     currentVersion?: string,
+    knowledgeSummaries?: string,
   ): string {
     const parts: string[] = [];
 
@@ -117,10 +115,39 @@ export class ActionsHandler implements CategoryHandler {
     } else if (parts.length === 0) {
       // Default for initial generation
       parts.push(
-        'Generate a comprehensive initial version using all available context and source materials.',
+        'Generate a clear, concise initial version using all available context and source materials.',
       );
+
+      // add the knowledge summaries to the prompt
+      if (knowledgeSummaries) {
+        parts.push(`\nKnowledge Summaries:\n${knowledgeSummaries}`);
+      }
     }
 
     return parts.join('\n\n');
   }
 }
+/*
+
+    // Layer 3: Current context for incremental updates
+    systemPrompt += `\n\n## Current Context
+
+### Current Document Content
+${currentContent}
+
+### Current Objective Actions
+${currentObjectiveActions || 'No objective actions yet - this is the first knowledge input. Generate initial objective actions based on the current document content and new knowledge.'}
+
+### New Knowledge to Process
+${knowledgeSummaries}
+
+## Your Task
+Analyze the new knowledge and update the objective actions to show:
+1. Which items are now RESOLVED (knowledge fully addresses them)
+2. Which items are MODIFIED (knowledge partially addresses or updates them)
+3. NEW items discovered from the knowledge
+4. Items that remain unchanged
+
+Always use the full knowledge document title and date for attribution.
+At the end, summarize what changed in the "Changes from Knowledge" section.`;
+*/

@@ -8,11 +8,9 @@ import {
   buildStreamConfig,
   processStream,
 } from '../document-types/base-handler';
-import { stripThinkingTags } from '@/lib/ai/utils/thinking-stream-processor';
 import { getWorkspaceById } from '@/lib/workspace/queries';
 import { getObjectiveById } from '@/lib/db/objective';
 import { getDomainById } from '@/lib/db/queries/domain';
-import { getUserById } from '@/lib/db/queries';
 import { myProvider } from '@/lib/ai/providers';
 import { getLogger } from '@/lib/logger';
 
@@ -62,11 +60,14 @@ export class ContextHandler implements CategoryHandler {
       throw new Error(`Domain not found: ${workspace.domainId}`);
     }
 
-    // Fetch user for context
-    const user = await getUserById(context.session.user.id);
-
     // Select appropriate builder
     let systemPrompt: string;
+
+    logger.debug('artifactType for context generation', {
+      artifactTypeId: artifactType.id,
+      artifactTypeLabel: artifactType.label,
+    });
+
     if (contextType === 'objective') {
       // Validate objectiveId is present
       if (!context.objectiveId) {
@@ -87,10 +88,10 @@ export class ContextHandler implements CategoryHandler {
       }
 
       const builder = new ObjectiveContextBuilder();
-      systemPrompt = builder.generateContextPrompt(artifactType, domain, user);
+      systemPrompt = builder.generateContextPrompt(artifactType, domain);
     } else {
       const builder = new WorkspaceContextBuilder();
-      systemPrompt = builder.generateContextPrompt(artifactType, domain, user);
+      systemPrompt = builder.generateContextPrompt(artifactType, domain);
     }
 
     // Build user prompt with instruction and current version
@@ -107,29 +108,20 @@ export class ContextHandler implements CategoryHandler {
       model,
       system: systemPrompt,
       prompt: userPrompt,
-      maxOutputTokens: 8192,
+      context: context,
+      maxOutputTokens: 500,
       temperature: 0.3, // Low temperature for consistent context generation
       chatId: context.chatId,
+      // thinkingBudget: ThinkingBudget.LOW
     });
 
-    // Process stream and return generated content
-    let content: string;
-    if (context.dataStream) {
-      content = await processStream(streamConfig, context.dataStream);
-    } else {
-      // Non-streaming mode: accumulate full response
-      const { fullStream } = await import('ai').then((m) =>
-        m.streamText(streamConfig as Parameters<typeof m.streamText>[0]),
-      );
-      const chunks: string[] = [];
-      for await (const delta of fullStream) {
-        if (delta.type === 'text-delta') {
-          chunks.push(delta.text);
-        }
-      }
-      // Strip thinking tags from accumulated content
-      content = stripThinkingTags(chunks.join(''));
+    // Enforce dataStream requirement (consistent with summary-handler)
+    if (!context.dataStream) {
+      throw new Error('dataStream is required for context generation');
     }
+
+    // Process stream and return generated content
+    const content = await processStream(streamConfig, context.dataStream);
 
     logger.debug('Context artifact generated successfully', {
       contextType,
