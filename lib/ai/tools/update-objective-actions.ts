@@ -10,7 +10,13 @@ import type { ChatMessage } from '@/lib/types';
 const logger = getLogger('update-objective-actions');
 
 interface ToolContext {
-  session: { user: { id: string } };
+  session: {
+    user: {
+      id: string;
+      firstName: string | null;
+      lastName: string | null;
+    };
+  };
   dataStream: UIMessageStreamWriter<ChatMessage>;
   workspaceId: string;
   chatId: string;

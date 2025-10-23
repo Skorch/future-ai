@@ -13,7 +13,13 @@ import type { ChatMessage } from '@/lib/types';
 const logger = getLogger('generate-document-version');
 
 interface ToolContext {
-  session: { user: { id: string } };
+  session: {
+    user: {
+      id: string;
+      firstName: string | null;
+      lastName: string | null;
+    };
+  };
   dataStream: UIMessageStreamWriter<ChatMessage>;
   workspaceId: string;
   chatId: string;
@@ -47,7 +53,7 @@ The tool will use the objective's configured artifact type automatically.`,
       instruction: z
         .string()
         .describe(
-          'Instructions for generating the document content from source materials',
+          'Provide DETAILED instructions to this Sub-Agent, based on the context you have discussed with the User around what to include or what not to include.',
         ),
       primarySourceDocumentId: z
         .string()

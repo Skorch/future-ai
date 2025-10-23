@@ -1,4 +1,4 @@
-import { tool } from 'ai';
+import { tool, type UIMessageStreamWriter } from 'ai';
 import { z } from 'zod';
 import { getLogger } from '@/lib/logger';
 import { getCategoryHandler } from '@/lib/artifacts/category-handlers';
@@ -7,13 +7,21 @@ import {
   getWorkspaceContext,
   updateWorkspaceContext as updateContextInDB,
 } from '@/lib/workspace/queries';
+import type { ChatMessage } from '@/lib/types';
 
 const logger = getLogger('UpdateWorkspaceContext');
 
 interface UpdateWorkspaceContextParams {
-  session: { user: { id: string } };
+  session: {
+    user: {
+      id: string;
+      firstName: string | null;
+      lastName: string | null;
+    };
+  };
   workspaceId: string;
   chatId?: string;
+  dataStream: UIMessageStreamWriter<ChatMessage>;
 }
 
 /**
@@ -24,6 +32,7 @@ export const updateWorkspaceContext = ({
   session,
   workspaceId,
   chatId,
+  dataStream,
 }: UpdateWorkspaceContextParams) =>
   tool({
     description: `Update the workspace context with newly observed facts about the user, their work, company, team, processes, or preferences.
@@ -139,6 +148,7 @@ Ensure:
           workspaceId,
           chatId,
           session,
+          dataStream,
         });
 
         // Validate length

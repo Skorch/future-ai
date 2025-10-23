@@ -1,4 +1,4 @@
-import { tool } from 'ai';
+import { tool, type UIMessageStreamWriter } from 'ai';
 import { z } from 'zod';
 import { getLogger } from '@/lib/logger';
 import { getCategoryHandler } from '@/lib/artifacts/category-handlers';
@@ -7,14 +7,22 @@ import {
   getCurrentVersionGoal,
   updateObjectiveGoal as updateGoalInDB,
 } from '@/lib/db/objective-document';
+import type { ChatMessage } from '@/lib/types';
 
 const logger = getLogger('UpdateObjectiveGoal');
 
 interface UpdateObjectiveGoalParams {
-  session: { user: { id: string } };
+  session: {
+    user: {
+      id: string;
+      firstName: string | null;
+      lastName: string | null;
+    };
+  };
   objectiveId: string;
   workspaceId: string;
   chatId?: string;
+  dataStream: UIMessageStreamWriter<ChatMessage>;
 }
 
 /**
@@ -26,6 +34,7 @@ export const updateObjectiveGoal = ({
   objectiveId,
   workspaceId,
   chatId,
+  dataStream,
 }: UpdateObjectiveGoalParams) =>
   tool({
     description: `Update the objective goal definition with facts about THIS SPECIFIC goal, deal, or project.
@@ -127,6 +136,7 @@ Update the objective goal by incorporating these new observations. Focus on THIS
           chatId,
           objectiveId,
           session,
+          dataStream,
         });
 
         // Save the updated goal

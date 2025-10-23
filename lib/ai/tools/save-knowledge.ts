@@ -26,7 +26,13 @@ const ParticipantSchema = z.object({
 });
 
 interface SaveKnowledgeProps {
-  session: { user: { id: string } };
+  session: {
+    user: {
+      id: string;
+      firstName: string | null;
+      lastName: string | null;
+    };
+  };
   dataStream: UIMessageStreamWriter<ChatMessage>;
   workspaceId: string;
   chatId?: string;
@@ -63,7 +69,9 @@ IMPORTANT:
       instruction: z
         .string()
         .optional()
-        .describe('Additional instructions for summary generation'),
+        .describe(
+          'Provide DETAILED instructions to this Sub-Agent, based on the context you have discussed with the User around what to include or what not to include.',
+        ),
 
       // Metadata fields
       sourceType: z
