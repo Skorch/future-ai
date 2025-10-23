@@ -614,6 +614,7 @@ const PurePreviewMessage = ({
                   toolCallId: string;
                   state: ToolUIPart['state'];
                   input?: unknown;
+                  text?: string;
                   output?: unknown;
                 };
                 const { toolCallId, state } = toolPart;
@@ -624,6 +625,7 @@ const PurePreviewMessage = ({
                     toolCallId={toolCallId}
                     state={state}
                     input={toolPart.input}
+                    streamingContent={toolPart.text}
                     output={
                       toolPart.output && typeof toolPart.output === 'object'
                         ? (toolPart.output as {
@@ -642,6 +644,7 @@ const PurePreviewMessage = ({
                   toolCallId: string;
                   state: ToolUIPart['state'];
                   input?: unknown;
+                  text?: string;
                   output?: unknown;
                 };
                 const { toolCallId, state } = toolPart;
@@ -652,6 +655,7 @@ const PurePreviewMessage = ({
                     toolCallId={toolCallId}
                     state={state}
                     input={toolPart.input}
+                    streamingContent={toolPart.text}
                     output={
                       toolPart.output && typeof toolPart.output === 'object'
                         ? (toolPart.output as {

@@ -12,6 +12,7 @@ interface UpdateWorkspaceContextToolProps {
   toolCallId: string;
   state: ToolUIPart['state'];
   input?: unknown;
+  streamingContent?: string;
   output?: {
     success?: boolean;
     updatedSections?: string[];
@@ -23,6 +24,7 @@ export function UpdateWorkspaceContextTool({
   toolCallId,
   state,
   input,
+  streamingContent,
   output,
 }: UpdateWorkspaceContextToolProps) {
   return (
@@ -33,7 +35,21 @@ export function UpdateWorkspaceContextTool({
         label="Updating Workspace Context"
       />
       <ToolContent>
-        {state === 'input-available' && <ToolInput input={input} />}
+        {state === 'input-available' && (
+          <>
+            <ToolInput input={input} />
+            {streamingContent && (
+              <div className="p-4 space-y-2 border-t">
+                <h4 className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
+                  Generating Context
+                </h4>
+                <div className="prose prose-sm max-w-none text-sm whitespace-pre-wrap">
+                  {streamingContent}
+                </div>
+              </div>
+            )}
+          </>
+        )}
         {state === 'output-available' && (
           <ToolOutput
             output={
