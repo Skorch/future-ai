@@ -1,7 +1,12 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 import { getLogger } from '@/lib/logger';
-import { generateWorkspaceContext } from '@/lib/workspace/workspace-context';
+import { getCategoryHandler } from '@/lib/artifacts/category-handlers';
+import {
+  getWorkspaceById,
+  getWorkspaceContext,
+  updateWorkspaceContext as updateContextInDB,
+} from '@/lib/workspace/queries';
 
 const logger = getLogger('UpdateWorkspaceContext');
 
@@ -81,24 +86,100 @@ The workspace context helps you provide better assistance in future conversation
         observationCount: observations.length,
       });
 
-      const result = await generateWorkspaceContext({
-        workspaceId,
-        userId: session.user.id,
-        observations,
-        updateReason,
-      });
+      try {
+        // Get workspace to verify ownership and get artifact type
+        const workspace = await getWorkspaceById(workspaceId, session.user.id);
+        if (!workspace) {
+          logger.error('Workspace not found', {
+            workspaceId,
+            userId: session.user.id,
+          });
+          return {
+            success: false,
+            error: 'Workspace not found',
+          };
+        }
 
-      if (result.success) {
+        // Get category handler for workspace context
+        const { handler, artifactType } = await getCategoryHandler(
+          workspace.workspaceContextArtifactTypeId,
+        );
+
+        // Get current workspace context
+        const contextData = await getWorkspaceContext(
+          workspaceId,
+          session.user.id,
+        );
+        const currentContext = contextData?.context || undefined;
+
+        // Build instruction from observations and update reason
+        const instruction = `Update Reason: ${updateReason}
+
+Observations:
+${observations.map((obs, i) => `${i + 1}. ${obs}`).join('\n')}
+
+## Task
+
+Review the current workspace context and incorporate the new observations following all quality criteria and guidelines. Return the updated context as markdown.
+
+If this is the first update (no current context), create an initial context based on the observations.
+
+Ensure:
+1. All updates are evidence-based (from the observations)
+2. Information is workspace-level (not objective/project-specific)
+3. Content is well-organized and concise
+4. Outdated information is replaced, not duplicated`;
+
+        // Generate using category handler
+        const updatedContext = await handler.generate(artifactType, {
+          currentVersion: currentContext,
+          instruction,
+          workspaceId,
+          session,
+        });
+
+        // Validate length
+        const maxLength = Number.parseInt(
+          process.env.WORKSPACE_CONTEXT_MAX_LENGTH || '5000',
+        );
+        if (updatedContext.length > maxLength) {
+          logger.error('Generated context exceeds limit', {
+            length: updatedContext.length,
+            maxLength,
+          });
+          return {
+            success: false,
+            error: `Generated context exceeds ${maxLength} character limit (${updatedContext.length} chars)`,
+          };
+        }
+
+        // Save updated context
+        await updateContextInDB(workspaceId, session.user.id, updatedContext);
+
+        logger.info('Workspace context updated successfully', {
+          workspaceId,
+          updateReason,
+          contextLength: updatedContext.length,
+        });
+
         return {
           success: true,
           message: 'Workspace context updated successfully',
-          updatedSections: result.updatedSections || [],
+          updatedSections: [], // Handler doesn't provide structured sections
+        };
+      } catch (error) {
+        logger.error('Error updating workspace context', {
+          error,
+          workspaceId,
+          updateReason,
+        });
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Unknown error updating context',
         };
       }
-
-      return {
-        success: false,
-        error: result.error || 'Failed to update context',
-      };
     },
   });

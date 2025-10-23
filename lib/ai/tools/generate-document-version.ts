@@ -1,15 +1,11 @@
 import { tool } from 'ai';
 import type { UIMessageStreamWriter } from 'ai';
 import { z } from 'zod';
-import { fetchSourceDocuments } from '@/lib/artifacts/document-types/base-handler';
 import {
   getVersionByChatId,
   updateVersionContent,
 } from '@/lib/db/objective-document';
-import {
-  generateFromArtifactType,
-  validateArtifactTypeForGeneration,
-} from '@/lib/db/queries/artifact-handler';
+import { getCategoryHandler } from '@/lib/artifacts/category-handlers';
 import type { ArtifactType } from '@/lib/db/schema';
 import { getLogger } from '@/lib/logger';
 import type { ChatMessage } from '@/lib/types';
@@ -72,18 +68,19 @@ The tool will use the objective's configured artifact type automatically.`,
       const startTime = Date.now();
 
       try {
-        // 1. Validate artifact type configuration
-        const validation = validateArtifactTypeForGeneration(artifactType);
-        if (!validation.valid) {
+        // 1. Validate artifact type exists
+        if (!artifactType) {
           return {
             success: false,
-            error: validation.error,
+            error: 'No artifact type configured for this objective',
           };
         }
 
-        const validArtifactType = validation.artifactType;
+        // 2. Get category handler for this artifact type
+        const { handler, artifactType: validArtifactType } =
+          await getCategoryHandler(artifactType.id);
 
-        // 2. Get version for this chat
+        // 3. Get version for this chat
         const result = await getVersionByChatId(chatId);
         if (!result) {
           return {
@@ -94,7 +91,7 @@ The tool will use the objective's configured artifact type automatically.`,
 
         const { version } = result;
 
-        // 3. Combine source document IDs
+        // 4. Combine source document IDs
         const sourceDocumentIds = [
           ...(primarySourceDocumentId ? [primarySourceDocumentId] : []),
           ...(referenceDocumentIds || []),
@@ -108,30 +105,6 @@ The tool will use the objective's configured artifact type automatically.`,
           sourceIds: sourceDocumentIds,
           hasInstruction: !!instruction,
         });
-
-        // 4. Load source documents ONCE (if provided)
-        let sourceContent = '';
-        if (sourceDocumentIds.length > 0) {
-          logger.info('Loading source documents', {
-            count: sourceDocumentIds.length,
-          });
-
-          sourceContent = await fetchSourceDocuments(
-            sourceDocumentIds,
-            workspaceId,
-          );
-
-          logger.info('Source documents loaded', {
-            totalLength: sourceContent.length,
-            hasContent: !!sourceContent,
-            preview: sourceContent.substring(0, 200),
-          });
-        } else {
-          logger.warn('No source documents provided', {
-            artifactTypeLabel: validArtifactType.label,
-            instruction: instruction.substring(0, 100),
-          });
-        }
 
         // 5. Initialize artifact stream
         dataStream.write({ type: 'data-kind', data: 'text', transient: true });
@@ -152,22 +125,25 @@ The tool will use the objective's configured artifact type automatically.`,
         });
         dataStream.write({ type: 'data-clear', data: null, transient: true });
 
-        // 6. Generate content using database-driven artifact type
-        logger.info('Generating content from artifact type', {
+        // 6. Generate content using category handler
+        logger.info('Generating content with category handler', {
           artifactTypeId: validArtifactType.id,
           artifactTypeLabel: validArtifactType.label,
-          hasSourceContent: !!sourceContent,
-          sourceContentLength: sourceContent.length,
+          category: handler.category,
+          hasCurrentVersion: !!version.content,
+          sourceCount: sourceDocumentIds.length,
         });
 
-        const generatedContent = await generateFromArtifactType(
-          validArtifactType,
-          {
-            sourceContent,
-            instruction,
-            dataStream,
-          },
-        );
+        const generatedContent = await handler.generate(validArtifactType, {
+          currentVersion: version.content || undefined,
+          instruction,
+          sourceDocumentIds:
+            sourceDocumentIds.length > 0 ? sourceDocumentIds : undefined,
+          dataStream,
+          workspaceId,
+          objectiveId,
+          session,
+        });
 
         // 7. Save generated content to document version
         await updateVersionContent(version.id, generatedContent);

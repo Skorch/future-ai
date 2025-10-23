@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import type { DocumentType } from '@/lib/artifacts';
 
 // Core transcript types
 export interface TranscriptItem {
@@ -38,7 +37,7 @@ export interface RAGDocument {
 export interface RAGMetadata {
   // Core identifiers (always present)
   documentId: string;
-  documentType: DocumentType | 'transcript' | 'document' | string; // Registry types + special filters + generic string
+  documentType: string; // Registry types + special filters + generic string
   userId: string;
 
   // Document info (always present)

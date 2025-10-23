@@ -1,9 +1,10 @@
 import { tool } from 'ai';
 import type { UIMessageStreamWriter } from 'ai';
 import { z } from 'zod';
-import { getDocumentTypeDefinition, documentTypes } from '@/lib/artifacts';
+import { getCategoryHandler } from '@/lib/artifacts/category-handlers';
 import { getVersionByChatId } from '@/lib/db/objective-document';
 import { getLogger } from '@/lib/logger';
+import { getObjectiveById } from '@/lib/db/objective';
 import type { ChatMessage } from '@/lib/types';
 
 const logger = getLogger('update-objective-actions');
@@ -26,11 +27,6 @@ export const updateObjectiveActions = ({
       "Update the objective actions for the current chat's document version based on new knowledge. The objective actions track risks, unknowns, blockers, gaps, and contradictions that need to be resolved. Use this after processing knowledge to show what was resolved, modified, or newly discovered.",
 
     inputSchema: z.object({
-      documentType: z
-        .enum(documentTypes as [string, ...string[]])
-        .describe(
-          'Document type (must match the document being tracked - e.g., business-requirements, sales-strategy)',
-        ),
       knowledgeDocumentIds: z
         .array(z.string().uuid())
         .min(1)
@@ -46,7 +42,6 @@ export const updateObjectiveActions = ({
     }),
 
     execute: async ({
-      documentType,
       knowledgeDocumentIds,
       instruction = 'Analyze how this knowledge affects the objective actions items',
     }) => {
@@ -67,28 +62,28 @@ export const updateObjectiveActions = ({
         logger.info('Starting objective actions update', {
           versionId: version.id,
           objectiveId,
-          documentType,
           knowledgeDocCount: knowledgeDocumentIds.length,
         });
 
-        // 2. Get document handler
-        const documentDef = await getDocumentTypeDefinition(
-          documentType as Parameters<typeof getDocumentTypeDefinition>[0],
-        );
-        if (!documentDef?.handler) {
+        // 2. Get objective to access artifact type ID
+        const objective = await getObjectiveById(objectiveId, session.user.id);
+
+        if (!objective) {
           return {
             success: false,
-            error: `Unknown document type: ${documentType}`,
+            error: 'Objective not found or access denied',
           };
         }
 
-        // 3. Check if handler supports objective actions generation
-        if (!documentDef.handler.onGenerateObjectiveActions) {
-          return {
-            success: false,
-            error: `Document type ${documentType} doesn't support objective actions tracking`,
-          };
-        }
+        // 3. Get category handler for objective actions
+        const { handler, artifactType } = await getCategoryHandler(
+          objective.objectiveActionsArtifactTypeId,
+        );
+
+        logger.info('Using category handler for objective actions', {
+          category: handler.category,
+          artifactTypeName: artifactType.label,
+        });
 
         // 4. Initialize objective actions stream
         dataStream.write({
@@ -108,21 +103,25 @@ export const updateObjectiveActions = ({
         });
         dataStream.write({ type: 'data-clear', data: null, transient: true });
 
-        logger.info('Calling objective actions handler', {
-          handler: documentDef.metadata.type,
-          knowledgeDocIds: knowledgeDocumentIds,
-        });
-
-        // 5. Generate objective actions via handler
-        await documentDef.handler.onGenerateObjectiveActions({
-          currentVersion: version,
-          knowledgeDocIds: knowledgeDocumentIds,
+        // 5. Generate objective actions using category handler
+        const objectiveActionsContent = await handler.generate(artifactType, {
+          currentVersion: version.objectiveActions ?? undefined,
           instruction,
+          knowledgeDocIds: knowledgeDocumentIds,
           dataStream,
           workspaceId,
-          session,
           objectiveId,
+          session,
         });
+
+        // 6. Save objective actions to database
+        const { updateVersionObjectiveActions } = await import(
+          '@/lib/db/objective-document'
+        );
+        await updateVersionObjectiveActions(
+          version.id,
+          objectiveActionsContent,
+        );
 
         dataStream.write({ type: 'data-finish', data: null, transient: true });
 
@@ -137,7 +136,6 @@ export const updateObjectiveActions = ({
           versionId: version.id,
           title: 'Objective Actions Update',
           kind: 'text' as const,
-          documentType: documentType || 'text',
           success: true,
           message: `Objective actions have been updated and are displayed above. Review the changes to see what was resolved, modified, or newly discovered from the knowledge.`,
         };

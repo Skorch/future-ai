@@ -5,10 +5,6 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import { getKnowledgeDocumentById } from '@/lib/db/knowledge-document';
 import { getObjectiveDocumentById } from '@/lib/db/objective-document';
-import type { DocumentType } from '@/lib/artifacts';
-
-// Extended type to include transcript (upload-only, not in registry)
-type ExtendedDocumentType = DocumentType | 'transcript';
 
 interface LoadDocumentProps {
   session: { user: { id: string } };
@@ -131,7 +127,7 @@ Reserve space for user messages, your responses, and other tool outputs.`,
           ).toLocaleString()} tokens)`;
 
       const metadata = document.metadata as {
-        documentType?: ExtendedDocumentType;
+        documentType?: string;
         fileName?: string;
         fileSize?: number;
         uploadedAt?: string;

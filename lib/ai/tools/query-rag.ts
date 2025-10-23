@@ -9,15 +9,14 @@ import { rerankWithLLM, type LLMRerankResult } from '../../rag/llm-reranker';
 import type { QueryResult, QueryMatch, RAGMetadata } from '../../rag/types';
 import type { ChatMessage } from '@/lib/types';
 import { QUERY_RAG_PROMPT } from '@/lib/ai/prompts/builders/shared/prompts/tools/query-rag.prompts';
-import { getDocumentTypeDisplayMap, type DocumentType } from '@/lib/artifacts';
+import { documentTypeDisplayNames } from '@/lib/artifacts/client';
 
 // Build schema dynamically based on allowed document types for domain
 // TODO: This should query database for domain-specific artifact types
-function createQueryRAGSchema(allowedTypes?: DocumentType[]) {
+function createQueryRAGSchema(allowedTypes?: string[]) {
   // Use all types if none provided (temporary until database-driven filtering is implemented)
   const types =
-    allowedTypes ||
-    (['business-requirements', 'sales-strategy'] as DocumentType[]);
+    allowedTypes || (['business-requirements', 'sales-strategy'] as string[]);
   // Build dynamic content types: registry types + special metadata filters
   // Note: 'transcript' and 'document' are metadata filters, not registry types
   const contentTypesArray: string[] = [
@@ -279,9 +278,6 @@ export const queryRAG = (props: QueryRAGProps) => {
     execute: async (params) => {
       const startTime = Date.now();
 
-      // Get display name mapping for document types
-      const displayMap = await getDocumentTypeDisplayMap();
-
       try {
         // Check cache first
         const cacheKey = JSON.stringify(params);
@@ -440,7 +436,7 @@ export const queryRAG = (props: QueryRAGProps) => {
               ...m.metadata,
               // Add display name for the document type
               documentTypeDisplay:
-                displayMap[m.metadata.documentType] ||
+                documentTypeDisplayNames[m.metadata.documentType] ||
                 m.metadata.documentType.charAt(0).toUpperCase() +
                   m.metadata.documentType.slice(1).replace(/-/g, ' '),
             },

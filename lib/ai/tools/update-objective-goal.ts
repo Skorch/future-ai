@@ -1,7 +1,12 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 import { getLogger } from '@/lib/logger';
-import { generateObjectiveGoal } from '@/lib/objective/objective-goal';
+import { getCategoryHandler } from '@/lib/artifacts/category-handlers';
+import { getObjectiveById } from '@/lib/db/objective';
+import {
+  getCurrentVersionGoal,
+  updateObjectiveGoal as updateGoalInDB,
+} from '@/lib/db/objective-document';
 
 const logger = getLogger('UpdateObjectiveGoal');
 
@@ -76,25 +81,90 @@ Examples:
         observationCount: observations.length,
       });
 
-      const result = await generateObjectiveGoal({
-        objectiveId,
-        workspaceId,
-        userId: session.user.id,
-        observations,
-        updateReason,
-      });
+      try {
+        // Get objective to verify ownership and get artifact type
+        const objective = await getObjectiveById(objectiveId, session.user.id);
+        if (!objective) {
+          logger.error('Objective not found', {
+            objectiveId,
+            userId: session.user.id,
+          });
+          return {
+            success: false,
+            error: 'Objective not found',
+          };
+        }
 
-      if (result.success) {
+        // Get category handler for objective context
+        const { handler, artifactType } = await getCategoryHandler(
+          objective.objectiveContextArtifactTypeId,
+        );
+
+        // Get current goal content
+        const versionData = await getCurrentVersionGoal(
+          objectiveId,
+          session.user.id,
+        );
+        const currentGoal = versionData?.goal || undefined;
+
+        // Build instruction from observations and update reason
+        const instruction = `Update Reason: ${updateReason}
+
+Observations:
+${observations.map((obs, i) => `${i + 1}. ${obs}`).join('\n')}
+
+## Task
+
+Update the objective goal by incorporating these new observations. Focus on THIS specific objective.`;
+
+        // Generate using category handler
+        const updatedGoal = await handler.generate(artifactType, {
+          currentVersion: currentGoal,
+          instruction,
+          workspaceId,
+          objectiveId,
+          session,
+        });
+
+        // Save the updated goal
+        if (versionData) {
+          await updateGoalInDB(
+            versionData.versionId,
+            session.user.id,
+            updatedGoal,
+          );
+        } else {
+          logger.warn('No version found for objective goal', { objectiveId });
+          return {
+            success: false,
+            error: 'No version found for objective',
+          };
+        }
+
+        logger.info('Objective goal updated successfully', {
+          objectiveId,
+          updateReason,
+          goalLength: updatedGoal.length,
+        });
+
         return {
           success: true,
           message: 'Objective context updated successfully',
-          updatedSections: result.updatedSections || [],
+          updatedSections: [], // Handler doesn't provide structured sections
+        };
+      } catch (error) {
+        logger.error('Error updating objective goal', {
+          error,
+          objectiveId,
+          updateReason,
+        });
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Unknown error updating goal',
         };
       }
-
-      return {
-        success: false,
-        error: result.error || 'Failed to update context',
-      };
     },
   });

@@ -6,12 +6,11 @@ import {
   createKnowledgeDocument,
   getKnowledgeDocumentById,
 } from '@/lib/db/knowledge-document';
-import { getCurrentVersionGoal } from '@/lib/db/objective-document';
 import { getObjectiveById } from '@/lib/db/objective';
 import type { UIMessageStreamWriter } from 'ai';
 import type { ChatMessage } from '@/lib/types';
 import { getLogger } from '@/lib/logger';
-import type { KnowledgeHandler } from '@/lib/artifacts/knowledge-types/base-handler';
+import { getCategoryHandler } from '@/lib/artifacts/category-handlers';
 
 const logger = getLogger('SaveKnowledge');
 
@@ -93,45 +92,17 @@ IMPORTANT:
           throw new Error('Raw knowledge document not found');
         }
 
-        // 2. Load objective for topic filtering context
+        // 2. Load objective for logging and title generation
         const objective = await getObjectiveById(objectiveId, session.user.id);
 
         if (!objective) {
           throw new Error('Objective not found or access denied');
         }
 
-        // 2.5. Load objective goal from current version
-        const goalData = await getCurrentVersionGoal(
-          objectiveId,
-          session.user.id,
-        );
-        const objectiveGoal = goalData?.goal ?? null;
-
-        // 3. Load workspace and domain for context
+        // 3. Load objective with artifact type for summary handler
         const { db } = await import('@/lib/db/queries');
-        const { workspace: workspaceSchema, objective: objectiveSchema } =
-          await import('@/lib/db/schema');
+        const { objective: objectiveSchema } = await import('@/lib/db/schema');
         const { eq } = await import('drizzle-orm');
-        const { getByWorkspaceId: getDomainByWorkspaceId } = await import(
-          '@/lib/db/queries/domain'
-        );
-
-        const workspaceData = await db
-          .select()
-          .from(workspaceSchema)
-          .where(eq(workspaceSchema.id, workspaceId))
-          .limit(1);
-
-        const workspace = workspaceData[0] || null;
-        if (!workspace) {
-          throw new Error('Workspace not found');
-        }
-
-        // Load domain with artifact type relations from database
-        const domain = await getDomainByWorkspaceId(workspaceId);
-        if (!domain) {
-          throw new Error('Domain not found for workspace');
-        }
 
         // Load objective with artifact type for summary builder
         const objectiveWithArtifactType = await db.query.objective.findFirst({
@@ -145,23 +116,13 @@ IMPORTANT:
           throw new Error('Objective missing summaryArtifactType');
         }
 
-        // 3. Load appropriate knowledge handler
-        let handler: KnowledgeHandler;
-        try {
-          const handlerModule = await import(
-            `@/lib/artifacts/knowledge-types/${params.documentType}/server`
-          );
-          handler = handlerModule.handler;
-        } catch (error) {
-          logger.error('Failed to load knowledge handler', {
-            type: params.documentType,
-            error,
-          });
-          throw new Error(`Unknown knowledge type: ${params.documentType}`);
-        }
+        // 3. Load summary category handler
+        const { handler, artifactType } = await getCategoryHandler(
+          objectiveWithArtifactType.summaryArtifactType.id,
+        );
 
         // 4. Generate title for the summary
-        const summaryTitle = `${handler.metadata.name} - ${rawDoc.title}`;
+        const summaryTitle = `${artifactType.label} - ${rawDoc.title}`;
 
         // 5. Initialize artifact stream (tell UI what we're creating)
         dataStream.write({
@@ -182,17 +143,14 @@ IMPORTANT:
           objective: objective.title,
         });
 
-        const summaryContent = await handler.onGenerateKnowledge({
-          rawContent: rawDoc.content,
-          objectiveTitle: objective.title,
-          objectiveDescription: objective.description || undefined,
-          instruction: params.instruction || 'Create a comprehensive summary',
+        const summaryContent = await handler.generate(artifactType, {
+          currentVersion: rawDoc.content, // Raw content as source
+          instruction:
+            params.instruction || 'Generate knowledge summary from raw content',
           dataStream,
-          domain,
-          workspace,
-          objective,
-          objectiveGoal,
-          artifactType: objectiveWithArtifactType.summaryArtifactType,
+          workspaceId,
+          objectiveId,
+          session,
         });
 
         // 7. Save knowledge document with metadata
