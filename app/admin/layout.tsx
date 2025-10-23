@@ -1,12 +1,15 @@
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
-import { cn } from '@/lib/utils';
+import { cookies } from 'next/headers';
+import { AdminSidebar } from '@/components/admin/admin-sidebar';
+import { SidebarProvider } from '@/components/ui/sidebar';
+import { SidebarInsetWithTrigger } from '@/components/sidebar-inset-with-trigger';
+import type { ReactNode } from 'react';
 
 export default async function AdminLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   const { userId } = await auth();
 
@@ -14,56 +17,14 @@ export default async function AdminLayout({
     redirect('/login');
   }
 
-  return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b">
-        <div className="container mx-auto p-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Admin Portal</h1>
-          <Link
-            href="/"
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            ← Back to App
-          </Link>
-        </div>
-      </header>
-      <div className="container mx-auto px-4 py-6">
-        <div className="flex gap-6">
-          {/* Sidebar Navigation */}
-          <aside className="w-48 shrink-0">
-            <nav className="space-y-1">
-              <NavLink href="/admin/domains">Domains</NavLink>
-              <NavLink href="/admin/artifact-types">Artifact Types</NavLink>
-              <NavLink href="/admin/playbooks">Playbooks</NavLink>
-              <NavLink href="/admin/prompts">Prompts</NavLink>
-            </nav>
-          </aside>
+  // Get sidebar state from cookies
+  const cookieStore = await cookies();
+  const isCollapsed = cookieStore.get('sidebar:state')?.value === 'false';
 
-          {/* Main Content Area */}
-          <main className="flex-1 min-w-0">{children}</main>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function NavLink({
-  href,
-  children,
-}: {
-  href: string;
-  children: React.ReactNode;
-}) {
   return (
-    <Link
-      href={href}
-      className={cn(
-        'block px-3 py-2 rounded-md text-sm font-medium transition-colors',
-        'hover:bg-accent hover:text-accent-foreground',
-        'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
-      )}
-    >
-      {children}
-    </Link>
+    <SidebarProvider defaultOpen={!isCollapsed}>
+      <AdminSidebar />
+      <SidebarInsetWithTrigger>{children}</SidebarInsetWithTrigger>
+    </SidebarProvider>
   );
 }
