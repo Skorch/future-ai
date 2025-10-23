@@ -25,7 +25,7 @@ export default async function AdminPromptsPage() {
   ]);
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-6 max-w-6xl">
+    <div className="space-y-6">
       <div className="space-y-2">
         <h1 className="text-3xl font-bold">Prompt Management</h1>
         <p className="text-muted-foreground">

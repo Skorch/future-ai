@@ -8,8 +8,8 @@ export default async function ArtifactTypesPage() {
   const artifactTypes = await getAllArtifactTypes();
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="mb-6 flex items-center justify-between">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Artifact Type Management</h1>
           <p className="text-muted-foreground mt-2">
