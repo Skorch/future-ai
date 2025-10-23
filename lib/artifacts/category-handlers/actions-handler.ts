@@ -101,27 +101,26 @@ export class ActionsHandler implements CategoryHandler {
   ): string {
     const parts: string[] = [];
 
-    // Add instruction if provided
+    // 1. Add instruction if provided
     if (instruction) {
-      parts.push(`User Instruction:\n${instruction}`);
+      parts.push(`## User Instruction\n\n${instruction}`);
     }
 
-    // Add appropriate generation guidance
+    // 2. Add knowledge summaries (ALWAYS if provided - needed for both initial and incremental)
+    if (knowledgeSummaries) {
+      parts.push(`## Knowledge Summaries\n\n${knowledgeSummaries}`);
+    }
+
+    // 3. Add current version and guidance
     if (currentVersion) {
-      parts.push(`\nCurrent Objective Actions:\n${currentVersion}`);
+      parts.push(`## Current Objective Actions\n\n${currentVersion}`);
       parts.push(
         'Make only the specific changes requested. Preserve all existing valuable content unless explicitly asked to modify it. This is an incremental update, not a rewrite.',
       );
-    } else if (parts.length === 0) {
-      // Default for initial generation
+    } else {
       parts.push(
         'Generate a clear, concise initial version using all available context and source materials.',
       );
-
-      // add the knowledge summaries to the prompt
-      if (knowledgeSummaries) {
-        parts.push(`\nKnowledge Summaries:\n${knowledgeSummaries}`);
-      }
     }
 
     return parts.join('\n\n');
