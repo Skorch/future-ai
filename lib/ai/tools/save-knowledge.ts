@@ -5,12 +5,17 @@ import { z } from 'zod';
 import {
   createKnowledgeDocument,
   getKnowledgeDocumentById,
+  getKnowledgeDocumentBySourceId,
+  updateKnowledgeDocument,
 } from '@/lib/db/knowledge-document';
-import { getObjectiveById } from '@/lib/db/objective';
+import {
+  getObjectiveById,
+  getObjectiveWithArtifactTypes,
+} from '@/lib/db/objective';
 import type { UIMessageStreamWriter } from 'ai';
 import type { ChatMessage } from '@/lib/types';
 import { getLogger } from '@/lib/logger';
-import { getCategoryHandler } from '@/lib/artifacts/category-handlers';
+import { SummaryHandler } from '@/lib/artifacts/category-handlers/summary-handler';
 
 const logger = getLogger('SaveKnowledge');
 
@@ -97,32 +102,30 @@ IMPORTANT:
           throw new Error('Objective not found or access denied');
         }
 
-        // 3. Load objective with artifact type for summary handler
-        const { db } = await import('@/lib/db/queries');
-        const { objective: objectiveSchema } = await import('@/lib/db/schema');
-        const { eq } = await import('drizzle-orm');
+        // 3. Load objective with artifact types using DAL
+        const objectiveWithArtifactTypes = await getObjectiveWithArtifactTypes(
+          objectiveId,
+          session.user.id,
+        );
 
-        // Load objective with artifact type for summary builder
-        const objectiveWithArtifactType = await db.query.objective.findFirst({
-          where: eq(objectiveSchema.id, objectiveId),
-          with: {
-            summaryArtifactType: true,
-          },
-        });
-
-        if (!objectiveWithArtifactType?.summaryArtifactType) {
+        if (!objectiveWithArtifactTypes?.summaryArtifactType) {
           throw new Error('Objective missing summaryArtifactType');
         }
 
-        // 3. Load summary category handler
-        const { handler, artifactType } = await getCategoryHandler(
-          objectiveWithArtifactType.summaryArtifactType.id,
+        // 4. Check for existing summary (for incremental updates)
+        const existingSummary = await getKnowledgeDocumentBySourceId(
+          params.rawKnowledgeDocumentId,
+          objectiveId,
         );
 
-        // 4. Generate title for the summary
+        // 5. Instantiate handler directly and get artifact type
+        const handler = new SummaryHandler();
+        const artifactType = objectiveWithArtifactTypes.summaryArtifactType;
+
+        // 6. Generate title for the summary
         const summaryTitle = `${artifactType.label} - ${rawDoc.title}`;
 
-        // 5. Initialize artifact stream (tell UI what we're creating)
+        // 7. Initialize artifact stream (tell UI what we're creating)
         dataStream.write({
           type: 'data-kind',
           data: 'knowledge',
@@ -135,16 +138,22 @@ IMPORTANT:
         });
         dataStream.write({ type: 'data-clear', data: null, transient: true });
 
-        // 6. Generate summary with streaming
+        // 8. Generate summary with streaming
         logger.info('Generating knowledge summary', {
           artifactType: artifactType.label,
           objective: objective.title,
         });
 
         const summaryContent = await handler.generate(artifactType, {
-          currentVersion: rawDoc.content, // Raw content as source
+          currentVersion: existingSummary?.content,
+          sourceDocumentIds: existingSummary
+            ? undefined
+            : [params.rawKnowledgeDocumentId],
           instruction:
-            params.instruction || 'Generate knowledge summary from raw content',
+            params.instruction ||
+            (existingSummary
+              ? 'Update the knowledge summary with any new insights or corrections'
+              : 'Generate knowledge summary from the source material'),
           dataStream,
           workspaceId,
           chatId,
@@ -152,45 +161,73 @@ IMPORTANT:
           session,
         });
 
-        // 7. Save knowledge document with metadata
-        const knowledgeDoc = await createKnowledgeDocument(
-          workspaceId,
-          session.user.id,
-          {
-            objectiveId,
-            title: summaryTitle,
+        let knowledgeDocId: string;
+
+        if (existingSummary) {
+          // 9. Update existing summary
+          await updateKnowledgeDocument(existingSummary.id, {
             content: summaryContent,
-            category: 'knowledge',
-            documentType: artifactType.label,
             metadata: {
-              generatedFrom: params.rawKnowledgeDocumentId,
-              generatedAt: new Date().toISOString(),
+              ...(existingSummary.metadata as Record<string, unknown>),
+              updatedAt: new Date().toISOString(),
+              updateCount:
+                (((existingSummary.metadata as Record<string, unknown>)
+                  ?.updateCount as number) || 0) + 1,
             },
-            // First-class metadata fields
-            sourceType: params.sourceType,
-            sourceDate: new Date(params.sourceDate),
-            participants: params.participants,
-            sourceKnowledgeDocumentId: params.rawKnowledgeDocumentId,
-          },
-        );
+          });
 
-        logger.info('Knowledge summary saved', {
-          knowledgeDocId: knowledgeDoc.id,
-          artifactType: artifactType.label,
-        });
+          knowledgeDocId = existingSummary.id;
 
-        // 8. Send document ID and finish signal to UI
+          logger.info('Knowledge summary updated', {
+            knowledgeDocId: existingSummary.id,
+            artifactType: artifactType.label,
+            updateCount:
+              (((existingSummary.metadata as Record<string, unknown>)
+                ?.updateCount as number) || 0) + 1,
+          });
+        } else {
+          // 9. Create new knowledge document
+          const knowledgeDoc = await createKnowledgeDocument(
+            workspaceId,
+            session.user.id,
+            {
+              objectiveId,
+              title: summaryTitle,
+              content: summaryContent,
+              category: 'knowledge',
+              documentType: artifactType.label,
+              metadata: {
+                generatedFrom: params.rawKnowledgeDocumentId,
+                generatedAt: new Date().toISOString(),
+              },
+              // First-class metadata fields
+              sourceType: params.sourceType,
+              sourceDate: new Date(params.sourceDate),
+              participants: params.participants,
+              sourceKnowledgeDocumentId: params.rawKnowledgeDocumentId,
+            },
+          );
+
+          knowledgeDocId = knowledgeDoc.id;
+
+          logger.info('Knowledge summary created', {
+            knowledgeDocId: knowledgeDoc.id,
+            artifactType: artifactType.label,
+          });
+        }
+
+        // 10. Send document ID and finish signal to UI
         dataStream.write({
           type: 'data-id',
-          data: knowledgeDoc.id,
+          data: knowledgeDocId,
           transient: true,
         });
         dataStream.write({ type: 'data-finish', data: null, transient: true });
 
-        // 9. Return standardized result for UI
+        // 11. Return standardized result for UI
         return {
           success: true,
-          id: knowledgeDoc.id,
+          id: knowledgeDocId,
           title: summaryTitle,
           kind: 'knowledge' as const,
           content: summaryContent,

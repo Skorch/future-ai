@@ -6,6 +6,7 @@ import { SummaryBuilder } from '@/lib/ai/prompts/builders/summary-builder';
 import {
   processStream,
   buildStreamConfig,
+  fetchSourceDocuments,
 } from '@/lib/artifacts/document-types/base-handler';
 import { myProvider } from '@/lib/ai/providers';
 import { db } from '@/lib/db/queries';
@@ -56,6 +57,14 @@ export class SummaryHandler implements CategoryHandler {
       : null;
     const objectiveGoal = goalData?.goal ?? null;
 
+    // Load source documents if provided
+    const sourceContent = context.sourceDocumentIds
+      ? await fetchSourceDocuments(
+          context.sourceDocumentIds,
+          context.workspaceId,
+        )
+      : '';
+
     // Use SummaryBuilder to generate system prompt with all context layers
     const builder = new SummaryBuilder();
     const systemPrompt = builder.generate(
@@ -69,6 +78,7 @@ export class SummaryHandler implements CategoryHandler {
     const userPrompt = this.buildPromptWithContext(
       context.instruction,
       context.currentVersion,
+      sourceContent,
     );
 
     // Create stream configuration
@@ -96,8 +106,14 @@ export class SummaryHandler implements CategoryHandler {
   private buildPromptWithContext(
     instruction?: string,
     currentVersion?: string,
+    sourceContent?: string,
   ): string {
     let prompt = instruction || 'Generate the summary based on the context.';
+
+    // Add source content if provided
+    if (sourceContent) {
+      prompt += `\n\n## Source Materials\n${sourceContent}`;
+    }
 
     // Add appropriate generation guidance
     if (currentVersion) {
