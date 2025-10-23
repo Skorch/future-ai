@@ -113,10 +113,24 @@ IMPORTANT:
         }
 
         // 4. Check for existing summary (for incremental updates)
+        logger.debug('Checking for existing summary', {
+          sourceKnowledgeDocumentId: params.rawKnowledgeDocumentId,
+          objectiveId,
+        });
+
         const existingSummary = await getKnowledgeDocumentBySourceId(
           params.rawKnowledgeDocumentId,
           objectiveId,
         );
+
+        logger.debug('Existing summary lookup result', {
+          found: !!existingSummary,
+          existingSummaryId: existingSummary?.id,
+          existingSummaryTitle: existingSummary?.title,
+          existingSummaryCreatedAt: existingSummary?.createdAt,
+          sourceKnowledgeDocumentId: params.rawKnowledgeDocumentId,
+          objectiveId,
+        });
 
         // 5. Instantiate handler directly and get artifact type
         const handler = new SummaryHandler();

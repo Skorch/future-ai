@@ -274,6 +274,9 @@ export async function buildStreamConfig({
   tools?: Record<string, unknown>;
   chatId?: string;
 }): Promise<StreamConfig> {
+  // Append no-preamble instruction to all prompts
+  const promptWithInstructions = `${prompt}\n\nIMPORTANT: Generate ONLY the document content. Do NOT add preamble, summary, or explanatory text about what you will do. Start directly with the document.`;
+
   // Build full system prompt with standard layers for streamText
   const systemWithContext = `${CORE_SYSTEM_PROMPT}
 
@@ -294,7 +297,7 @@ ${system}`;
       const historicalMessages = convertToModelMessages(uiMessages);
       messages = [
         ...historicalMessages,
-        { role: 'user' as const, content: prompt },
+        { role: 'user' as const, content: promptWithInstructions },
       ];
 
       logger.debug('Fetched chat history for artifact generation', {
@@ -308,14 +311,14 @@ ${system}`;
         chatId,
         error,
       });
-      messages = [{ role: 'user' as const, content: prompt }];
+      messages = [{ role: 'user' as const, content: promptWithInstructions }];
     }
   }
 
   const config: StreamConfig = {
     model,
     system: systemWithContext,
-    ...(messages ? { messages } : { prompt }),
+    ...(messages ? { messages } : { prompt: promptWithInstructions }),
     maxOutputTokens,
     temperature,
     experimental_transform: smoothStream({ chunking: 'word' }),
