@@ -62,11 +62,13 @@ export interface GenerationContext {
 
   /**
    * User session for authentication and authorization
-   * Contains the user ID for database operations
+   * Contains the user ID for database operations and display name for prompts
    */
   session: {
     user: {
       id: string;
+      firstName: string | null;
+      lastName: string | null;
     };
   };
 }

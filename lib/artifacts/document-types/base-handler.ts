@@ -7,22 +7,18 @@
 import {
   streamText,
   smoothStream,
-  convertToModelMessages,
   type ModelMessage,
   type LanguageModel,
   type UIMessageStreamWriter,
 } from 'ai';
 import { getKnowledgeDocumentById } from '@/lib/db/knowledge-document';
 import { getObjectiveDocumentById } from '@/lib/db/objective-document';
-import { getMessagesByChatId } from '@/lib/db/queries';
-import { convertToUIMessages } from '@/lib/utils';
 import type { ChatMessage } from '@/lib/types';
 import type { AnthropicProviderOptions } from '@ai-sdk/anthropic';
 import { CORE_SYSTEM_PROMPT } from '@/lib/ai/prompts/system';
 import { getCurrentContext } from '@/lib/ai/prompts/current-context';
-import { getStreamingAgentPrompt } from '@/lib/ai/prompts/builders/shared/prompts/unified-agent.prompts';
-import { ThinkingStreamProcessor } from '@/lib/ai/utils/thinking-stream-processor';
 import { getLogger } from '@/lib/logger';
+import type { GenerationContext } from '../category-handlers/types';
 
 const logger = getLogger('base-handler');
 
@@ -87,8 +83,8 @@ export async function processStream(
   config: StreamConfig,
   dataStream: UIMessageStreamWriter<ChatMessage>,
 ): Promise<string> {
-  // Create processor to handle thinking detection and filtering
-  const processor = new ThinkingStreamProcessor();
+  // Accumulate content as we stream
+  let accumulatedContent = '';
 
   // Cast tools to satisfy streamText type requirements
   const { fullStream } = streamText(config as Parameters<typeof streamText>[0]);
@@ -96,15 +92,29 @@ export async function processStream(
   for await (const delta of fullStream) {
     const { type } = delta;
 
+    // logger.debug(`processStream received delta ${JSON.stringify(delta)}`);
+
     if (type === 'text-delta') {
       const { text } = delta;
-      // Let processor handle all thinking detection and streaming
-      processor.processTextDelta(text, dataStream);
+      // Accumulate content
+      accumulatedContent += text;
+
+      // Stream text directly to UI
+      dataStream.write({
+        type: 'data-textDelta',
+        data: text,
+        transient: true,
+      });
     }
   }
 
-  // Return content with thinking tags filtered out
-  return processor.getFinalContent();
+  logger.debug('processStream completed', {
+    contentLength: accumulatedContent.length,
+    contentPreview: accumulatedContent.substring(0, 200),
+    isEmpty: accumulatedContent.length === 0,
+  });
+
+  return accumulatedContent;
 }
 
 /**
@@ -248,7 +258,7 @@ export function composeSystemPrompt(
 /**
  * Build stream configuration with thinking budget support
  * Helper for types that need reasoning capabilities
- * Prepends full prompt stack: CORE_SYSTEM_PROMPT + getCurrentContext + STREAMING_AGENT_PROMPT + specific system
+ * Automatically prepends CORE_SYSTEM_PROMPT + getCurrentContext to all system prompts
  *
  * When chatId is provided, fetches conversation history and uses messages array instead of single prompt
  */
@@ -256,16 +266,17 @@ export async function buildStreamConfig({
   model,
   system,
   prompt,
+  context,
   maxOutputTokens,
   thinkingBudget,
   temperature = 0.6,
-  prediction,
   tools,
   chatId,
 }: {
   model: LanguageModel;
   system: string;
   prompt: string;
+  context: GenerationContext;
   maxOutputTokens?: number;
   thinkingBudget?: number;
   temperature?: number;
@@ -274,56 +285,55 @@ export async function buildStreamConfig({
   tools?: Record<string, unknown>;
   chatId?: string;
 }): Promise<StreamConfig> {
-  // Append no-preamble instruction to all prompts
-  const promptWithInstructions = `${prompt}\n\nIMPORTANT: Generate ONLY the document content. Do NOT add preamble, summary, or explanatory text about what you will do. Start directly with the document.`;
+  // Extract user from context for getCurrentContext
+  const { user } = context.session;
 
-  // Build full system prompt with standard layers for streamText
-  const systemWithContext = `${CORE_SYSTEM_PROMPT}
+  // Prepend core system layers to domain-specific system prompt
+  const fullSystemPrompt = `${CORE_SYSTEM_PROMPT}
 
-${getCurrentContext({ user: null })}
-
-${getStreamingAgentPrompt()}
+${getCurrentContext({ user })}
 
 ${system}`;
 
+  // Append no-preamble instruction to all prompts
+  const promptWithInstructions = `${prompt}
+  IMPORTANT: Generate ONLY the document content. Do NOT add preamble, summary, or explanatory text about what you will do. Only output document content.
+  IMPORTANT: Limit your response to NO MORE than ${maxOutputTokens} tokens!!
+  `;
+
   // Fetch chat history if chatId provided
   let messages: ModelMessage[] | undefined;
-  if (chatId) {
-    try {
-      const messagesFromDb = await getMessagesByChatId({ id: chatId });
-      const uiMessages = convertToUIMessages(messagesFromDb);
-
-      // Convert to model format and append current user prompt
-      const historicalMessages = convertToModelMessages(uiMessages);
-      messages = [
-        ...historicalMessages,
-        { role: 'user' as const, content: promptWithInstructions },
-      ];
-
-      logger.debug('Fetched chat history for artifact generation', {
-        chatId,
-        messageCount: messagesFromDb.length,
-        totalMessages: messages.length,
-      });
-    } catch (error) {
-      // Fallback to single message if fetch fails
-      logger.error('Failed to fetch chat history, using single prompt', {
-        chatId,
-        error,
-      });
-      messages = [{ role: 'user' as const, content: promptWithInstructions }];
-    }
-  }
 
   const config: StreamConfig = {
-    model,
-    system: systemWithContext,
+    model: model,
+    system: fullSystemPrompt,
     ...(messages ? { messages } : { prompt: promptWithInstructions }),
-    maxOutputTokens,
-    temperature,
+    maxOutputTokens: maxOutputTokens,
+    temperature: temperature,
+
     experimental_transform: smoothStream({ chunking: 'word' }),
     ...(tools && { tools }),
   };
+
+  // Debug logging to diagnose empty content issues
+  // const lastMessage = messages?.[messages.length - 1];
+  // const lastContent =
+  //   typeof lastMessage?.content === 'string'
+  //     ? lastMessage.content.substring(0, 200)
+  //     : JSON.stringify(lastMessage?.content).substring(0, 200);
+
+  logger.debug('buildStreamConfig created', {
+    mode: messages ? 'messages' : 'prompt',
+    messageCount: messages?.length,
+    // lastMessageContent: lastContent,
+    promptContent: messages
+      ? undefined
+      : promptWithInstructions.substring(0, 200),
+    systemPromptLength: fullSystemPrompt.length,
+    hasTools: !!tools,
+    maxOutputTokens: maxOutputTokens,
+    temperature: temperature,
+  });
 
   // Add provider-specific options if needed
   const providerOptions: ProviderOptions = {};
@@ -333,15 +343,6 @@ ${system}`;
       thinking: {
         type: 'enabled' as const,
         budgetTokens: thinkingBudget,
-      },
-    };
-  }
-
-  if (prediction) {
-    providerOptions.openai = {
-      prediction: {
-        type: 'content' as const,
-        content: prediction,
       },
     };
   }

@@ -155,8 +155,14 @@ export async function POST(
       domainTitle: domain.title,
     });
 
-    // Create session object for AI tools
-    const session = { user: { id: userId } };
+    // Create session object for AI tools with user display name
+    const session = {
+      user: {
+        id: userId,
+        firstName: user.firstName,
+        lastName: user.lastName,
+      },
+    };
 
     // Rate limiting removed - no message limits
 
@@ -447,6 +453,7 @@ export async function POST(
                 session,
                 workspaceId,
                 chatId: id,
+                dataStream,
               }),
 
               // Objective goal update tool
@@ -455,6 +462,7 @@ export async function POST(
                 objectiveId: chatObjectiveId,
                 workspaceId,
                 chatId: id,
+                dataStream,
               }),
 
               // Objective actions update tool
