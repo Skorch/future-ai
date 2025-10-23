@@ -17,6 +17,7 @@ import {
   Heading2,
   Heading3,
   Code,
+  Edit,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -399,46 +400,65 @@ export function DomainForm({ domain, artifactTypes }: DomainFormProps) {
           </p>
         </div>
 
-        {/* Objective Artifact Type */}
+        {/* 1. Objective Goal Type */}
         <div className="space-y-2">
           <Label htmlFor="defaultObjectiveArtifactTypeId">
-            Objective Artifact Type <span className="text-destructive">*</span>
+            Objective Goal Type <span className="text-destructive">*</span>
           </Label>
           <p className="text-xs text-muted-foreground">
             Used to generate the primary objective document when creating a new
             objective
           </p>
-          <Select
-            value={defaultObjectiveArtifactTypeId}
-            onValueChange={(value) =>
-              setValue('defaultObjectiveArtifactTypeId', value)
-            }
-          >
-            <SelectTrigger id="defaultObjectiveArtifactTypeId">
-              <SelectValue placeholder="Select objective artifact type">
-                {defaultObjectiveArtifactTypeId &&
-                  objectiveTypes.find(
-                    (at) => at.id === defaultObjectiveArtifactTypeId,
-                  )?.title}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {objectiveTypes.map((artifactType) => (
-                <SelectItem
-                  key={artifactType.id}
-                  value={artifactType.id}
-                  className="py-3"
-                >
-                  <div className="flex flex-col gap-0.5">
-                    <span className="font-medium">{artifactType.title}</span>
-                    <span className="text-xs text-muted-foreground line-clamp-2">
-                      {artifactType.description}
-                    </span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex gap-2 items-start">
+            <div className="flex-1">
+              <Select
+                value={defaultObjectiveArtifactTypeId}
+                onValueChange={(value) =>
+                  setValue('defaultObjectiveArtifactTypeId', value)
+                }
+              >
+                <SelectTrigger id="defaultObjectiveArtifactTypeId">
+                  <SelectValue placeholder="Select objective goal type">
+                    {defaultObjectiveArtifactTypeId &&
+                      objectiveTypes.find(
+                        (at) => at.id === defaultObjectiveArtifactTypeId,
+                      )?.title}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {objectiveTypes.map((artifactType) => (
+                    <SelectItem
+                      key={artifactType.id}
+                      value={artifactType.id}
+                      className="py-3"
+                    >
+                      <div className="flex flex-col gap-0.5">
+                        <span className="font-medium">
+                          {artifactType.title}
+                        </span>
+                        <span className="text-xs text-muted-foreground line-clamp-2">
+                          {artifactType.description}
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={() =>
+                router.push(
+                  `/admin/artifact-types/${defaultObjectiveArtifactTypeId}/edit`,
+                )
+              }
+              disabled={!defaultObjectiveArtifactTypeId}
+            >
+              <Edit className="size-4" />
+            </Button>
+          </div>
           {errors.defaultObjectiveArtifactTypeId && (
             <p className="text-sm text-destructive">
               {errors.defaultObjectiveArtifactTypeId.message}
@@ -446,93 +466,64 @@ export function DomainForm({ domain, artifactTypes }: DomainFormProps) {
           )}
         </div>
 
-        {/* Summary Artifact Type */}
-        <div className="space-y-2">
-          <Label htmlFor="defaultSummaryArtifactTypeId">
-            Summary Artifact Type <span className="text-destructive">*</span>
-          </Label>
-          <p className="text-xs text-muted-foreground">
-            Used to process and summarize knowledge documents (transcripts,
-            emails, notes)
-          </p>
-          <Select
-            value={defaultSummaryArtifactTypeId}
-            onValueChange={(value) =>
-              setValue('defaultSummaryArtifactTypeId', value)
-            }
-          >
-            <SelectTrigger id="defaultSummaryArtifactTypeId">
-              <SelectValue placeholder="Select summary artifact type">
-                {defaultSummaryArtifactTypeId &&
-                  summaryTypes.find(
-                    (at) => at.id === defaultSummaryArtifactTypeId,
-                  )?.title}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {summaryTypes.map((artifactType) => (
-                <SelectItem
-                  key={artifactType.id}
-                  value={artifactType.id}
-                  className="py-3"
-                >
-                  <div className="flex flex-col gap-0.5">
-                    <span className="font-medium">{artifactType.title}</span>
-                    <span className="text-xs text-muted-foreground line-clamp-2">
-                      {artifactType.description}
-                    </span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {errors.defaultSummaryArtifactTypeId && (
-            <p className="text-sm text-destructive">
-              {errors.defaultSummaryArtifactTypeId.message}
-            </p>
-          )}
-        </div>
-
-        {/* Objective Actions Artifact Type */}
+        {/* 2. Objective Actions Type */}
         <div className="space-y-2">
           <Label htmlFor="defaultObjectiveActionsArtifactTypeId">
-            Objective Actions Artifact Type{' '}
-            <span className="text-destructive">*</span>
+            Objective Actions Type <span className="text-destructive">*</span>
           </Label>
           <p className="text-xs text-muted-foreground">
             Used to track action items and next steps related to objectives
           </p>
-          <Select
-            value={defaultObjectiveActionsArtifactTypeId}
-            onValueChange={(value) =>
-              setValue('defaultObjectiveActionsArtifactTypeId', value)
-            }
-          >
-            <SelectTrigger id="defaultObjectiveActionsArtifactTypeId">
-              <SelectValue placeholder="Select objective actions artifact type">
-                {defaultObjectiveActionsArtifactTypeId &&
-                  objectiveActionsTypes.find(
-                    (at) => at.id === defaultObjectiveActionsArtifactTypeId,
-                  )?.title}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {objectiveActionsTypes.map((artifactType) => (
-                <SelectItem
-                  key={artifactType.id}
-                  value={artifactType.id}
-                  className="py-3"
-                >
-                  <div className="flex flex-col gap-0.5">
-                    <span className="font-medium">{artifactType.title}</span>
-                    <span className="text-xs text-muted-foreground line-clamp-2">
-                      {artifactType.description}
-                    </span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex gap-2 items-start">
+            <div className="flex-1">
+              <Select
+                value={defaultObjectiveActionsArtifactTypeId}
+                onValueChange={(value) =>
+                  setValue('defaultObjectiveActionsArtifactTypeId', value)
+                }
+              >
+                <SelectTrigger id="defaultObjectiveActionsArtifactTypeId">
+                  <SelectValue placeholder="Select objective actions type">
+                    {defaultObjectiveActionsArtifactTypeId &&
+                      objectiveActionsTypes.find(
+                        (at) => at.id === defaultObjectiveActionsArtifactTypeId,
+                      )?.title}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {objectiveActionsTypes.map((artifactType) => (
+                    <SelectItem
+                      key={artifactType.id}
+                      value={artifactType.id}
+                      className="py-3"
+                    >
+                      <div className="flex flex-col gap-0.5">
+                        <span className="font-medium">
+                          {artifactType.title}
+                        </span>
+                        <span className="text-xs text-muted-foreground line-clamp-2">
+                          {artifactType.description}
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={() =>
+                router.push(
+                  `/admin/artifact-types/${defaultObjectiveActionsArtifactTypeId}/edit`,
+                )
+              }
+              disabled={!defaultObjectiveActionsArtifactTypeId}
+            >
+              <Edit className="size-4" />
+            </Button>
+          </div>
           {errors.defaultObjectiveActionsArtifactTypeId && (
             <p className="text-sm text-destructive">
               {errors.defaultObjectiveActionsArtifactTypeId.message}
@@ -540,96 +531,198 @@ export function DomainForm({ domain, artifactTypes }: DomainFormProps) {
           )}
         </div>
 
-        {/* Workspace Context Artifact Type */}
-        <div className="space-y-2">
-          <Label htmlFor="defaultWorkspaceContextArtifactTypeId">
-            Workspace Context Artifact Type{' '}
-            <span className="text-destructive">*</span>
-          </Label>
-          <p className="text-xs text-muted-foreground">
-            Used to manage workspace-level context and configuration
-          </p>
-          <Select
-            value={defaultWorkspaceContextArtifactTypeId}
-            onValueChange={(value) =>
-              setValue('defaultWorkspaceContextArtifactTypeId', value)
-            }
-          >
-            <SelectTrigger id="defaultWorkspaceContextArtifactTypeId">
-              <SelectValue placeholder="Select workspace context artifact type">
-                {defaultWorkspaceContextArtifactTypeId &&
-                  contextTypes.find(
-                    (at) => at.id === defaultWorkspaceContextArtifactTypeId,
-                  )?.title}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {contextTypes.map((artifactType) => (
-                <SelectItem
-                  key={artifactType.id}
-                  value={artifactType.id}
-                  className="py-3"
-                >
-                  <div className="flex flex-col gap-0.5">
-                    <span className="font-medium">{artifactType.title}</span>
-                    <span className="text-xs text-muted-foreground line-clamp-2">
-                      {artifactType.description}
-                    </span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {errors.defaultWorkspaceContextArtifactTypeId && (
-            <p className="text-sm text-destructive">
-              {errors.defaultWorkspaceContextArtifactTypeId.message}
-            </p>
-          )}
-        </div>
-
-        {/* Objective Context Artifact Type */}
+        {/* 3. Objective Artifact Type */}
         <div className="space-y-2">
           <Label htmlFor="defaultObjectiveContextArtifactTypeId">
-            Objective Context Artifact Type{' '}
-            <span className="text-destructive">*</span>
+            Objective Artifact Type <span className="text-destructive">*</span>
           </Label>
           <p className="text-xs text-muted-foreground">
             Used to manage context specific to individual objectives
           </p>
-          <Select
-            value={defaultObjectiveContextArtifactTypeId}
-            onValueChange={(value) =>
-              setValue('defaultObjectiveContextArtifactTypeId', value)
-            }
-          >
-            <SelectTrigger id="defaultObjectiveContextArtifactTypeId">
-              <SelectValue placeholder="Select objective context artifact type">
-                {defaultObjectiveContextArtifactTypeId &&
-                  contextTypes.find(
-                    (at) => at.id === defaultObjectiveContextArtifactTypeId,
-                  )?.title}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {contextTypes.map((artifactType) => (
-                <SelectItem
-                  key={artifactType.id}
-                  value={artifactType.id}
-                  className="py-3"
-                >
-                  <div className="flex flex-col gap-0.5">
-                    <span className="font-medium">{artifactType.title}</span>
-                    <span className="text-xs text-muted-foreground line-clamp-2">
-                      {artifactType.description}
-                    </span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex gap-2 items-start">
+            <div className="flex-1">
+              <Select
+                value={defaultObjectiveContextArtifactTypeId}
+                onValueChange={(value) =>
+                  setValue('defaultObjectiveContextArtifactTypeId', value)
+                }
+              >
+                <SelectTrigger id="defaultObjectiveContextArtifactTypeId">
+                  <SelectValue placeholder="Select objective artifact type">
+                    {defaultObjectiveContextArtifactTypeId &&
+                      contextTypes.find(
+                        (at) => at.id === defaultObjectiveContextArtifactTypeId,
+                      )?.title}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {contextTypes.map((artifactType) => (
+                    <SelectItem
+                      key={artifactType.id}
+                      value={artifactType.id}
+                      className="py-3"
+                    >
+                      <div className="flex flex-col gap-0.5">
+                        <span className="font-medium">
+                          {artifactType.title}
+                        </span>
+                        <span className="text-xs text-muted-foreground line-clamp-2">
+                          {artifactType.description}
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={() =>
+                router.push(
+                  `/admin/artifact-types/${defaultObjectiveContextArtifactTypeId}/edit`,
+                )
+              }
+              disabled={!defaultObjectiveContextArtifactTypeId}
+            >
+              <Edit className="size-4" />
+            </Button>
+          </div>
           {errors.defaultObjectiveContextArtifactTypeId && (
             <p className="text-sm text-destructive">
               {errors.defaultObjectiveContextArtifactTypeId.message}
+            </p>
+          )}
+        </div>
+
+        {/* 4. Knowledge Summary Type */}
+        <div className="space-y-2">
+          <Label htmlFor="defaultSummaryArtifactTypeId">
+            Knowledge Summary Type <span className="text-destructive">*</span>
+          </Label>
+          <p className="text-xs text-muted-foreground">
+            Used to process and summarize knowledge documents (transcripts,
+            emails, notes)
+          </p>
+          <div className="flex gap-2 items-start">
+            <div className="flex-1">
+              <Select
+                value={defaultSummaryArtifactTypeId}
+                onValueChange={(value) =>
+                  setValue('defaultSummaryArtifactTypeId', value)
+                }
+              >
+                <SelectTrigger id="defaultSummaryArtifactTypeId">
+                  <SelectValue placeholder="Select knowledge summary type">
+                    {defaultSummaryArtifactTypeId &&
+                      summaryTypes.find(
+                        (at) => at.id === defaultSummaryArtifactTypeId,
+                      )?.title}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {summaryTypes.map((artifactType) => (
+                    <SelectItem
+                      key={artifactType.id}
+                      value={artifactType.id}
+                      className="py-3"
+                    >
+                      <div className="flex flex-col gap-0.5">
+                        <span className="font-medium">
+                          {artifactType.title}
+                        </span>
+                        <span className="text-xs text-muted-foreground line-clamp-2">
+                          {artifactType.description}
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={() =>
+                router.push(
+                  `/admin/artifact-types/${defaultSummaryArtifactTypeId}/edit`,
+                )
+              }
+              disabled={!defaultSummaryArtifactTypeId}
+            >
+              <Edit className="size-4" />
+            </Button>
+          </div>
+          {errors.defaultSummaryArtifactTypeId && (
+            <p className="text-sm text-destructive">
+              {errors.defaultSummaryArtifactTypeId.message}
+            </p>
+          )}
+        </div>
+
+        {/* 5. Workspace Context Type */}
+        <div className="space-y-2">
+          <Label htmlFor="defaultWorkspaceContextArtifactTypeId">
+            Workspace Context Type <span className="text-destructive">*</span>
+          </Label>
+          <p className="text-xs text-muted-foreground">
+            Used to manage workspace-level context and configuration
+          </p>
+          <div className="flex gap-2 items-start">
+            <div className="flex-1">
+              <Select
+                value={defaultWorkspaceContextArtifactTypeId}
+                onValueChange={(value) =>
+                  setValue('defaultWorkspaceContextArtifactTypeId', value)
+                }
+              >
+                <SelectTrigger id="defaultWorkspaceContextArtifactTypeId">
+                  <SelectValue placeholder="Select workspace context type">
+                    {defaultWorkspaceContextArtifactTypeId &&
+                      contextTypes.find(
+                        (at) => at.id === defaultWorkspaceContextArtifactTypeId,
+                      )?.title}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {contextTypes.map((artifactType) => (
+                    <SelectItem
+                      key={artifactType.id}
+                      value={artifactType.id}
+                      className="py-3"
+                    >
+                      <div className="flex flex-col gap-0.5">
+                        <span className="font-medium">
+                          {artifactType.title}
+                        </span>
+                        <span className="text-xs text-muted-foreground line-clamp-2">
+                          {artifactType.description}
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={() =>
+                router.push(
+                  `/admin/artifact-types/${defaultWorkspaceContextArtifactTypeId}/edit`,
+                )
+              }
+              disabled={!defaultWorkspaceContextArtifactTypeId}
+            >
+              <Edit className="size-4" />
+            </Button>
+          </div>
+          {errors.defaultWorkspaceContextArtifactTypeId && (
+            <p className="text-sm text-destructive">
+              {errors.defaultWorkspaceContextArtifactTypeId.message}
             </p>
           )}
         </div>
