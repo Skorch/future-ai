@@ -5,10 +5,10 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { ScenarioSelector } from './scenario-selector';
 import { ConfigurationPanel } from './configuration-panel';
 import { PromptStackView, type PromptStackViewRef } from './prompt-stack-view';
+import { PromptTabs } from '@/components/admin/prompt-tabs';
 import { SCENARIOS, type ScenarioId } from '../types';
 import type { Domain, ArtifactType, User } from '@/lib/db/schema';
 import { updateDomainPrompt, updateArtifactTypePrompt } from '../actions';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
@@ -29,8 +29,25 @@ export function PromptsPageClient({
   const stackViewRef = useRef<PromptStackViewRef>(null);
 
   // Initialize state from URL or defaults
+  const [activeTab, setActiveTab] = useState<'main-agent' | 'tool-calls'>(
+    () =>
+      (searchParams.get('tab') as 'main-agent' | 'tool-calls') || 'main-agent',
+  );
   const [selectedScenarioId, setSelectedScenarioId] = useState<ScenarioId>(
-    () => (searchParams.get('scenario') as ScenarioId) || 'chat-message',
+    () => {
+      const urlScenario = searchParams.get('scenario') as ScenarioId;
+      const urlTab = searchParams.get('tab') as 'main-agent' | 'tool-calls';
+
+      // Main Agent tab always uses chat-message
+      if (urlTab === 'main-agent' || !urlTab) {
+        return 'chat-message';
+      }
+
+      // Tool Calls tab: use URL scenario or default to first non-chat scenario
+      return urlScenario && urlScenario !== 'chat-message'
+        ? urlScenario
+        : 'workspace-context';
+    },
   );
   const [selectedDomainId, setSelectedDomainId] = useState<string | null>(
     () => searchParams.get('domain') || domains[0]?.id || null,
@@ -54,6 +71,7 @@ export function PromptsPageClient({
   // Update URL whenever state changes
   useEffect(() => {
     const params = new URLSearchParams();
+    params.set('tab', activeTab);
     params.set('scenario', selectedScenarioId);
     if (selectedDomainId) params.set('domain', selectedDomainId);
     if (selectedArtifactTypeId)
@@ -66,6 +84,7 @@ export function PromptsPageClient({
     // Replace URL without triggering navigation
     router.replace(`?${params.toString()}`, { scroll: false });
   }, [
+    activeTab,
     selectedScenarioId,
     selectedDomainId,
     selectedArtifactTypeId,
@@ -145,6 +164,25 @@ export function PromptsPageClient({
     setConfigExpanded(!configExpanded);
   }, [configExpanded, flushSaves]);
 
+  // Handle tab change with save-before-switch
+  const handleTabChange = useCallback(
+    async (tab: 'main-agent' | 'tool-calls') => {
+      await flushSaves();
+      setActiveTab(tab);
+
+      // When switching to "Main Agent" tab, always show chat-message scenario
+      if (tab === 'main-agent') {
+        setSelectedScenarioId('chat-message');
+      } else {
+        // When switching to Tool Calls tab, switch to first tool scenario if on chat-message
+        if (selectedScenarioId === 'chat-message') {
+          setSelectedScenarioId('workspace-context');
+        }
+      }
+    },
+    [flushSaves, selectedScenarioId],
+  );
+
   if (!scenario) {
     return (
       <div className="text-center py-12 text-muted-foreground">
@@ -154,15 +192,23 @@ export function PromptsPageClient({
   }
 
   return (
-    <div className="space-y-6">
-      {/* Collapsible Configuration Section */}
-      <Card>
-        <CardHeader
-          className="cursor-pointer hover:bg-accent/50 transition-colors"
-          onClick={handleConfigToggle}
-        >
-          <div className="flex items-center justify-between">
-            <CardTitle>Configuration</CardTitle>
+    <PromptTabs activeTab={activeTab} onTabChange={handleTabChange}>
+      <div className="space-y-8">
+        {/* Collapsible Configuration Section */}
+        <div className="border rounded-lg">
+          <div
+            role="button"
+            tabIndex={0}
+            className="flex items-center justify-between p-6 cursor-pointer hover:bg-accent/50 transition-colors"
+            onClick={handleConfigToggle}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleConfigToggle();
+              }
+            }}
+          >
+            <h2 className="text-lg font-semibold">Configuration</h2>
             <Button variant="ghost" size="sm">
               {configExpanded ? (
                 <ChevronUp className="size-4" />
@@ -171,45 +217,48 @@ export function PromptsPageClient({
               )}
             </Button>
           </div>
-        </CardHeader>
-        {configExpanded && (
-          <CardContent className="space-y-6">
-            <ScenarioSelector
-              selectedId={selectedScenarioId}
-              onSelect={handleScenarioChange}
-            />
+          {configExpanded && (
+            <div className="p-6 space-y-6 border-t">
+              {/* Only show scenario selector on Tool Calls tab */}
+              {activeTab === 'tool-calls' && (
+                <ScenarioSelector
+                  selectedId={selectedScenarioId}
+                  onSelect={handleScenarioChange}
+                />
+              )}
 
-            <ConfigurationPanel
-              scenario={scenario}
-              domains={domains}
-              artifactTypes={artifactTypes}
-              selectedDomainId={selectedDomainId}
-              selectedArtifactTypeId={selectedArtifactTypeId}
-              onDomainChange={handleDomainChange}
-              onArtifactTypeChange={handleArtifactTypeChange}
-            />
-          </CardContent>
-        )}
-      </Card>
-
-      {/* Prompt Stack View */}
-      {domain ? (
-        <PromptStackView
-          ref={stackViewRef}
-          scenario={scenario}
-          domain={domain}
-          artifactType={artifactType}
-          user={user}
-          expandedLayers={expandedLayers}
-          onToggleLayer={handleToggleLayer}
-          onSaveDomain={updateDomainPrompt}
-          onSaveArtifactType={updateArtifactTypePrompt}
-        />
-      ) : (
-        <div className="text-center py-12 text-muted-foreground">
-          Please select a domain to view prompts
+              <ConfigurationPanel
+                scenario={scenario}
+                domains={domains}
+                artifactTypes={artifactTypes}
+                selectedDomainId={selectedDomainId}
+                selectedArtifactTypeId={selectedArtifactTypeId}
+                onDomainChange={handleDomainChange}
+                onArtifactTypeChange={handleArtifactTypeChange}
+              />
+            </div>
+          )}
         </div>
-      )}
-    </div>
+
+        {/* Content area: Show PromptStackView for both tabs */}
+        {domain ? (
+          <PromptStackView
+            ref={stackViewRef}
+            scenario={scenario}
+            domain={domain}
+            artifactType={artifactType}
+            user={user}
+            expandedLayers={expandedLayers}
+            onToggleLayer={handleToggleLayer}
+            onSaveDomain={updateDomainPrompt}
+            onSaveArtifactType={updateArtifactTypePrompt}
+          />
+        ) : (
+          <div className="text-center py-12 text-muted-foreground">
+            Please select a domain to view prompts
+          </div>
+        )}
+      </div>
+    </PromptTabs>
   );
 }

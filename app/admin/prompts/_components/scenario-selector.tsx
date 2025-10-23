@@ -18,15 +18,18 @@ export function ScenarioSelector({
   selectedId,
   onSelect,
 }: ScenarioSelectorProps) {
+  // Filter out chat-message scenario (shown on Main Agent tab)
+  const toolScenarios = SCENARIOS.filter((s) => s.id !== 'chat-message');
+
   return (
     <div className="space-y-2">
-      <div className="text-sm font-medium">Select Scenario</div>
+      <div className="text-sm font-medium">Select Tool</div>
       <Select value={selectedId} onValueChange={onSelect}>
         <SelectTrigger className="w-full">
-          <SelectValue placeholder="Choose a prompt scenario..." />
+          <SelectValue placeholder="Choose a tool..." />
         </SelectTrigger>
         <SelectContent>
-          {SCENARIOS.map((scenario) => (
+          {toolScenarios.map((scenario) => (
             <SelectItem key={scenario.id} value={scenario.id}>
               <div className="flex flex-col">
                 <span className="font-medium">{scenario.label}</span>

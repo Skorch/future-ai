@@ -52,7 +52,7 @@ export interface Scenario {
 export const SCENARIOS: Scenario[] = [
   {
     id: 'workspace-context',
-    label: 'Workspace Context Prompt',
+    label: 'Update Workspace Context',
     description: 'Generate workspace-level context summary',
     requiresDomain: true,
     requiresArtifactType: false,
@@ -83,7 +83,7 @@ export const SCENARIOS: Scenario[] = [
   },
   {
     id: 'objective-context',
-    label: 'Objective Context Prompt',
+    label: 'Update Objective Goal',
     description: 'Generate objective-level context summary',
     requiresDomain: true,
     requiresArtifactType: false,
@@ -114,7 +114,7 @@ export const SCENARIOS: Scenario[] = [
   },
   {
     id: 'objective-document',
-    label: 'Objective Document Creation',
+    label: 'Generate Document Version',
     description:
       'Generate objective document (e.g., Sales Strategy, Business Requirements)',
     requiresDomain: true,
@@ -171,7 +171,7 @@ export const SCENARIOS: Scenario[] = [
   },
   {
     id: 'knowledge-summary',
-    label: 'Knowledge Doc Summary',
+    label: 'Save Knowledge',
     description: 'Generate summary from transcript/meeting notes',
     requiresDomain: true,
     requiresArtifactType: true,
@@ -208,7 +208,7 @@ export const SCENARIOS: Scenario[] = [
   },
   {
     id: 'objectiveActions',
-    label: 'Objective Actions Creation',
+    label: 'Update Objective Actions',
     description: 'Generate objective actions from objective document',
     requiresDomain: true,
     requiresArtifactType: true,
