@@ -17,10 +17,6 @@ vi.mock('../pinecone-client', () => ({
 }));
 vi.mock('@/lib/ai/utils/rag-chunker');
 vi.mock('@/lib/ai/utils/transcript-parser');
-vi.mock('@/lib/artifacts', () => ({
-  getDocumentTypeDefinition: vi.fn(),
-  artifactRegistry: {},
-}));
 
 // Now import after mocks are set up
 import { syncDocumentToRAG, deleteFromRAG } from '../sync';

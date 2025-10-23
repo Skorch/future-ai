@@ -9,7 +9,6 @@ import {
 import crypto from 'node:crypto';
 import type { TranscriptItem, RAGDocument, RAGMetadata } from './types';
 import { getLogger } from '@/lib/logger';
-import { getDocumentTypeDefinition } from '@/lib/artifacts';
 
 const logger = getLogger('RAGSync');
 
@@ -176,30 +175,9 @@ async function chunkDocument(
   const fileHash = crypto.createHash('sha256').update(documentId).digest('hex');
 
   // Determine chunking strategy
-  let chunkingStrategy = 'section-based'; // Default
-
-  // Special case for transcripts (not in registry)
-  if (documentType === 'transcript') {
-    chunkingStrategy = 'ai-transcript';
-  } else {
-    // Try to get strategy from artifact metadata
-    try {
-      // Check if it's a valid DocumentType by checking the registry
-      const { artifactRegistry } = await import('@/lib/artifacts');
-      if (documentType in artifactRegistry) {
-        const artifactDef = await getDocumentTypeDefinition(
-          documentType as keyof typeof artifactRegistry,
-        );
-        if (artifactDef?.metadata?.chunkingStrategy) {
-          chunkingStrategy = artifactDef.metadata.chunkingStrategy;
-        }
-      }
-    } catch (error) {
-      logger.debug(
-        `[RAG Sync] Could not find artifact definition for ${documentType}, using default section-based chunking`,
-      );
-    }
-  }
+  // Use 'ai-transcript' for transcripts, 'section-based' for all other document types
+  const chunkingStrategy =
+    documentType === 'transcript' ? 'ai-transcript' : 'section-based';
 
   // Apply chunking based on strategy
   if (chunkingStrategy === 'ai-transcript') {
