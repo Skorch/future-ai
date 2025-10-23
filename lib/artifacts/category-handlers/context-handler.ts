@@ -8,6 +8,7 @@ import {
   buildStreamConfig,
   processStream,
 } from '../document-types/base-handler';
+import { stripThinkingTags } from '@/lib/ai/utils/thinking-stream-processor';
 import { getWorkspaceById } from '@/lib/workspace/queries';
 import { getObjectiveById } from '@/lib/db/objective';
 import { getDomainById } from '@/lib/db/queries/domain';
@@ -125,7 +126,8 @@ export class ContextHandler implements CategoryHandler {
           chunks.push(delta.text);
         }
       }
-      content = chunks.join('');
+      // Strip thinking tags from accumulated content
+      content = stripThinkingTags(chunks.join(''));
     }
 
     logger.debug('Context artifact generated successfully', {
