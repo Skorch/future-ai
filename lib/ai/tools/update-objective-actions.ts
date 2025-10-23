@@ -110,6 +110,7 @@ export const updateObjectiveActions = ({
           knowledgeDocIds: knowledgeDocumentIds,
           dataStream,
           workspaceId,
+          chatId,
           objectiveId,
           session,
         });

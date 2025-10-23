@@ -96,7 +96,7 @@ ${rawContent}
 ---`;
 
   // Use existing stream utilities from base-handler
-  const config = buildStreamConfig({
+  const config = await buildStreamConfig({
     model: myProvider.languageModel('claude-sonnet-4'),
     system: systemPrompt,
     prompt: userPrompt,

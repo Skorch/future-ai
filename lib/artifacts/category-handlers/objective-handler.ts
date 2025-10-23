@@ -77,12 +77,13 @@ export class ObjectiveHandler implements CategoryHandler {
     );
 
     // Create stream config
-    const streamConfig = buildStreamConfig({
+    const streamConfig = await buildStreamConfig({
       model: myProvider.languageModel('artifact-model'),
       system: systemPrompt,
       prompt: userPrompt,
       maxOutputTokens: 4000,
       temperature: 0.4,
+      chatId: context.chatId,
     });
 
     // Process stream and return content

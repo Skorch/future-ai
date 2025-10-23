@@ -13,6 +13,7 @@ const logger = getLogger('UpdateWorkspaceContext');
 interface UpdateWorkspaceContextParams {
   session: { user: { id: string } };
   workspaceId: string;
+  chatId?: string;
 }
 
 /**
@@ -22,6 +23,7 @@ interface UpdateWorkspaceContextParams {
 export const updateWorkspaceContext = ({
   session,
   workspaceId,
+  chatId,
 }: UpdateWorkspaceContextParams) =>
   tool({
     description: `Update the workspace context with newly observed facts about the user, their work, company, team, processes, or preferences.
@@ -135,6 +137,7 @@ Ensure:
           currentVersion: currentContext,
           instruction,
           workspaceId,
+          chatId,
           session,
         });
 

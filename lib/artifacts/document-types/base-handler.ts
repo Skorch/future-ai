@@ -4,16 +4,27 @@
  * while allowing each handler to maintain its own prompts and configuration
  */
 
-import { streamText, smoothStream } from 'ai';
+import {
+  streamText,
+  smoothStream,
+  convertToModelMessages,
+  type ModelMessage,
+  type LanguageModel,
+  type UIMessageStreamWriter,
+} from 'ai';
 import { getKnowledgeDocumentById } from '@/lib/db/knowledge-document';
 import { getObjectiveDocumentById } from '@/lib/db/objective-document';
-import type { LanguageModel, UIMessageStreamWriter } from 'ai';
+import { getMessagesByChatId } from '@/lib/db/queries';
+import { convertToUIMessages } from '@/lib/utils';
 import type { ChatMessage } from '@/lib/types';
 import type { AnthropicProviderOptions } from '@ai-sdk/anthropic';
 import { CORE_SYSTEM_PROMPT } from '@/lib/ai/prompts/system';
 import { getCurrentContext } from '@/lib/ai/prompts/current-context';
 import { getStreamingAgentPrompt } from '@/lib/ai/prompts/builders/shared/prompts/unified-agent.prompts';
 import { ThinkingStreamProcessor } from '@/lib/ai/utils/thinking-stream-processor';
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('base-handler');
 
 /**
  * Provider options type for AI models
@@ -30,11 +41,13 @@ type ProviderOptions = {
 
 /**
  * Configuration for streaming text generation
+ * Supports both prompt (single message) and messages (conversation history)
  */
 export interface StreamConfig {
   model: LanguageModel;
   system: string;
-  prompt: string;
+  prompt?: string;
+  messages?: Array<ModelMessage>;
   maxOutputTokens?: number;
   temperature?: number;
   experimental_transform?: ReturnType<typeof smoothStream>;
@@ -236,8 +249,10 @@ export function composeSystemPrompt(
  * Build stream configuration with thinking budget support
  * Helper for types that need reasoning capabilities
  * Prepends full prompt stack: CORE_SYSTEM_PROMPT + getCurrentContext + STREAMING_AGENT_PROMPT + specific system
+ *
+ * When chatId is provided, fetches conversation history and uses messages array instead of single prompt
  */
-export function buildStreamConfig({
+export async function buildStreamConfig({
   model,
   system,
   prompt,
@@ -246,6 +261,7 @@ export function buildStreamConfig({
   temperature = 0.6,
   prediction,
   tools,
+  chatId,
 }: {
   model: LanguageModel;
   system: string;
@@ -256,7 +272,8 @@ export function buildStreamConfig({
   prediction?: string;
   // Tools from AI SDK - use unknown since CoreTool is not exported
   tools?: Record<string, unknown>;
-}): StreamConfig {
+  chatId?: string;
+}): Promise<StreamConfig> {
   // Build full system prompt with standard layers for streamText
   const systemWithContext = `${CORE_SYSTEM_PROMPT}
 
@@ -266,10 +283,39 @@ ${getStreamingAgentPrompt()}
 
 ${system}`;
 
+  // Fetch chat history if chatId provided
+  let messages: ModelMessage[] | undefined;
+  if (chatId) {
+    try {
+      const messagesFromDb = await getMessagesByChatId({ id: chatId });
+      const uiMessages = convertToUIMessages(messagesFromDb);
+
+      // Convert to model format and append current user prompt
+      const historicalMessages = convertToModelMessages(uiMessages);
+      messages = [
+        ...historicalMessages,
+        { role: 'user' as const, content: prompt },
+      ];
+
+      logger.debug('Fetched chat history for artifact generation', {
+        chatId,
+        messageCount: messagesFromDb.length,
+        totalMessages: messages.length,
+      });
+    } catch (error) {
+      // Fallback to single message if fetch fails
+      logger.error('Failed to fetch chat history, using single prompt', {
+        chatId,
+        error,
+      });
+      messages = [{ role: 'user' as const, content: prompt }];
+    }
+  }
+
   const config: StreamConfig = {
     model,
     system: systemWithContext,
-    prompt,
+    ...(messages ? { messages } : { prompt }),
     maxOutputTokens,
     temperature,
     experimental_transform: smoothStream({ chunking: 'word' }),

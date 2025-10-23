@@ -438,6 +438,7 @@ export async function POST(
                 session,
                 dataStream,
                 workspaceId,
+                chatId: id,
                 objectiveId: chatObjectiveId,
               }),
 
@@ -445,6 +446,7 @@ export async function POST(
               updateWorkspaceContext: updateWorkspaceContext({
                 session,
                 workspaceId,
+                chatId: id,
               }),
 
               // Objective goal update tool
@@ -452,6 +454,7 @@ export async function POST(
                 session,
                 objectiveId: chatObjectiveId,
                 workspaceId,
+                chatId: id,
               }),
 
               // Objective actions update tool

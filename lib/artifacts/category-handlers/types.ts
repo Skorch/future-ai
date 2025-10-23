@@ -49,6 +49,12 @@ export interface GenerationContext {
   workspaceId: string;
 
   /**
+   * Optional chat ID to inherit conversation context
+   * When provided, the handler can fetch chat history for contextual awareness
+   */
+  chatId?: string;
+
+  /**
    * Optional objective context
    * When generating artifacts within an objective scope
    */

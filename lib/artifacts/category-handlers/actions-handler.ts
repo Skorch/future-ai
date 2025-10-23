@@ -77,12 +77,13 @@ export class ActionsHandler implements CategoryHandler {
 
     // 7. Create stream config with artifact model
     const model = myProvider.languageModel('artifact-model');
-    const config = buildStreamConfig({
+    const config = await buildStreamConfig({
       model,
       system: systemPrompt,
       prompt: userPrompt,
       maxOutputTokens: 16000,
       temperature: 0.6,
+      chatId: context.chatId,
     });
 
     // 8. Process stream and return content

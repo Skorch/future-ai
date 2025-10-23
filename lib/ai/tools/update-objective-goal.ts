@@ -14,6 +14,7 @@ interface UpdateObjectiveGoalParams {
   session: { user: { id: string } };
   objectiveId: string;
   workspaceId: string;
+  chatId?: string;
 }
 
 /**
@@ -24,6 +25,7 @@ export const updateObjectiveGoal = ({
   session,
   objectiveId,
   workspaceId,
+  chatId,
 }: UpdateObjectiveGoalParams) =>
   tool({
     description: `Update the objective goal definition with facts about THIS SPECIFIC goal, deal, or project.
@@ -122,6 +124,7 @@ Update the objective goal by incorporating these new observations. Focus on THIS
           currentVersion: currentGoal,
           instruction,
           workspaceId,
+          chatId,
           objectiveId,
           session,
         });

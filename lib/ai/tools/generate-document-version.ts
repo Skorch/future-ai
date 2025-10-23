@@ -141,6 +141,7 @@ The tool will use the objective's configured artifact type automatically.`,
             sourceDocumentIds.length > 0 ? sourceDocumentIds : undefined,
           dataStream,
           workspaceId,
+          chatId,
           objectiveId,
           session,
         });

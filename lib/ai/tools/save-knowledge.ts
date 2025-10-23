@@ -24,6 +24,7 @@ interface SaveKnowledgeProps {
   session: { user: { id: string } };
   dataStream: UIMessageStreamWriter<ChatMessage>;
   workspaceId: string;
+  chatId?: string;
   objectiveId: string;
 }
 
@@ -31,6 +32,7 @@ export const saveKnowledge = ({
   session,
   dataStream,
   workspaceId,
+  chatId,
   objectiveId,
 }: SaveKnowledgeProps) =>
   tool({
@@ -145,6 +147,7 @@ IMPORTANT:
             params.instruction || 'Generate knowledge summary from raw content',
           dataStream,
           workspaceId,
+          chatId,
           objectiveId,
           session,
         });

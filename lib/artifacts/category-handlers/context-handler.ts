@@ -103,12 +103,13 @@ export class ContextHandler implements CategoryHandler {
     const model = myProvider.languageModel('artifact-model');
 
     // Build stream config
-    const streamConfig = buildStreamConfig({
+    const streamConfig = await buildStreamConfig({
       model,
       system: systemPrompt,
       prompt: userPrompt,
       maxOutputTokens: 8192,
       temperature: 0.3, // Low temperature for consistent context generation
+      chatId: context.chatId,
     });
 
     // Process stream and return generated content
