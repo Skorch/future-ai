@@ -14,7 +14,7 @@ export interface ArtifactMetadata {
   clientKind: 'text';
   icon?: string; // lucide-react icon name for UI display
 
-  // Builder class for generating prompts (deprecated - handlers instantiate builders directly)
+  // Builder class for generating prompts
   builderClass?: new () => DocumentBuilder;
 
   // Agent guidance for when to use this artifact type

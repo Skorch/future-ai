@@ -54,18 +54,7 @@ DO NOT EVER genreate a migration manually
 - Guest user support through regex pattern matching
 
 ### Database Architecture
-- **Drizzle ORM** with PostgreSQL (Vercel Postgres)
-- Schema versioning with deprecated tables for backward compatibility
-- Key entities:
-  - `User` - User accounts with email/password
-  - `Chat` - Chat conversations with visibility settings
-  - `Message` - Messages with parts and attachments
-  - `Vote` - Message voting system
-  - `Document` (deprecated) - Old single-table document storage
-  - `Suggestion` - Document editing suggestions
-  - `Stream` - Chat streaming metadata
-  - `Workspace` - Multi-tenant isolation with domain support
-  - `Playbook` / `PlaybookStep` - Workflow guidance system
+ALWAYS check the schema.ts to verify your understanding of the current DB schame design
 
 ### Directory Structure
 ```
