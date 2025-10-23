@@ -53,9 +53,6 @@ IMPORTANT:
         .string()
         .uuid()
         .describe('ID of the raw knowledge document to summarize'),
-      documentType: z
-        .enum(['sales-call-summary', 'requirements-meeting-summary'])
-        .describe('Type of summary to generate'),
       instruction: z
         .string()
         .optional()
@@ -78,7 +75,6 @@ IMPORTANT:
     execute: async (params) => {
       logger.debug('Generating knowledge summary', {
         rawDocId: params.rawKnowledgeDocumentId,
-        type: params.documentType,
         objectiveId,
       });
 
@@ -139,7 +135,7 @@ IMPORTANT:
 
         // 6. Generate summary with streaming
         logger.info('Generating knowledge summary', {
-          type: params.documentType,
+          artifactType: artifactType.label,
           objective: objective.title,
         });
 
@@ -162,7 +158,7 @@ IMPORTANT:
             title: summaryTitle,
             content: summaryContent,
             category: 'knowledge',
-            documentType: params.documentType,
+            documentType: artifactType.label,
             metadata: {
               generatedFrom: params.rawKnowledgeDocumentId,
               generatedAt: new Date().toISOString(),
@@ -177,7 +173,7 @@ IMPORTANT:
 
         logger.info('Knowledge summary saved', {
           knowledgeDocId: knowledgeDoc.id,
-          type: params.documentType,
+          artifactType: artifactType.label,
         });
 
         // 8. Send document ID and finish signal to UI
