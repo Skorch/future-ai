@@ -4,6 +4,7 @@ import type { ArtifactType } from '@/lib/db/schema';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 
 interface ArtifactTypeTableProps {
@@ -11,6 +12,8 @@ interface ArtifactTypeTableProps {
 }
 
 export function ArtifactTypeTable({ artifactTypes }: ArtifactTypeTableProps) {
+  const router = useRouter();
+
   const truncateText = (text: string, maxLength: number) => {
     if (text.length <= maxLength) return text;
     return `${text.slice(0, maxLength)}...`;
@@ -60,7 +63,17 @@ export function ArtifactTypeTable({ artifactTypes }: ArtifactTypeTableProps) {
               key={artifactType.id}
               className="border-b last:border-b-0 hover:bg-muted/30 transition-colors"
             >
-              <td className="px-4 py-3 font-medium">{artifactType.title}</td>
+              <td className="px-4 py-3">
+                <Button
+                  variant="link"
+                  className="h-auto p-0 text-left font-medium justify-start"
+                  onClick={() =>
+                    router.push(`/admin/artifact-types/${artifactType.id}/edit`)
+                  }
+                >
+                  {artifactType.title}
+                </Button>
+              </td>
               <td className="px-4 py-3">
                 {getCategoryBadge(artifactType.category)}
               </td>

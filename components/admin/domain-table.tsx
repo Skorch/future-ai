@@ -4,6 +4,7 @@ import type { DomainWithRelations } from '@/lib/db/schema';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 
 interface DomainTableProps {
@@ -11,6 +12,8 @@ interface DomainTableProps {
 }
 
 export function DomainTable({ domains }: DomainTableProps) {
+  const router = useRouter();
+
   const truncateText = (text: string, maxLength: number) => {
     if (text.length <= maxLength) return text;
     return `${text.slice(0, maxLength)}...`;
@@ -46,7 +49,17 @@ export function DomainTable({ domains }: DomainTableProps) {
               key={domain.id}
               className="border-b last:border-b-0 hover:bg-muted/30 transition-colors"
             >
-              <td className="px-4 py-3 font-medium">{domain.title}</td>
+              <td className="px-4 py-3">
+                <Button
+                  variant="link"
+                  className="h-auto p-0 text-left font-medium justify-start"
+                  onClick={() =>
+                    router.push(`/admin/domains/${domain.id}/edit`)
+                  }
+                >
+                  {domain.title}
+                </Button>
+              </td>
               <td className="px-4 py-3 text-sm text-muted-foreground max-w-md">
                 {truncateText(domain.description, 100)}
               </td>
