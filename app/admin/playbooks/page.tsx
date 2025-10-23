@@ -7,9 +7,14 @@ export default async function PlaybooksPage() {
   const playbooks = await getAllPlaybooksWithDomains();
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-semibold">Playbooks</h2>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Playbook Management</h1>
+          <p className="text-muted-foreground mt-2">
+            Create and manage playbooks for guided workflows
+          </p>
+        </div>
         <Link href="/admin/playbooks/new">
           <Button>+ New Playbook</Button>
         </Link>

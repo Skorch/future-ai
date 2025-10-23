@@ -1,8 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import DataGrid, { type Column } from 'react-data-grid';
-import 'react-data-grid/lib/styles.css';
+import { useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -70,118 +68,104 @@ export function PlaybookTable({ playbooks, onUpdate }: PlaybookTableProps) {
     }
   };
 
-  const columns: Column<AdminPlaybook>[] = useMemo(
-    () => [
-      {
-        key: 'name',
-        name: 'Name',
-        resizable: true,
-        renderCell: ({ row }) => (
-          <Button
-            variant="link"
-            className="h-auto p-0 text-left font-normal justify-start"
-            onClick={() => router.push(`/admin/playbooks/${row.id}/edit`)}
-          >
-            {row.name}
-          </Button>
-        ),
-      },
-      {
-        key: 'description',
-        name: 'Description',
-        resizable: true,
-        renderCell: ({ row }) => (
-          <span className="text-sm text-muted-foreground line-clamp-2">
-            {row.description || '—'}
-          </span>
-        ),
-      },
-      {
-        key: 'domains',
-        name: 'Domains',
-        renderCell: ({ row }: { row: AdminPlaybook }) => (
-          <div className="flex flex-wrap gap-1">
-            {row.domains.map((domain) => (
-              <Badge key={domain.id} variant="secondary">
-                {domain.title}
-              </Badge>
-            ))}
-          </div>
-        ),
-      },
-      {
-        key: 'createdAt',
-        name: 'Created',
-        width: 150,
-        renderCell: ({ row }) => (
-          <span className="text-sm">
-            {formatDistanceToNow(new Date(row.createdAt), {
-              addSuffix: true,
-            })}
-          </span>
-        ),
-      },
-      {
-        key: 'steps',
-        name: 'Steps',
-        width: 100,
-        renderCell: ({ row }: { row: AdminPlaybook }) => (
-          <span className="text-sm">{row.steps.length}</span>
-        ),
-      },
-      {
-        key: 'actions',
-        name: 'Actions',
-        width: 80,
-        renderCell: ({ row }) => (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="size-8 p-0">
-                <MoreHorizontal className="size-4" />
-                <span className="sr-only">Open menu</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onClick={() => router.push(`/admin/playbooks/${row.id}/edit`)}
-              >
-                <Pencil className="mr-2 size-4" />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => {
-                  setPlaybookToDelete(row);
-                  setDeleteDialogOpen(true);
-                }}
-                className="text-destructive"
-              >
-                <Trash2 className="mr-2 size-4" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ),
-      },
-    ],
-    [router],
-  );
-
-  const rowHeight = 52;
-  const headerHeight = 40;
-  const gridHeight = Math.min(headerHeight + playbooks.length * rowHeight, 600);
+  const truncateText = (text: string, maxLength: number) => {
+    if (text.length <= maxLength) return text;
+    return `${text.slice(0, maxLength)}...`;
+  };
 
   return (
     <>
-      <div className="rdg-light dark:rdg-dark">
-        <DataGrid
-          columns={columns}
-          rows={playbooks}
-          rowKeyGetter={(row) => row.id}
-          style={{ height: gridHeight }}
-          className="border rounded-md"
-          rowHeight={rowHeight}
-          headerRowHeight={headerHeight}
-        />
+      <div className="rounded-md border overflow-hidden">
+        <table className="w-full">
+          <thead className="bg-muted/50">
+            <tr className="border-b">
+              <th className="px-4 py-3 text-left text-sm font-medium">Name</th>
+              <th className="px-4 py-3 text-left text-sm font-medium">
+                Description
+              </th>
+              <th className="px-4 py-3 text-left text-sm font-medium">
+                Domains
+              </th>
+              <th className="px-4 py-3 text-left text-sm font-medium">Steps</th>
+              <th className="px-4 py-3 text-left text-sm font-medium">
+                Created
+              </th>
+              <th className="px-4 py-3 text-left text-sm font-medium">
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {playbooks.map((playbook) => (
+              <tr
+                key={playbook.id}
+                className="border-b last:border-b-0 hover:bg-muted/30 transition-colors"
+              >
+                <td className="px-4 py-3 font-medium">
+                  <Button
+                    variant="link"
+                    className="h-auto p-0 text-left font-medium justify-start"
+                    onClick={() =>
+                      router.push(`/admin/playbooks/${playbook.id}/edit`)
+                    }
+                  >
+                    {playbook.name}
+                  </Button>
+                </td>
+                <td className="px-4 py-3 text-sm text-muted-foreground max-w-md">
+                  {playbook.description
+                    ? truncateText(playbook.description, 100)
+                    : '—'}
+                </td>
+                <td className="px-4 py-3">
+                  <div className="flex flex-wrap gap-1">
+                    {playbook.domains.map((domain) => (
+                      <Badge key={domain.id} variant="secondary">
+                        {domain.title}
+                      </Badge>
+                    ))}
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-sm">{playbook.steps.length}</td>
+                <td className="px-4 py-3 text-sm text-muted-foreground">
+                  {formatDistanceToNow(new Date(playbook.createdAt), {
+                    addSuffix: true,
+                  })}
+                </td>
+                <td className="px-4 py-3">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="size-8 p-0">
+                        <MoreHorizontal className="size-4" />
+                        <span className="sr-only">Open menu</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={() =>
+                          router.push(`/admin/playbooks/${playbook.id}/edit`)
+                        }
+                      >
+                        <Pencil className="mr-2 size-4" />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setPlaybookToDelete(playbook);
+                          setDeleteDialogOpen(true);
+                        }}
+                        className="text-destructive"
+                      >
+                        <Trash2 className="mr-2 size-4" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
