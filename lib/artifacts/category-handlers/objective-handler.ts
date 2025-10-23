@@ -100,22 +100,30 @@ export class ObjectiveHandler implements CategoryHandler {
     currentVersion?: string,
     sourceContent?: string,
   ): string {
-    // Start with instruction or default
-    let prompt = instruction || 'Generate the document';
+    const parts: string[] = [];
 
-    // Add source content if provided
+    // 1. Add instruction
+    parts.push(
+      `## User Instructions\n\n${instruction || 'Generate the document'}`,
+    );
+
+    // 2. Add source materials (if provided)
     if (sourceContent) {
-      prompt += `\n\n## Source Materials\n${sourceContent}`;
+      parts.push(`## Source Materials\n\n${sourceContent}`);
     }
 
-    // Add current version with proper incremental update guidance
+    // 3. Add current version and guidance
     if (currentVersion) {
-      prompt += `\n\n## Current Version\n\`\`\`\n${currentVersion}\n\`\`\`\n\nMake only the specific changes requested. Preserve all existing valuable content unless explicitly asked to modify it. This is an incremental update, not a rewrite.`;
+      parts.push(`## Current Version\n\n${currentVersion}`);
+      parts.push(
+        'Make only the specific changes requested. Preserve all existing valuable content unless explicitly asked to modify it. This is an incremental update, not a rewrite.',
+      );
     } else {
-      prompt +=
-        '\n\nGenerate a comprehensive initial version using all available context and source materials.';
+      parts.push(
+        'Generate a comprehensive initial version using all available context and source materials.',
+      );
     }
 
-    return prompt;
+    return parts.join('\n\n');
   }
 }

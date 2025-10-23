@@ -147,27 +147,29 @@ export class ContextHandler implements CategoryHandler {
     instruction?: string,
     currentVersion?: string,
   ): string {
-    let prompt = '';
+    const parts: string[] = [];
 
-    // Add current version if it exists
-    if (currentVersion) {
-      prompt += `## Current Context\n\n${currentVersion}\n\n`;
-    }
-
-    // Add instruction
+    // 1. Add instruction (if provided)
     if (instruction) {
-      prompt += `## Update Instructions\n\n${instruction}\n\n`;
+      parts.push(`## User Instructions\n\n${instruction}`);
     }
 
-    // Add generation guidance
+    // 2. Add current version (if exists)
     if (currentVersion) {
-      prompt +=
-        'Make only the specific changes requested. Preserve all existing valuable content unless explicitly asked to modify it. This is an incremental update, not a rewrite.\n\n';
-    } else {
-      prompt +=
-        'Generate a comprehensive initial version using all available context and source materials.\n\n';
+      parts.push(`## Current Context\n\n${currentVersion}`);
     }
 
-    return prompt;
+    // 3. Add generation guidance
+    if (currentVersion) {
+      parts.push(
+        'Make only the specific changes requested. Preserve all existing valuable content unless explicitly asked to modify it. This is an incremental update, not a rewrite.',
+      );
+    } else {
+      parts.push(
+        'Generate a comprehensive initial version using all available context and source materials.',
+      );
+    }
+
+    return parts.join('\n\n');
   }
 }
