@@ -1,17 +1,9 @@
 import { getLogger } from '@/lib/logger';
 
 const logger = getLogger('providers');
-import { customProvider, type LanguageModel } from 'ai';
+import type { LanguageModel } from 'ai';
 import { createAnthropic } from '@ai-sdk/anthropic';
-import { createOpenAI } from '@ai-sdk/openai';
-import {
-  artifactModel,
-  chatModel,
-  reasoningModel,
-  titleModel,
-} from './models.test';
 import { chatModels } from './models';
-import { isTestEnvironment } from '../constants';
 
 // Create Anthropic provider instance - lazy initialization to ensure env vars are loaded
 let anthropicInstance: ReturnType<typeof createAnthropic> | null = null;
@@ -52,23 +44,6 @@ const getAnthropic = () => {
   return anthropicInstance;
 };
 
-// Create OpenAI provider instance - lazy initialization for reranking only
-let openaiInstance: ReturnType<typeof createOpenAI> | null = null;
-
-const getOpenAI = () => {
-  if (!openaiInstance) {
-    logger.info(
-      '[Providers] Initializing OpenAI with API key:',
-      process.env.OPENAI_API_KEY ? 'present' : 'missing',
-    );
-
-    openaiInstance = createOpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
-  }
-  return openaiInstance;
-};
-
 // Build language models from our model definitions
 const buildLanguageModels = () => {
   // biome-ignore lint/suspicious/noExplicitAny: Language models have varying types
@@ -90,23 +65,10 @@ const buildLanguageModels = () => {
   // Add title and artifact models using Claude
   // Using Haiku for title generation (fast and cheap)
   models['title-model'] = getAnthropic()('claude-3-5-haiku-latest');
-  // Using Sonnet 4 for reranking (reliable structured outputs) - kept as fallback
+  // Using Sonnet 4 for reranking (reliable structured outputs)
   models['reranker-model'] = getAnthropic()('claude-sonnet-4-5-20250929');
   // Using Sonnet 4 for artifact generation (best balance of speed and detailed output)
   models['artifact-model'] = getAnthropic()('claude-sonnet-4-5-20250929');
-
-  // Add OpenAI models for reranking ONLY - not exposed to chat interface
-  // These models are exclusively for tool use, particularly the LLM reranker
-
-  // GPT-5 family
-  models['openai-gpt-5-reranker'] = getOpenAI()('gpt-5');
-  models['openai-gpt-5-mini-reranker'] = getOpenAI()('gpt-5-mini');
-  models['openai-gpt-5-nano-reranker'] = getOpenAI()('gpt-5-nano');
-
-  // GPT-4.1 family
-  models['openai-gpt-4.1-reranker'] = getOpenAI()('gpt-4.1');
-  models['openai-gpt-4.1-mini-reranker'] = getOpenAI()('gpt-4.1-mini');
-  models['openai-gpt-4.1-nano-reranker'] = getOpenAI()('gpt-4.1-nano');
 
   return models;
 };
@@ -121,26 +83,16 @@ const getLanguageModels = () => {
   return builtModels;
 };
 
-export const myProvider = isTestEnvironment
-  ? customProvider({
-      languageModels: {
-        'claude-sonnet-4': chatModel,
-        'claude-sonnet-4-thinking': reasoningModel,
-        'claude-opus-4-1': chatModel,
-        'claude-opus-4-1-thinking': reasoningModel,
-        'title-model': titleModel,
-        'artifact-model': artifactModel,
-      },
-    })
-  : {
-      languageModel: (modelId: string) => {
-        logger.debug(`[Providers] Requesting model: ${modelId}`);
-        const models = getLanguageModels();
-        const model = models[modelId];
-        if (!model) {
-          logger.error(`[Providers] Available models:`, Object.keys(models));
-          throw new Error(`Model ${modelId} not found in provider`);
-        }
-        return model;
-      },
-    };
+// Provider for production - uses real Anthropic models
+export const myProvider = {
+  languageModel: (modelId: string) => {
+    logger.debug(`[Providers] Requesting model: ${modelId}`);
+    const models = getLanguageModels();
+    const model = models[modelId];
+    if (!model) {
+      logger.error(`[Providers] Available models:`, Object.keys(models));
+      throw new Error(`Model ${modelId} not found in provider`);
+    }
+    return model;
+  },
+};

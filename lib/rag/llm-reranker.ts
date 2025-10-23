@@ -62,18 +62,8 @@ export interface TopicGroup {
   matchIds: string[];
 }
 
-// Configuration for OpenAI reranking - using GPT-4.1-mini for optimal performance
-const OPENAI_RERANK_CONFIG = {
-  provider: 'openai' as const,
-  modelFamily: 'gpt-4.1' as const, // Using GPT-4.1 family
-  modelVariant: 'mini' as const, // Using mini for better balance of speed and quality
-  textVerbosity: 'low' as const,
-  reasoning_effort: 'low' as const, // Reduced to 'low' to disable reasoning overhead
-  reasoningSummary: false, // No reasoning summary per user preference
-} as const;
-
-// Set to true to use OpenAI for reranking, false to use Anthropic
-const USE_OPENAI_FOR_RERANKING = true;
+// Use Claude (Anthropic) for reranking
+const USE_OPENAI_FOR_RERANKING = false;
 
 const systemPrompt = `You are a JSON API that analyzes search results. You MUST return ONLY valid JSON output with no additional text.
 
@@ -116,7 +106,7 @@ export async function rerankWithLLM(
 
   // Log which provider is being used
   logger.debug(
-    `Using ${USE_OPENAI_FOR_RERANKING ? `OpenAI GPT-5-${OPENAI_RERANK_CONFIG.modelVariant}` : 'Anthropic Claude'} for reranking`,
+    `Using ${USE_OPENAI_FOR_RERANKING ? 'OpenAI' : 'Anthropic Claude'} for reranking`,
   );
   perfLog('Initialized');
 
@@ -193,25 +183,10 @@ RULES:
 
     perfLog('Prompt prepared');
 
-    // Generate structured output with OpenAI (default) or Claude based on const configuration
-
-    // Use configuration const to determine provider
-    const modelToUse = USE_OPENAI_FOR_RERANKING
-      ? `openai-${OPENAI_RERANK_CONFIG.modelFamily}-${OPENAI_RERANK_CONFIG.modelVariant}-reranker` // Build model name from family and variant
-      : options.model || 'reranker-model'; // Fallback to Claude
+    // Use Claude for reranking
+    const modelToUse = options.model || 'reranker-model';
 
     logger.debug(`Model selected: ${modelToUse}`);
-
-    // Build provider options for OpenAI if needed
-    const providerOptions = USE_OPENAI_FOR_RERANKING
-      ? {
-          openai: {
-            textVerbosity: OPENAI_RERANK_CONFIG.textVerbosity,
-            reasoning_effort: OPENAI_RERANK_CONFIG.reasoning_effort,
-            // No reasoning summary based on configuration
-          },
-        }
-      : undefined;
 
     perfLog('Config prepared');
 
@@ -235,9 +210,6 @@ RULES:
         prompt,
         schema: LLMRerankSchema,
         temperature: 0.1, // Very low temperature for consistency
-        ...(providerOptions && {
-          experimental_providerMetadata: providerOptions,
-        }),
       });
 
       perfLog('After generateObject');
