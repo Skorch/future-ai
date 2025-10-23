@@ -36,11 +36,9 @@
     "rag:test": "tsx scripts/rag-cli.ts"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^2.0.17",
-    "@ai-sdk/openai": "^2.0.32",
+    "@ai-sdk/anthropic": "^2.0.37",
     "@ai-sdk/provider": "2.0.0",
-    "@ai-sdk/react": "2.0.26",
-    "@ai-sdk/xai": "2.0.13",
+    "@ai-sdk/react": "2.0.77",
     "@clerk/backend": "^2.15.0",
     "@clerk/nextjs": "^6.32.2",
     "@codemirror/lang-javascript": "^6.2.3",
@@ -81,7 +79,7 @@
     "@vercel/analytics": "^1.5.0",
     "@vercel/otel": "^1.12.0",
     "@vercel/postgres": "^0.10.0",
-    "ai": "5.0.26",
+    "ai": "5.0.77",
     "chalk": "^5.6.2",
     "class-variance-authority": "^0.7.1",
     "classnames": "^2.5.1",
