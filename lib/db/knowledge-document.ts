@@ -134,6 +134,39 @@ export async function getKnowledgeDocumentById(
   }
 }
 
+/**
+ * Get knowledge document by source knowledge document ID
+ * Returns the most recent summary created from a given raw document
+ */
+export async function getKnowledgeDocumentBySourceId(
+  sourceKnowledgeDocumentId: string,
+  objectiveId: string,
+): Promise<KnowledgeDocument | null> {
+  try {
+    const [doc] = await db
+      .select()
+      .from(knowledgeDocument)
+      .where(
+        and(
+          eq(
+            knowledgeDocument.sourceKnowledgeDocumentId,
+            sourceKnowledgeDocumentId,
+          ),
+          eq(knowledgeDocument.objectiveId, objectiveId),
+        ),
+      )
+      .orderBy(desc(knowledgeDocument.createdAt))
+      .limit(1);
+
+    return (doc as KnowledgeDocument) || null;
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get knowledge document by source id',
+    );
+  }
+}
+
 export async function updateKnowledgeDocument(
   id: string,
   data: {

@@ -133,6 +133,46 @@ export async function getObjectiveById(
   }
 }
 
+/**
+ * Get objective with all artifact type relations
+ * Used when tools need access to artifact type configurations
+ */
+export async function getObjectiveWithArtifactTypes(
+  objectiveId: string,
+  userId: string,
+) {
+  try {
+    const result = await db.query.objective.findFirst({
+      where: and(eq(objective.id, objectiveId)),
+      with: {
+        workspace: {
+          columns: { userId: true, deletedAt: true },
+        },
+        summaryArtifactType: true,
+        objectiveDocumentArtifactType: true,
+        objectiveContextArtifactType: true,
+        objectiveActionsArtifactType: true,
+      },
+    });
+
+    // Verify ownership and workspace not deleted
+    if (
+      !result ||
+      result.workspace.userId !== userId ||
+      result.workspace.deletedAt
+    ) {
+      return undefined;
+    }
+
+    return result;
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get objective with artifact types',
+    );
+  }
+}
+
 export async function updateObjective(
   objectiveId: string,
   userId: string,
