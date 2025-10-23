@@ -16,6 +16,8 @@ import {
 } from '@/lib/ai/prompts/workspace-context-generation';
 import { myProvider } from '@/lib/ai/providers';
 import { WorkspaceContextBuilder } from '@/lib/ai/prompts/builders';
+import { CORE_SYSTEM_PROMPT } from '@/lib/ai/prompts/system';
+import { getCurrentContext } from '@/lib/ai/prompts/current-context';
 
 const logger = getLogger('WorkspaceContext');
 
@@ -116,11 +118,17 @@ export async function generateWorkspaceContext({
 
     // Build system prompt using builder
     const builder = new WorkspaceContextBuilder();
-    const systemPrompt = builder.generateContextPrompt(
+    const domainPrompt = builder.generateContextPrompt(
       workspaceWithRelations.workspaceContextArtifactType,
       domainRecord,
-      user,
     );
+
+    // Manually prepend core system layers (since we're not using buildStreamConfig)
+    const fullSystemPrompt = `${CORE_SYSTEM_PROMPT}
+
+${getCurrentContext({ user })}
+
+${domainPrompt}`;
 
     // Build user prompt with current context and observations
     const userPrompt = `
@@ -156,7 +164,7 @@ Ensure:
       model: myProvider.languageModel('title-model'), // claude-3-5-haiku for speed
       schema: WorkspaceContextSchema,
       mode: 'json',
-      system: systemPrompt,
+      system: fullSystemPrompt,
       prompt: userPrompt,
       temperature: 0.2, // Low temperature for consistency
     });

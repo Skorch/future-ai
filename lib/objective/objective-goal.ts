@@ -13,6 +13,8 @@ import {
 import { getWorkspaceById } from '@/lib/workspace/queries';
 import { myProvider } from '@/lib/ai/providers';
 import { ObjectiveContextBuilder } from '@/lib/ai/prompts/builders';
+import { CORE_SYSTEM_PROMPT } from '@/lib/ai/prompts/system';
+import { getCurrentContext } from '@/lib/ai/prompts/current-context';
 import {
   getCurrentVersionGoal,
   updateObjectiveGoal,
@@ -116,11 +118,17 @@ export async function generateObjectiveGoal({
 
     // Build system prompt using builder
     const builder = new ObjectiveContextBuilder();
-    const systemPrompt = builder.generateContextPrompt(
+    const domainPrompt = builder.generateContextPrompt(
       objectiveWithRelations.objectiveContextArtifactType,
       domainRecord,
-      user,
     );
+
+    // Manually prepend core system layers (since we're not using buildStreamConfig)
+    const fullSystemPrompt = `${CORE_SYSTEM_PROMPT}
+
+${getCurrentContext({ user })}
+
+${domainPrompt}`;
 
     // Build user prompt with current goal and observations
     const userPrompt = `
@@ -148,7 +156,7 @@ Update the objective goal by incorporating these new observations. Focus on THIS
       model: myProvider.languageModel('title-model'), // claude-3-5-haiku for speed
       schema: ObjectiveContextSchema,
       mode: 'json',
-      system: systemPrompt,
+      system: fullSystemPrompt,
       prompt: userPrompt,
       temperature: 0.2,
     });
