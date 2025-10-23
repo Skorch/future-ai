@@ -4,6 +4,7 @@ import { unstable_cache } from 'next/cache';
 import { db } from '@/lib/db/queries';
 import { artifactType, type ArtifactType } from '../schema';
 import { eq } from 'drizzle-orm';
+import { getObjectiveById } from '../objective';
 
 // Cache tag for invalidation
 const CACHE_TAG = 'artifact-types';
@@ -55,4 +56,61 @@ export async function getArtifactTypesByCategory(
 ): Promise<ArtifactType[]> {
   const all = await getAllArtifactTypes();
   return all.filter((at) => at.category === category);
+}
+
+/**
+ * Fetch artifact type by label (leverages cache, filtered in-memory)
+ */
+export async function getArtifactTypeByLabel(
+  label: string,
+): Promise<ArtifactType | null> {
+  const all = await getAllArtifactTypes();
+  return all.find((at) => at.label === label) || null;
+}
+
+/**
+ * Fetch all 4 artifact types for an objective (document, actions, summary, context)
+ */
+export async function getArtifactTypesForObjective(
+  objectiveId: string,
+  userId: string,
+): Promise<{
+  document: ArtifactType | null;
+  actions: ArtifactType | null;
+  summary: ArtifactType | null;
+  context: ArtifactType | null;
+}> {
+  const objective = await getObjectiveById(objectiveId, userId);
+
+  if (!objective) {
+    return {
+      document: null,
+      actions: null,
+      summary: null,
+      context: null,
+    };
+  }
+
+  // Query all 4 artifact types in parallel
+  const [document, actions, summary, context] = await Promise.all([
+    objective.objectiveDocumentArtifactTypeId
+      ? getArtifactTypeById(objective.objectiveDocumentArtifactTypeId)
+      : Promise.resolve(null),
+    objective.objectiveActionsArtifactTypeId
+      ? getArtifactTypeById(objective.objectiveActionsArtifactTypeId)
+      : Promise.resolve(null),
+    objective.summaryArtifactTypeId
+      ? getArtifactTypeById(objective.summaryArtifactTypeId)
+      : Promise.resolve(null),
+    objective.objectiveContextArtifactTypeId
+      ? getArtifactTypeById(objective.objectiveContextArtifactTypeId)
+      : Promise.resolve(null),
+  ]);
+
+  return {
+    document,
+    actions,
+    summary,
+    context,
+  };
 }

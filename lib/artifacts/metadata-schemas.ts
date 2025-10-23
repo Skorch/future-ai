@@ -1,12 +1,13 @@
 import { z } from 'zod';
-import type { DocumentType } from './index';
 
 /**
  * Metadata schemas for each document type.
  * These schemas define the fields that can be provided when creating documents.
+ *
+ * @deprecated These hardcoded schemas are being replaced by database-driven configuration.
  */
 export const DOCUMENT_METADATA_SCHEMAS: Record<
-  DocumentType,
+  string,
   // biome-ignore lint/suspicious/noExplicitAny: Zod schema types require generic any
   z.ZodObject<any>
 > = {
@@ -24,7 +25,7 @@ export const DOCUMENT_METADATA_SCHEMAS: Record<
 /**
  * Get the metadata schema for a specific document type.
  */
-export function getMetadataSchema(docType: DocumentType) {
+export function getMetadataSchema(docType: string) {
   return DOCUMENT_METADATA_SCHEMAS[docType] || z.object({});
 }
 
@@ -32,7 +33,7 @@ export function getMetadataSchema(docType: DocumentType) {
  * Get default values for a document type's metadata.
  */
 // biome-ignore lint/suspicious/noExplicitAny: Metadata values can be of any type
-export function getDefaultMetadata(docType: DocumentType): Record<string, any> {
+export function getDefaultMetadata(docType: string): Record<string, any> {
   const schema = getMetadataSchema(docType);
   try {
     return schema.parse({});
