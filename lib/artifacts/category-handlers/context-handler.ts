@@ -165,12 +165,15 @@ export class ContextHandler implements CategoryHandler {
     // Add instruction
     if (instruction) {
       prompt += `## Update Instructions\n\n${instruction}\n\n`;
-    } else if (currentVersion) {
+    }
+
+    // Add generation guidance
+    if (currentVersion) {
       prompt +=
-        '## Task\n\nReview and refine the current context, ensuring all information is accurate, up-to-date, and well-organized.\n\n';
+        'Make only the specific changes requested. Preserve all existing valuable content unless explicitly asked to modify it. This is an incremental update, not a rewrite.\n\n';
     } else {
       prompt +=
-        '## Task\n\nGenerate an initial context document based on available information.\n\n';
+        'Generate a comprehensive initial version using all available context and source materials.\n\n';
     }
 
     return prompt;

@@ -99,9 +99,12 @@ export class SummaryHandler implements CategoryHandler {
   ): string {
     let prompt = instruction || 'Generate the summary based on the context.';
 
-    // If updating existing content, append current version as source
+    // Add appropriate generation guidance
     if (currentVersion) {
-      prompt += `\n\n## Current Version (for reference)\n\n${currentVersion}`;
+      prompt += `\n\n## Current Version\n\n${currentVersion}\n\nMake only the specific changes requested. Preserve all existing valuable content unless explicitly asked to modify it. This is an incremental update, not a rewrite.`;
+    } else {
+      prompt +=
+        '\n\nGenerate a comprehensive initial version using all available context and source materials.';
     }
 
     return prompt;

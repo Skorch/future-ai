@@ -108,20 +108,16 @@ export class ActionsHandler implements CategoryHandler {
       parts.push(`User Instruction:\n${instruction}`);
     }
 
-    // Add current state context if this is an update
+    // Add appropriate generation guidance
     if (currentVersion) {
+      parts.push(`\nCurrent Objective Actions:\n${currentVersion}`);
       parts.push(
-        `\nCurrent Objective Actions (for context):\n${currentVersion}`,
+        'Make only the specific changes requested. Preserve all existing valuable content unless explicitly asked to modify it. This is an incremental update, not a rewrite.',
       );
+    } else if (parts.length === 0) {
+      // Default for initial generation
       parts.push(
-        '\nNote: The "Current Objective Actions" in the system prompt is the authoritative version. Use this version only for additional context if needed.',
-      );
-    }
-
-    // Default prompt if nothing provided
-    if (parts.length === 0) {
-      parts.push(
-        'Analyze the new knowledge and update the objective actions accordingly.',
+        'Generate a comprehensive initial version using all available context and source materials.',
       );
     }
 

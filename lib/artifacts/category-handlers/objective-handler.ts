@@ -107,9 +107,12 @@ export class ObjectiveHandler implements CategoryHandler {
       prompt += `\n\n## Source Materials\n${sourceContent}`;
     }
 
-    // Add current version if exists
+    // Add current version with proper incremental update guidance
     if (currentVersion) {
-      prompt += `\n\n## Current Version\n\`\`\`\n${currentVersion}\n\`\`\`\n\nUpdate based on instruction above.`;
+      prompt += `\n\n## Current Version\n\`\`\`\n${currentVersion}\n\`\`\`\n\nMake only the specific changes requested. Preserve all existing valuable content unless explicitly asked to modify it. This is an incremental update, not a rewrite.`;
+    } else {
+      prompt +=
+        '\n\nGenerate a comprehensive initial version using all available context and source materials.';
     }
 
     return prompt;
