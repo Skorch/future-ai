@@ -21,10 +21,22 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Pencil, Trash2, Copy } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { deletePlaybook } from '@/app/admin/playbooks/actions';
+import {
+  deletePlaybook,
+  clonePlaybookAction,
+} from '@/app/admin/playbooks/actions';
 import type { AdminPlaybook } from '@/lib/db/queries/admin/playbooks';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 interface PlaybookTableProps {
   playbooks: AdminPlaybook[];
@@ -37,6 +49,11 @@ export function PlaybookTable({ playbooks, onUpdate }: PlaybookTableProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [playbookToDelete, setPlaybookToDelete] =
     useState<AdminPlaybook | null>(null);
+  const [cloneDialogOpen, setCloneDialogOpen] = useState(false);
+  const [playbookToClone, setPlaybookToClone] = useState<AdminPlaybook | null>(
+    null,
+  );
+  const [cloneName, setCloneName] = useState('');
 
   const handleDelete = async () => {
     if (!playbookToDelete) return;
@@ -65,6 +82,37 @@ export function PlaybookTable({ playbooks, onUpdate }: PlaybookTableProps) {
     } finally {
       setDeleteDialogOpen(false);
       setPlaybookToDelete(null);
+    }
+  };
+
+  const handleClone = async () => {
+    if (!playbookToClone || !cloneName.trim()) return;
+
+    try {
+      const result = await clonePlaybookAction(playbookToClone.id, cloneName);
+      if (result.success) {
+        toast({
+          title: 'Playbook cloned',
+          description: `${cloneName} has been created.`,
+        });
+        onUpdate();
+      } else {
+        toast({
+          title: 'Error',
+          description: 'Failed to clone playbook.',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'An error occurred while cloning the playbook.',
+        variant: 'destructive',
+      });
+    } finally {
+      setCloneDialogOpen(false);
+      setPlaybookToClone(null);
+      setCloneName('');
     }
   };
 
@@ -151,6 +199,16 @@ export function PlaybookTable({ playbooks, onUpdate }: PlaybookTableProps) {
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => {
+                          setPlaybookToClone(playbook);
+                          setCloneName(`Copy of ${playbook.name}`);
+                          setCloneDialogOpen(true);
+                        }}
+                      >
+                        <Copy className="mr-2 size-4" />
+                        Clone
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => {
                           setPlaybookToDelete(playbook);
                           setDeleteDialogOpen(true);
                         }}
@@ -183,6 +241,33 @@ export function PlaybookTable({ playbooks, onUpdate }: PlaybookTableProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={cloneDialogOpen} onOpenChange={setCloneDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Clone Playbook</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="clone-name">Playbook Name</Label>
+              <Input
+                id="clone-name"
+                value={cloneName}
+                onChange={(e) => setCloneName(e.target.value)}
+                placeholder="Enter new playbook name"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCloneDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleClone} disabled={!cloneName.trim()}>
+              Clone Playbook
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

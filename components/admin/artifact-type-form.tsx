@@ -36,9 +36,17 @@ import {
   createArtifactTypeAction,
 } from '@/app/admin/artifact-types/actions';
 import type { ArtifactType } from '@/lib/db/schema';
+import { ArtifactCategory } from '@/lib/db/schema';
+import { getCategoryDisplayName } from '@/lib/artifacts/utils';
 
 const artifactTypeSchema = z.object({
-  category: z.enum(['objective', 'summary', 'objectiveActions', 'context']),
+  category: z.enum([
+    'objective',
+    'summary',
+    'objectiveActions',
+    'workspaceContext',
+    'objectiveContext',
+  ]),
   label: z.string().min(1, 'Label is required'),
   title: z.string().min(1, 'Title is required'),
   description: z.string().min(1, 'Description is required'),
@@ -351,10 +359,21 @@ export function ArtifactTypeForm({
             <SelectValue placeholder="Select category" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="objective">Objective</SelectItem>
-            <SelectItem value="summary">Summary</SelectItem>
-            <SelectItem value="objectiveActions">Objective Actions</SelectItem>
-            <SelectItem value="context">Context</SelectItem>
+            <SelectItem value={ArtifactCategory.OBJECTIVE}>
+              {getCategoryDisplayName(ArtifactCategory.OBJECTIVE)}
+            </SelectItem>
+            <SelectItem value={ArtifactCategory.SUMMARY}>
+              {getCategoryDisplayName(ArtifactCategory.SUMMARY)}
+            </SelectItem>
+            <SelectItem value={ArtifactCategory.OBJECTIVE_ACTIONS}>
+              {getCategoryDisplayName(ArtifactCategory.OBJECTIVE_ACTIONS)}
+            </SelectItem>
+            <SelectItem value={ArtifactCategory.WORKSPACE_CONTEXT}>
+              {getCategoryDisplayName(ArtifactCategory.WORKSPACE_CONTEXT)}
+            </SelectItem>
+            <SelectItem value={ArtifactCategory.OBJECTIVE_CONTEXT}>
+              {getCategoryDisplayName(ArtifactCategory.OBJECTIVE_CONTEXT)}
+            </SelectItem>
           </SelectContent>
         </Select>
         {mode === 'edit' && (

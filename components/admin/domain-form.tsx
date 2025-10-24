@@ -36,6 +36,7 @@ import {
   createDomainAction,
 } from '@/app/admin/domains/actions';
 import type { DomainWithRelations, ArtifactType } from '@/lib/db/schema';
+import { ArtifactCategory } from '@/lib/db/schema';
 
 const domainSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -62,13 +63,19 @@ export function DomainForm({ domain, artifactTypes }: DomainFormProps) {
 
   // Filter artifact types by category
   const objectiveTypes = artifactTypes.filter(
-    (at) => at.category === 'objective',
+    (at) => at.category === ArtifactCategory.OBJECTIVE,
   );
-  const summaryTypes = artifactTypes.filter((at) => at.category === 'summary');
+  const summaryTypes = artifactTypes.filter(
+    (at) => at.category === ArtifactCategory.SUMMARY,
+  );
   const objectiveActionsTypes = artifactTypes.filter(
-    (at) => at.category === 'objectiveActions',
+    (at) => at.category === ArtifactCategory.OBJECTIVE_ACTIONS,
   );
-  const contextTypes = artifactTypes.filter((at) => at.category === 'context');
+  const contextTypes = artifactTypes.filter(
+    (at) =>
+      at.category === ArtifactCategory.WORKSPACE_CONTEXT ||
+      at.category === ArtifactCategory.OBJECTIVE_CONTEXT,
+  );
 
   const {
     register,
