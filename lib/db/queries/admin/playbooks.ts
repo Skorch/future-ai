@@ -337,6 +337,69 @@ export async function updatePlaybook(
 }
 
 /**
+ * Clone a playbook with all steps and domain associations
+ * Uses transaction to ensure atomicity
+ */
+export async function clonePlaybook(
+  sourceId: string,
+  newName: string,
+): Promise<AdminPlaybook> {
+  const result = await db.transaction(async (tx) => {
+    // Load source playbook with all its data
+    const sourcePlaybook = await getPlaybookWithDomains(sourceId);
+    if (!sourcePlaybook) {
+      throw new Error(`Source playbook with id ${sourceId} not found`);
+    }
+
+    // Create new playbook with copied metadata
+    const [newPlaybook] = await tx
+      .insert(playbook)
+      .values({
+        name: newName,
+        description: sourcePlaybook.description,
+        whenToUse: sourcePlaybook.whenToUse,
+      })
+      .returning();
+
+    // Copy domain associations
+    if (sourcePlaybook.domains.length > 0) {
+      await tx.insert(playbookDomain).values(
+        sourcePlaybook.domains.map((domain) => ({
+          playbookId: newPlaybook.id,
+          domainId: domain.id,
+        })),
+      );
+    }
+
+    // Copy steps with same sequence and instructions
+    if (sourcePlaybook.steps.length > 0) {
+      await tx.insert(playbookStep).values(
+        sourcePlaybook.steps.map((step) => ({
+          playbookId: newPlaybook.id,
+          sequence: step.sequence,
+          instruction: step.instruction,
+          toolCall: step.toolCall,
+          condition: step.condition,
+        })),
+      );
+    }
+
+    return newPlaybook.id;
+  });
+
+  // Invalidate cache
+  revalidateTag(CACHE_TAG);
+
+  // Fetch and return complete cloned playbook with domains and steps
+  const clonedPlaybook = await getPlaybookWithDomains(result);
+  if (!clonedPlaybook) {
+    throw new Error('Failed to clone playbook');
+  }
+
+  return clonedPlaybook;
+}
+
+/**
  * Delete a playbook and all associated data
  * Cascade deletes will handle junction table and steps
  */
