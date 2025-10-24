@@ -37,11 +37,19 @@ import {
 } from '@/app/admin/domains/actions';
 import type { DomainWithRelations, ArtifactType } from '@/lib/db/schema';
 import { ArtifactCategory } from '@/lib/db/schema';
+import { WORKSPACE_CONTEXT_MAX_LENGTH } from '@/lib/constants/limits';
 
 const domainSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().min(1, 'Description is required'),
   systemPrompt: z.string().min(1, 'System prompt is required'),
+  defaultWorkspaceContext: z
+    .string()
+    .max(
+      WORKSPACE_CONTEXT_MAX_LENGTH,
+      `Maximum ${WORKSPACE_CONTEXT_MAX_LENGTH} characters`,
+    )
+    .optional(),
   defaultObjectiveArtifactTypeId: z.string().uuid(),
   defaultSummaryArtifactTypeId: z.string().uuid(),
   defaultObjectiveActionsArtifactTypeId: z.string().uuid(),
@@ -89,6 +97,7 @@ export function DomainForm({ domain, artifactTypes }: DomainFormProps) {
       title: domain?.title || '',
       description: domain?.description || '',
       systemPrompt: domain?.systemPrompt || '',
+      defaultWorkspaceContext: domain?.defaultWorkspaceContext || '',
       defaultObjectiveArtifactTypeId:
         domain?.defaultObjectiveArtifactTypeId || '',
       defaultSummaryArtifactTypeId: domain?.defaultSummaryArtifactTypeId || '',
@@ -142,12 +151,39 @@ export function DomainForm({ domain, artifactTypes }: DomainFormProps) {
     },
   });
 
-  // Cleanup editor on unmount
+  // Create Tiptap editor for default workspace context
+  const defaultWorkspaceContextEditor = useEditor({
+    extensions: [
+      TiptapStarterKit,
+      Markdown.configure({
+        html: false,
+        transformPastedText: true,
+        transformCopiedText: true,
+      }),
+    ],
+    content: domain?.defaultWorkspaceContext || '',
+    immediatelyRender: false,
+    editorProps: {
+      attributes: {
+        class:
+          'prose dark:prose-invert max-w-none focus:outline-none p-4 min-h-[200px]',
+      },
+    },
+    onUpdate: ({ editor }) => {
+      const markdown =
+        // biome-ignore lint/suspicious/noExplicitAny: Tiptap storage types don't include markdown extension
+        (editor.storage as any).markdown?.getMarkdown?.() || editor.getText();
+      setValue('defaultWorkspaceContext', markdown);
+    },
+  });
+
+  // Cleanup editors on unmount
   useEffect(() => {
     return () => {
       systemPromptEditor?.destroy();
+      defaultWorkspaceContextEditor?.destroy();
     };
-  }, [systemPromptEditor]);
+  }, [systemPromptEditor, defaultWorkspaceContextEditor]);
 
   // Force re-renders when selection changes to update button active states
   const [, setEditorState] = useState(0);
@@ -167,6 +203,22 @@ export function DomainForm({ domain, artifactTypes }: DomainFormProps) {
       systemPromptEditor.off('update', handleUpdate);
     };
   }, [systemPromptEditor]);
+
+  useEffect(() => {
+    if (!defaultWorkspaceContextEditor) return;
+
+    const handleUpdate = () => {
+      setEditorState((prev) => prev + 1);
+    };
+
+    defaultWorkspaceContextEditor.on('selectionUpdate', handleUpdate);
+    defaultWorkspaceContextEditor.on('update', handleUpdate);
+
+    return () => {
+      defaultWorkspaceContextEditor.off('selectionUpdate', handleUpdate);
+      defaultWorkspaceContextEditor.off('update', handleUpdate);
+    };
+  }, [defaultWorkspaceContextEditor]);
 
   const onSubmit = async (data: DomainFormData) => {
     setIsSubmitting(true);
@@ -392,6 +444,192 @@ export function DomainForm({ domain, artifactTypes }: DomainFormProps) {
         {errors.systemPrompt && (
           <p className="text-sm text-destructive">
             {errors.systemPrompt.message}
+          </p>
+        )}
+      </div>
+
+      {/* Default Workspace Context - Optional */}
+      <div className="space-y-2">
+        <Label htmlFor="defaultWorkspaceContext">
+          Default Workspace Context{' '}
+          <span className="text-muted-foreground">(Optional)</span>
+          <span className="ml-2 text-xs text-muted-foreground">
+            Max {WORKSPACE_CONTEXT_MAX_LENGTH.toLocaleString()} characters
+          </span>
+        </Label>
+        <div className="rounded-md border">
+          {/* Toolbar */}
+          <div className="flex items-center gap-1 border-b p-2 bg-muted/50">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() =>
+                defaultWorkspaceContextEditor
+                  ?.chain()
+                  .focus()
+                  .toggleBold()
+                  .run()
+              }
+              className={
+                defaultWorkspaceContextEditor?.isActive('bold')
+                  ? 'bg-muted'
+                  : ''
+              }
+            >
+              <Bold className="size-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() =>
+                defaultWorkspaceContextEditor
+                  ?.chain()
+                  .focus()
+                  .toggleItalic()
+                  .run()
+              }
+              className={
+                defaultWorkspaceContextEditor?.isActive('italic')
+                  ? 'bg-muted'
+                  : ''
+              }
+            >
+              <Italic className="size-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() =>
+                defaultWorkspaceContextEditor
+                  ?.chain()
+                  .focus()
+                  .toggleBulletList()
+                  .run()
+              }
+              className={
+                defaultWorkspaceContextEditor?.isActive('bulletList')
+                  ? 'bg-muted'
+                  : ''
+              }
+            >
+              <List className="size-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() =>
+                defaultWorkspaceContextEditor
+                  ?.chain()
+                  .focus()
+                  .toggleOrderedList()
+                  .run()
+              }
+              className={
+                defaultWorkspaceContextEditor?.isActive('orderedList')
+                  ? 'bg-muted'
+                  : ''
+              }
+            >
+              <ListOrdered className="size-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() =>
+                defaultWorkspaceContextEditor
+                  ?.chain()
+                  .focus()
+                  .toggleHeading({ level: 1 })
+                  .run()
+              }
+              className={
+                defaultWorkspaceContextEditor?.isActive('heading', {
+                  level: 1,
+                })
+                  ? 'bg-muted'
+                  : ''
+              }
+            >
+              <Heading1 className="size-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() =>
+                defaultWorkspaceContextEditor
+                  ?.chain()
+                  .focus()
+                  .toggleHeading({ level: 2 })
+                  .run()
+              }
+              className={
+                defaultWorkspaceContextEditor?.isActive('heading', {
+                  level: 2,
+                })
+                  ? 'bg-muted'
+                  : ''
+              }
+            >
+              <Heading2 className="size-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() =>
+                defaultWorkspaceContextEditor
+                  ?.chain()
+                  .focus()
+                  .toggleHeading({ level: 3 })
+                  .run()
+              }
+              className={
+                defaultWorkspaceContextEditor?.isActive('heading', {
+                  level: 3,
+                })
+                  ? 'bg-muted'
+                  : ''
+              }
+            >
+              <Heading3 className="size-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() =>
+                defaultWorkspaceContextEditor
+                  ?.chain()
+                  .focus()
+                  .toggleCodeBlock()
+                  .run()
+              }
+              className={
+                defaultWorkspaceContextEditor?.isActive('codeBlock')
+                  ? 'bg-muted'
+                  : ''
+              }
+            >
+              <Code className="size-4" />
+            </Button>
+          </div>
+          {/* Editor */}
+          <EditorContent editor={defaultWorkspaceContextEditor} />
+        </div>
+        <p className="text-xs text-muted-foreground">
+          This markdown content will be automatically copied to new workspaces
+          created with this domain. Useful for providing default context,
+          guidelines, or instructions.
+        </p>
+        {errors.defaultWorkspaceContext && (
+          <p className="text-sm text-destructive">
+            {errors.defaultWorkspaceContext.message}
           </p>
         )}
       </div>

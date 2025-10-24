@@ -102,6 +102,7 @@ export async function createWorkspace(
       domainId: targetDomainId,
       workspaceContextArtifactTypeId:
         domainData.defaultWorkspaceContextArtifactTypeId,
+      context: domainData.defaultWorkspaceContext || null, // Copy default context from domain as starting point
     })
     .returning();
   return ws;

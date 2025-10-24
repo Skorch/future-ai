@@ -111,6 +111,7 @@ export const domain = pgTable(
     title: text('title').notNull(), // Human-readable (e.g., "Sales Intelligence", "Project Intelligence")
     description: text('description').notNull(), // When to use this domain
     systemPrompt: text('systemPrompt').notNull(), // "Agent operating system" - core domain intelligence
+    defaultWorkspaceContext: text('defaultWorkspaceContext'), // Optional markdown template for new workspaces (same limit as workspace.context)
     isDefault: boolean('isDefault').default(false).notNull(), // Only one domain can be default
 
     // Default artifact types for this domain (all FK → ArtifactType.id)

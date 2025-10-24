@@ -1,0 +1,1 @@
+ALTER TABLE "Domain" ADD COLUMN "defaultWorkspaceContext" text;

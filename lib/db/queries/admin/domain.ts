@@ -33,6 +33,7 @@ export async function updateDomain(
     defaultObjectiveActionsArtifactTypeId?: string;
     defaultWorkspaceContextArtifactTypeId?: string;
     defaultObjectiveContextArtifactTypeId?: string;
+    defaultWorkspaceContext?: string;
   },
   userId: string,
 ): Promise<Domain | null> {
@@ -88,6 +89,9 @@ export async function updateDomain(
         defaultObjectiveContextArtifactTypeId:
           data.defaultObjectiveContextArtifactTypeId,
       }),
+      ...(data.defaultWorkspaceContext !== undefined && {
+        defaultWorkspaceContext: data.defaultWorkspaceContext,
+      }),
       updatedByUserId: userId,
       updatedAt: new Date(),
     })
@@ -117,6 +121,7 @@ export async function createDomain(
     defaultObjectiveActionsArtifactTypeId: string;
     defaultWorkspaceContextArtifactTypeId: string;
     defaultObjectiveContextArtifactTypeId: string;
+    defaultWorkspaceContext?: string;
   },
   userId: string,
 ): Promise<Domain> {
@@ -164,6 +169,7 @@ export async function createDomain(
         data.defaultWorkspaceContextArtifactTypeId,
       defaultObjectiveContextArtifactTypeId:
         data.defaultObjectiveContextArtifactTypeId,
+      defaultWorkspaceContext: data.defaultWorkspaceContext || null,
       updatedByUserId: userId,
     })
     .returning();
@@ -366,6 +372,7 @@ export async function cloneDomain(
       title: newDomainName,
       description: sourceDomain.description,
       systemPrompt: sourceDomain.systemPrompt,
+      defaultWorkspaceContext: sourceDomain.defaultWorkspaceContext, // Clone the default context template
       isDefault: false, // Never clone as default
       defaultObjectiveArtifactTypeId:
         artifactTypeIds.defaultObjectiveArtifactType,

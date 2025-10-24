@@ -34,6 +34,7 @@ export async function updateDomainAction(
     defaultObjectiveActionsArtifactTypeId?: string;
     defaultWorkspaceContextArtifactTypeId?: string;
     defaultObjectiveContextArtifactTypeId?: string;
+    defaultWorkspaceContext?: string;
   },
 ) {
   // 1. Get logger
@@ -73,6 +74,7 @@ export async function createDomainAction(data: {
   defaultObjectiveActionsArtifactTypeId: string;
   defaultWorkspaceContextArtifactTypeId: string;
   defaultObjectiveContextArtifactTypeId: string;
+  defaultWorkspaceContext?: string;
 }) {
   const logger = getLogger('AdminDomains');
 

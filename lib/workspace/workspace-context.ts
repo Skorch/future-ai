@@ -18,6 +18,7 @@ import { myProvider } from '@/lib/ai/providers';
 import { WorkspaceContextBuilder } from '@/lib/ai/prompts/builders';
 import { CORE_SYSTEM_PROMPT } from '@/lib/ai/prompts/system';
 import { getCurrentContext } from '@/lib/ai/prompts/current-context';
+import { WORKSPACE_CONTEXT_MAX_LENGTH } from '@/lib/constants/limits';
 
 const logger = getLogger('WorkspaceContext');
 
@@ -173,9 +174,7 @@ Ensure:
     const markdown = formatWorkspaceContextAsMarkdown(structuredContext);
 
     // Validate length
-    const maxLength = Number.parseInt(
-      process.env.WORKSPACE_CONTEXT_MAX_LENGTH || '5000',
-    );
+    const maxLength = WORKSPACE_CONTEXT_MAX_LENGTH;
     if (markdown.length > maxLength) {
       logger.error('Generated context exceeds limit', {
         length: markdown.length,
@@ -237,9 +236,7 @@ export async function updateWorkspaceContextAction(
   }
 
   // Get max length from env (default 5K)
-  const maxLength = Number.parseInt(
-    process.env.WORKSPACE_CONTEXT_MAX_LENGTH || '5000',
-  );
+  const maxLength = WORKSPACE_CONTEXT_MAX_LENGTH;
 
   if (context.length > maxLength) {
     return { error: `Context exceeds ${maxLength} character limit` };
