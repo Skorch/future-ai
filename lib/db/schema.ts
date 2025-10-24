@@ -14,7 +14,7 @@ import {
   primaryKey,
   foreignKey,
 } from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
+import { relations, sql } from 'drizzle-orm';
 
 // Enums
 export const objectiveStatusEnum = pgEnum('objective_status', [
@@ -35,8 +35,48 @@ export const artifactTypeCategoryEnum = pgEnum('artifact_type_category', [
   'objective',
   'summary',
   'objectiveActions',
-  'context',
+  'workspaceContext',
+  'objectiveContext',
 ]);
+
+/**
+ * Strongly typed constants for artifact type categories
+ * Single source of truth - use these instead of string literals
+ *
+ * Usage:
+ *   import { ArtifactCategory } from '@/lib/db/schema';
+ *   const category = ArtifactCategory.OBJECTIVE_ACTIONS;
+ *
+ * Benefits:
+ *   - TypeScript autocomplete in IDEs
+ *   - Compile-time errors for typos
+ *   - Easy refactoring (rename propagates)
+ *   - Prevents snake_case/camelCase mismatches
+ */
+export const ArtifactCategory = {
+  OBJECTIVE: 'objective',
+  SUMMARY: 'summary',
+  OBJECTIVE_ACTIONS: 'objectiveActions',
+  WORKSPACE_CONTEXT: 'workspaceContext',
+  OBJECTIVE_CONTEXT: 'objectiveContext',
+} as const;
+
+/**
+ * Type for artifact category values (derived from the const)
+ * Use this for function parameters and return types
+ */
+export type ArtifactCategoryType =
+  (typeof ArtifactCategory)[keyof typeof ArtifactCategory];
+
+/**
+ * Compile-time verification that TypeScript type matches database enum
+ * These will error at compile time if types drift out of sync
+ */
+type _EnumValues = (typeof artifactTypeCategoryEnum.enumValues)[number];
+type _EnumCheck = _EnumValues extends ArtifactCategoryType ? true : false;
+type _ReverseCheck = ArtifactCategoryType extends _EnumValues ? true : false;
+const _typeCheck: _EnumCheck = true;
+const _reverseCheck: _ReverseCheck = true;
 
 // ArtifactType table - defines document/artifact generation instructions and templates
 export const artifactType = pgTable(
@@ -64,42 +104,51 @@ export const artifactType = pgTable(
 export type ArtifactType = InferSelectModel<typeof artifactType>;
 
 // Domain table - defines business intelligence domains with default artifact types
-export const domain = pgTable('Domain', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  title: text('title').notNull(), // Human-readable (e.g., "Sales Intelligence", "Project Intelligence")
-  description: text('description').notNull(), // When to use this domain
-  systemPrompt: text('systemPrompt').notNull(), // "Agent operating system" - core domain intelligence
+export const domain = pgTable(
+  'Domain',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    title: text('title').notNull(), // Human-readable (e.g., "Sales Intelligence", "Project Intelligence")
+    description: text('description').notNull(), // When to use this domain
+    systemPrompt: text('systemPrompt').notNull(), // "Agent operating system" - core domain intelligence
+    isDefault: boolean('isDefault').default(false).notNull(), // Only one domain can be default
 
-  // Default artifact types for this domain (all FK → ArtifactType.id)
-  defaultObjectiveArtifactTypeId: uuid('defaultObjectiveArtifactTypeId')
-    .references(() => artifactType.id, { onDelete: 'restrict' })
-    .notNull(), // Category: objective
-  defaultSummaryArtifactTypeId: uuid('defaultSummaryArtifactTypeId')
-    .references(() => artifactType.id, { onDelete: 'restrict' })
-    .notNull(), // Category: summary
-  defaultObjectiveActionsArtifactTypeId: uuid(
-    'defaultObjectiveActionsArtifactTypeId',
-  )
-    .references(() => artifactType.id, { onDelete: 'restrict' })
-    .notNull(), // Category: objectiveActions
-  defaultWorkspaceContextArtifactTypeId: uuid(
-    'defaultWorkspaceContextArtifactTypeId',
-  )
-    .references(() => artifactType.id, { onDelete: 'restrict' })
-    .notNull(), // Category: context
-  defaultObjectiveContextArtifactTypeId: uuid(
-    'defaultObjectiveContextArtifactTypeId',
-  )
-    .references(() => artifactType.id, { onDelete: 'restrict' })
-    .notNull(), // Category: context
+    // Default artifact types for this domain (all FK → ArtifactType.id)
+    defaultObjectiveArtifactTypeId: uuid('defaultObjectiveArtifactTypeId')
+      .references(() => artifactType.id, { onDelete: 'restrict' })
+      .notNull(), // Category: objective
+    defaultSummaryArtifactTypeId: uuid('defaultSummaryArtifactTypeId')
+      .references(() => artifactType.id, { onDelete: 'restrict' })
+      .notNull(), // Category: summary
+    defaultObjectiveActionsArtifactTypeId: uuid(
+      'defaultObjectiveActionsArtifactTypeId',
+    )
+      .references(() => artifactType.id, { onDelete: 'restrict' })
+      .notNull(), // Category: objectiveActions
+    defaultWorkspaceContextArtifactTypeId: uuid(
+      'defaultWorkspaceContextArtifactTypeId',
+    )
+      .references(() => artifactType.id, { onDelete: 'restrict' })
+      .notNull(), // Category: workspaceContext
+    defaultObjectiveContextArtifactTypeId: uuid(
+      'defaultObjectiveContextArtifactTypeId',
+    )
+      .references(() => artifactType.id, { onDelete: 'restrict' })
+      .notNull(), // Category: objectiveContext
 
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-  updatedAt: timestamp('updatedAt').defaultNow().notNull(),
-  updatedByUserId: varchar('updatedByUserId', { length: 255 }).references(
-    () => user.id,
-    { onDelete: 'set null' },
-  ), // FK to User.id - tracks who last modified
-});
+    createdAt: timestamp('createdAt').defaultNow().notNull(),
+    updatedAt: timestamp('updatedAt').defaultNow().notNull(),
+    updatedByUserId: varchar('updatedByUserId', { length: 255 }).references(
+      () => user.id,
+      { onDelete: 'set null' },
+    ), // FK to User.id - tracks who last modified
+  },
+  (table) => ({
+    uniqueDefaultIdx: uniqueIndex('unique_default_domain')
+      .on(table.isDefault)
+      .where(sql`${table.isDefault} = true`),
+  }),
+);
 
 export type Domain = InferSelectModel<typeof domain>;
 

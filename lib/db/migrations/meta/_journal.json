@@ -141,6 +141,13 @@
       "when": 1761020830742,
       "tag": "0019_furry_squirrel_girl",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1761329795295,
+      "tag": "0020_flowery_lady_mastermind",
+      "breakpoints": true
     }
   ]
 }
