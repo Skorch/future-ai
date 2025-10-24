@@ -1,3 +1,5 @@
+'use client';
+
 import { Badge } from '@/components/ui/badge';
 import {
   Tool,
@@ -7,6 +9,7 @@ import {
   ToolOutput,
 } from '@/components/elements/tool';
 import type { ToolUIPart } from 'ai';
+import { useArtifact } from '@/hooks/use-artifact';
 
 interface UpdateObjectiveGoalToolProps {
   toolCallId: string;
@@ -27,28 +30,34 @@ export function UpdateObjectiveGoalTool({
   streamingContent,
   output,
 }: UpdateObjectiveGoalToolProps) {
+  // Use category-based artifact to show streaming content
+  const { artifact } = useArtifact('objective');
+  const isStreaming = artifact.status === 'streaming';
+  const hasContent = artifact.content.length > 0;
+
   return (
-    <Tool key={toolCallId} defaultOpen={false}>
+    <Tool
+      key={toolCallId}
+      defaultOpen={isStreaming || state === 'input-available'}
+    >
       <ToolHeader
         type="tool-updateObjectiveGoal"
         state={state}
         label="Updating Objective Goal"
       />
       <ToolContent>
-        {state === 'input-available' && (
-          <>
-            <ToolInput input={input} />
-            {streamingContent && (
-              <div className="p-4 space-y-2 border-t">
-                <h4 className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
-                  Generating Goal
-                </h4>
-                <div className="prose prose-sm max-w-none text-sm whitespace-pre-wrap">
-                  {streamingContent}
-                </div>
-              </div>
-            )}
-          </>
+        {state === 'input-available' && <ToolInput input={input} />}
+
+        {/* Show streaming content preview */}
+        {isStreaming && hasContent && (
+          <div className="border-l-2 border-primary/50 pl-4 py-2 max-h-[300px] overflow-y-auto">
+            <div className="text-xs font-medium text-muted-foreground mb-2">
+              Generating goal...
+            </div>
+            <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
+              {artifact.content}
+            </div>
+          </div>
         )}
         {state === 'output-available' && (
           <ToolOutput

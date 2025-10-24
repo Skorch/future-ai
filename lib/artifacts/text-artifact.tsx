@@ -22,13 +22,8 @@ export const textArtifact = new Artifact<'text', TextArtifactMetadata>({
         return {
           ...draftArtifact,
           content: draftArtifact.content + streamPart.data,
-          // Auto-show artifact after 400 characters of content
-          isVisible:
-            draftArtifact.status === 'streaming' &&
-            draftArtifact.content.length > 400 &&
-            draftArtifact.content.length < 450
-              ? true
-              : draftArtifact.isVisible,
+          // Keep current visibility state (auto-expand removed)
+          isVisible: draftArtifact.isVisible,
           status: 'streaming',
         };
       });
