@@ -316,6 +316,9 @@ Ask these questions in order:
 
 The first question overrides all others. SOLID violations should be fixed immediately, even with a single use case.
 
+#### General Architecture Best Practices
+- ALWAYS strongly typed, NEVER 'stringly typed'
+
 #### Reference Implementation
 
 - See `components/knowledge/` for complete example
@@ -330,7 +333,7 @@ The first question overrides all others. SOLID violations should be fixed immedi
 NEVER EVER delegate coding tasks not explicitly to a subagent outside of their specific purpose!!
 Subagents may NEVER call other subagents
 
-IMPORTANT:  Subagents start with a CLEAN CONTEXT - which means they don't know anything about your chat history.  The ONLY thing it knows is what you pass in as your prompt (as well as its own internal instructions).  Be sure to be clear in your Subagent Prompt and never refernece your own chat, instead be specific about that 'reference'.
+IMPORTANT:  Subagents start with a CLEAN CONTEXT - which means they don't know anything about your chat history.  The ONLY thing it knows is what you pass in as your prompt (as well as its own internal instructions).  Be ALWAYS BE CLEAR of your EXPECTATIONS in your Subagent Prompt and never refernece your own chat, instead be specific about that 'reference'.  BE SPECIFIC about what you expect it to do (and NOT do) and what your EXPECTED outcome is.
 
 ## Searching for Files
 

@@ -49,21 +49,31 @@ You will notice the difference between the two:  open ended vs specific
 
 Always turn this workflow into a task list using the `TodoWrite` tool. You never skip steps - include all subagent calls in your initial TODO.  You may alter your TODO afterword as your requirements shift.
 
+### SETUP
+
 - [ ] 1. Task Analysis and Setup
    - [ ] Summarize your goals and purpose
    - [ ] State what 'complete' means for the whole workflow so that you know when to keep working on the task and don't give up when you cannot finish unit test failures
    - [ ] Spend time to THINK about the request and the strategy to find the right context to load
    - [ ] Assess complexity and potential challenges
 
+### PLAN
+
+
 - [ ] 2. Load Context and State Plan
    - [ ] Use `code-searcher` subagent to find the possible files to load into context
    - [ ] THINK DEEPLY about the requirements and the scope of changes needed
-   - [ ] You always use the Code Plan format described below
 
-- [ ] 3. Step-By-Step DAG + Delegation Wave Plan
-   - [ ] Generate a list of steps to complete the plan
-   - [ ] Think hard about how to bundle each step into a DAG
-   - [ ] Create a list of Waves and each step within the wave
+   - [ ] Generate a comprehensive list of CLARIFYING QUESTOINS
+      - [ ] Break up in to 'question chunks'
+      - [ ] Use the `Ask User` tool for each 'Question Chunk'
+
+- [ ] 3. CREATE THE PLAN: Using all of your knowledge, context, answers, generate a comprehensive plan
+   - [ ] You always use the Code Plan format described below
+   - [ ] Step-By-Step DAG + Delegation Wave Plan
+      - [ ] Generate a list of steps to complete the plan - STEP BY STEP
+      - [ ] Think hard about how to bundle each step into a DAG - THINK ABOUT DEPENDENCIES
+      - [ ] Create a list of Waves and each step within the wave
 
 - [ ] 4. User Review
    - [ ] You ALWAYS ask the User to review and approve your proposed solution
@@ -72,11 +82,20 @@ Always turn this workflow into a task list using the `TodoWrite` tool. You never
       - [ ] rethink your approach
       - [ ] ALWAYS re-request a review of your revised solution
 
+### EXECUTE 
+
 - [ ] 5. Delegate Waves
    - [ ] For each Wave, delegate each step to concurrent `nextjs-coder` subagent tasks
       - [ ] For each subagent task prompt, use a consistent prompt format to explain exactly what is in scope and out of scope
+      
+   - [ ] AFter each wave, do a 'mini review'
+      - [ ] Run tests to verify functionality
+      - [ ] Review test results thoroughly
+      - [ ] Fix implementation if tests are failing
+      - [ ] Have `code-reviewer` review the quality of the changes
+         - [ ] Create a suggested list of updates and `Ask the User` to approve the suggested changes
    
-- [ ] 6. Validation
+- [ ] 6. Final Validation
    - [ ] Run tests to verify functionality
    - [ ] Review test results thoroughly
    - [ ] Fix implementation if tests are failing
@@ -85,9 +104,10 @@ Always turn this workflow into a task list using the `TodoWrite` tool. You never
    - [ ] Have `unit-test-architect` run the unit tests and create a report of failed tests and the suggested fix
       - [ ] Create a suggested list of updates and `Ask the User` to approve the suggested changes
 
+### Complete
 - [ ] 7. Final  
    - [ ] Summarize all changes made
-   - [ ] Ask the User to visually verify the fix / perform any manual integration tests
+   - [ ] `Ask the User` to visually verify the fix / perform any manual integration tests
    - [ ] Request final approval for this total batch of work
    - [ ] Build: always use the `build-fixer` subagent to build and fix minor build issues
    - [ ] Test: always use the `unit-test-architect` subagent to write tests, run tests, fix test issues 
