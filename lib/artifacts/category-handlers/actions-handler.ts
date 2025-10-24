@@ -5,6 +5,7 @@
  */
 
 import type { ArtifactType } from '@/lib/db/schema';
+import { ArtifactCategory } from '@/lib/db/schema';
 import type { CategoryHandler, GenerationContext } from './types';
 import { ObjectiveActionsBuilder } from '@/lib/ai/prompts/builders';
 import {
@@ -20,7 +21,7 @@ import {
 import { myProvider } from '@/lib/ai/providers';
 
 export class ActionsHandler implements CategoryHandler {
-  readonly category = 'objectiveActions' as const;
+  readonly category = ArtifactCategory.OBJECTIVE_ACTIONS;
 
   async generate(
     artifactType: ArtifactType,

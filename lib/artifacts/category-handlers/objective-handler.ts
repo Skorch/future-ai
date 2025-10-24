@@ -2,6 +2,7 @@ import 'server-only';
 
 import type { CategoryHandler, GenerationContext } from './types';
 import type { ArtifactType } from '@/lib/db/schema';
+import { ArtifactCategory } from '@/lib/db/schema';
 import { ObjectiveDocumentBuilder } from '@/lib/ai/prompts/builders';
 import {
   processStream,
@@ -16,7 +17,7 @@ import { getCurrentVersionGoal } from '@/lib/db/objective-document';
 import { myProvider } from '@/lib/ai/providers';
 
 export class ObjectiveHandler implements CategoryHandler {
-  readonly category = 'objective' as const;
+  readonly category = ArtifactCategory.OBJECTIVE;
 
   async generate(
     artifactType: ArtifactType,

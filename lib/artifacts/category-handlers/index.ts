@@ -3,9 +3,11 @@ import 'server-only';
 import type { CategoryHandler } from './types';
 import { getArtifactTypeById } from '@/lib/db/queries/artifact-type';
 import type { artifactTypeCategoryEnum, ArtifactType } from '@/lib/db/schema';
+import { ArtifactCategory } from '@/lib/db/schema';
 import { ObjectiveHandler } from './objective-handler';
 import { ActionsHandler } from './actions-handler';
-import { ContextHandler } from './context-handler';
+import { WorkspaceContextHandler } from './workspace-context-handler';
+import { ObjectiveContextHandler } from './objective-context-handler';
 import { SummaryHandler } from './summary-handler';
 
 // Extract the enum values type from the Drizzle enum
@@ -19,10 +21,11 @@ type ArtifactTypeCategoryEnum =
  * Handlers implement category-specific generation logic.
  */
 const categoryHandlers: Record<ArtifactTypeCategoryEnum, CategoryHandler> = {
-  objective: new ObjectiveHandler(),
-  objectiveActions: new ActionsHandler(),
-  context: new ContextHandler(),
-  summary: new SummaryHandler(),
+  [ArtifactCategory.OBJECTIVE]: new ObjectiveHandler(),
+  [ArtifactCategory.OBJECTIVE_ACTIONS]: new ActionsHandler(),
+  [ArtifactCategory.WORKSPACE_CONTEXT]: new WorkspaceContextHandler(),
+  [ArtifactCategory.OBJECTIVE_CONTEXT]: new ObjectiveContextHandler(),
+  [ArtifactCategory.SUMMARY]: new SummaryHandler(),
 };
 
 /**

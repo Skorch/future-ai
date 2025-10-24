@@ -2,6 +2,7 @@ import 'server-only';
 
 import type { CategoryHandler, GenerationContext } from './types';
 import type { ArtifactType } from '@/lib/db/schema';
+import { ArtifactCategory } from '@/lib/db/schema';
 import { SummaryBuilder } from '@/lib/ai/prompts/builders/summary-builder';
 import {
   processStream,
@@ -25,7 +26,7 @@ const logger = getLogger('summary-handler');
  * Uses database-stored prompts via ArtifactType configuration
  */
 export class SummaryHandler implements CategoryHandler {
-  readonly category = 'summary' as const;
+  readonly category = ArtifactCategory.SUMMARY;
 
   async generate(
     artifactType: ArtifactType,

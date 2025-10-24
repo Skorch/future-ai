@@ -2,43 +2,34 @@ import 'server-only';
 
 import type { CategoryHandler, GenerationContext } from './types';
 import type { ArtifactType } from '@/lib/db/schema';
+import { ArtifactCategory } from '@/lib/db/schema';
 import { WorkspaceContextBuilder } from '@/lib/ai/prompts/builders/specialized/workspace-context-builder';
-import { ObjectiveContextBuilder } from '@/lib/ai/prompts/builders/specialized/objective-context-builder';
 import {
   buildStreamConfig,
   processStream,
 } from '../document-types/base-handler';
 import { getWorkspaceById } from '@/lib/workspace/queries';
-import { getObjectiveById } from '@/lib/db/objective';
 import { getDomainById } from '@/lib/db/queries/domain';
 import { myProvider } from '@/lib/ai/providers';
 import { getLogger } from '@/lib/logger';
 
-const logger = getLogger('ContextHandler');
+const logger = getLogger('WorkspaceContextHandler');
 
 /**
- * Handler for context category artifacts (workspace context and objective context)
+ * Handler for workspace context artifacts
  *
- * This handler supports two types of context:
- * - Workspace context: Broad organizational context (stakeholders, preferences, constraints)
- * - Objective context: Goal-specific context (objectives, constraints, success criteria)
- *
- * The handler automatically determines which type to generate based on whether
- * an objectiveId is present in the generation context.
+ * Generates broad organizational context including stakeholders, preferences,
+ * and constraints at the workspace level.
  */
-export class ContextHandler implements CategoryHandler {
-  readonly category = 'context' as const;
+export class WorkspaceContextHandler implements CategoryHandler {
+  readonly category = ArtifactCategory.WORKSPACE_CONTEXT;
 
   async generate(
     artifactType: ArtifactType,
     context: GenerationContext,
   ): Promise<string> {
-    const contextType = this.determineContextType(context);
-
-    logger.debug('Generating context artifact', {
-      contextType,
+    logger.debug('Generating workspace context artifact', {
       workspaceId: context.workspaceId,
-      objectiveId: context.objectiveId,
       hasCurrentVersion: !!context.currentVersion,
       hasInstruction: !!context.instruction,
     });
@@ -60,39 +51,13 @@ export class ContextHandler implements CategoryHandler {
       throw new Error(`Domain not found: ${workspace.domainId}`);
     }
 
-    // Select appropriate builder
-    let systemPrompt: string;
-
-    logger.debug('artifactType for context generation', {
+    logger.debug('artifactType for workspace context generation', {
       artifactTypeId: artifactType.id,
       artifactTypeLabel: artifactType.label,
     });
 
-    if (contextType === 'objective') {
-      // Validate objectiveId is present
-      if (!context.objectiveId) {
-        throw new Error(
-          'Objective ID is required for objective context generation',
-        );
-      }
-
-      // Fetch objective for validation
-      const objective = await getObjectiveById(
-        context.objectiveId,
-        context.session.user.id,
-      );
-      if (!objective) {
-        throw new Error(
-          `Objective not found: ${context.objectiveId} for user ${context.session.user.id}`,
-        );
-      }
-
-      const builder = new ObjectiveContextBuilder();
-      systemPrompt = builder.generateContextPrompt(artifactType, domain);
-    } else {
-      const builder = new WorkspaceContextBuilder();
-      systemPrompt = builder.generateContextPrompt(artifactType, domain);
-    }
+    const builder = new WorkspaceContextBuilder();
+    const systemPrompt = builder.generateContextPrompt(artifactType, domain);
 
     // Build user prompt with instruction and current version
     const userPrompt = this.buildPromptWithContext(
@@ -117,27 +82,19 @@ export class ContextHandler implements CategoryHandler {
 
     // Enforce dataStream requirement (consistent with summary-handler)
     if (!context.dataStream) {
-      throw new Error('dataStream is required for context generation');
+      throw new Error(
+        'dataStream is required for workspace context generation',
+      );
     }
 
     // Process stream and return generated content
     const content = await processStream(streamConfig, context.dataStream);
 
-    logger.debug('Context artifact generated successfully', {
-      contextType,
+    logger.debug('Workspace context artifact generated successfully', {
       contentLength: content.length,
     });
 
     return content;
-  }
-
-  /**
-   * Determine whether to generate workspace or objective context
-   */
-  private determineContextType(
-    context: GenerationContext,
-  ): 'workspace' | 'objective' {
-    return context.objectiveId ? 'objective' : 'workspace';
   }
 
   /**
