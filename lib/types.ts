@@ -33,6 +33,7 @@ export type CustomUIDataTypes = {
   versionId: string;
   title: string;
   kind: ArtifactKind;
+  category: string;
   clear: null;
   finish: null;
   reasoning: string;

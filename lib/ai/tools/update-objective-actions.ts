@@ -98,6 +98,11 @@ export const updateObjectiveActions = ({
           transient: true,
         });
         dataStream.write({
+          type: 'data-category',
+          data: 'objectiveActions', // Category for stream routing
+          transient: true,
+        });
+        dataStream.write({
           type: 'data-id',
           data: version.id,
           transient: true,

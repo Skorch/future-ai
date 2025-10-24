@@ -35,9 +35,18 @@ export function useArtifactSelector<Selected>(selector: Selector<Selected>) {
   return selectedValue;
 }
 
-export function useArtifact() {
+/**
+ * Use artifact state with optional category-based isolation
+ * @param category - Optional category key (e.g., 'objective', 'objectiveActions', 'context', 'summary')
+ *                   If provided, artifact state is isolated per category
+ *                   If omitted, uses global 'artifact' key for backward compatibility
+ */
+export function useArtifact(category?: string) {
+  // Use category-based key if provided, otherwise default to global 'artifact' key
+  const artifactKey = category ? `artifact-${category}` : 'artifact';
+
   const { data: localArtifact, mutate: setLocalArtifact } = useSWR<UIArtifact>(
-    'artifact',
+    artifactKey,
     null,
     {
       fallbackData: initialArtifactData,

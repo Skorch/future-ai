@@ -3,7 +3,7 @@
 import { getLogger } from '@/lib/logger';
 
 const logger = getLogger('data-stream-handler');
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { artifactDefinitions } from './artifact';
 import { initialArtifactData, useArtifact } from '@/hooks/use-artifact';
 import { useDataStream } from './data-stream-provider';
@@ -11,7 +11,11 @@ import { useDataStream } from './data-stream-provider';
 export function DataStreamHandler() {
   const { dataStream } = useDataStream();
 
-  const { artifact, setArtifact, setMetadata } = useArtifact();
+  // Track category from stream events (use state to trigger re-renders)
+  const [category, setCategory] = useState<string | undefined>(undefined);
+
+  // Use category-based artifact hook
+  const { artifact, setArtifact, setMetadata } = useArtifact(category);
   const lastProcessedIndex = useRef(-1);
 
   useEffect(() => {
@@ -21,6 +25,21 @@ export function DataStreamHandler() {
     lastProcessedIndex.current = dataStream.length - 1;
 
     newDeltas.forEach((delta) => {
+      // Extract category from data-category events
+      if (delta.type === 'data-category') {
+        const newCategory = delta.data as string;
+        setCategory((prevCategory) => {
+          if (prevCategory !== newCategory) {
+            logger.debug('[DataStreamHandler] Category changed:', {
+              from: prevCategory,
+              to: newCategory,
+            });
+            return newCategory;
+          }
+          return prevCategory;
+        });
+      }
+
       const artifactDefinition = artifactDefinitions.find(
         (artifactDefinition) => artifactDefinition.kind === artifact.kind,
       );

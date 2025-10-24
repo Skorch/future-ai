@@ -154,6 +154,11 @@ IMPORTANT:
           transient: true,
         });
         dataStream.write({
+          type: 'data-category',
+          data: 'summary', // Category for stream routing
+          transient: true,
+        });
+        dataStream.write({
           type: 'data-title',
           data: summaryTitle,
           transient: true,

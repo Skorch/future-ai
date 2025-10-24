@@ -113,7 +113,16 @@ The tool will use the objective's configured artifact type automatically.`,
         });
 
         // 5. Initialize artifact stream
-        dataStream.write({ type: 'data-kind', data: 'text', transient: true });
+        dataStream.write({
+          type: 'data-kind',
+          data: 'text',
+          transient: true,
+        });
+        dataStream.write({
+          type: 'data-category',
+          data: validArtifactType.category, // Category for stream routing
+          transient: true,
+        });
         dataStream.write({
           type: 'data-id',
           data: version.documentId, // Send document envelope ID for routing
