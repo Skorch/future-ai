@@ -2,23 +2,20 @@
 
 import {
   useState,
-  useEffect,
   useCallback,
   useMemo,
   forwardRef,
   useImperativeHandle,
+  useRef,
 } from 'react';
-import { useEditor, EditorContent } from '@tiptap/react';
-import TiptapStarterKit from '@tiptap/starter-kit';
-import { Markdown } from 'tiptap-markdown';
-import { toast } from 'sonner';
+import { useSWRConfig } from 'swr';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Card, CardContent, CardHeader } from './ui/card';
-import { debounce } from '@/lib/utils/debounce';
-import { useSWRConfig } from 'swr';
+import { MarkdownEditor } from '@/components/markdown/markdown-editor';
 import { createDocumentCacheMutator } from '@/lib/cache/document-cache';
 import { createKnowledgeCacheMutator } from '@/lib/cache/knowledge-cache';
+import { debounce } from '@/lib/utils/debounce';
 
 interface DocumentEditorProps {
   documentId: string;
@@ -40,9 +37,11 @@ export const DocumentEditor = forwardRef<
   ref,
 ) {
   const [title, setTitle] = useState(initialTitle);
-  const [isSaving, setIsSaving] = useState(false);
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [content, setContent] = useState(initialContent);
   const { mutate } = useSWRConfig();
+
+  // Track last saved content to avoid duplicate saves
+  const lastSavedRef = useRef({ content: initialContent, title: initialTitle });
 
   // Centralized cache mutator - conditional based on document type
   const cacheMutator = useMemo(() => {
@@ -51,33 +50,18 @@ export const DocumentEditor = forwardRef<
       : createDocumentCacheMutator(mutate, workspaceId, documentId);
   }, [mutate, workspaceId, documentId, documentType]);
 
-  const editor = useEditor({
-    extensions: [
-      TiptapStarterKit,
-      Markdown.configure({
-        html: true,
-        tightLists: true,
-        transformPastedText: true,
-        transformCopiedText: true,
-      }),
-    ],
-    content: initialContent,
-    editable: true,
-    immediatelyRender: false,
-    editorProps: {
-      attributes: {
-        class:
-          'prose dark:prose-invert max-w-none focus:outline-none p-6 min-h-[400px]',
-      },
-    },
-  });
-
   // Auto-save function - handles both knowledge and objective documents
   const saveDocument = useCallback(
-    async (content: string, titleToSave: string) => {
-      if (!content) return; // Don't save empty content
+    async (contentToSave: string, titleToSave: string) => {
+      if (!contentToSave) return; // Don't save empty content
 
-      setIsSaving(true);
+      // Avoid duplicate saves
+      if (
+        lastSavedRef.current.content === contentToSave &&
+        lastSavedRef.current.title === titleToSave
+      ) {
+        return;
+      }
 
       try {
         if (documentType === 'knowledge') {
@@ -88,7 +72,7 @@ export const DocumentEditor = forwardRef<
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                content,
+                content: contentToSave,
                 title: titleToSave,
               }),
             },
@@ -104,7 +88,7 @@ export const DocumentEditor = forwardRef<
             {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ content }),
+              body: JSON.stringify({ content: contentToSave }),
             },
           );
 
@@ -113,77 +97,54 @@ export const DocumentEditor = forwardRef<
           }
         }
 
-        setLastSaved(new Date());
-        toast.success('Document saved', { duration: 1000 });
+        // Update last saved reference
+        lastSavedRef.current = { content: contentToSave, title: titleToSave };
 
         // Invalidate all document-related caches (both SWR and Next.js)
         await cacheMutator.invalidateAll();
       } catch (error) {
-        toast.error('Failed to save document');
-      } finally {
-        setIsSaving(false);
+        // Re-throw to let MarkdownEditor handle the error display
+        throw new Error('Failed to save document');
       }
     },
     [documentId, workspaceId, documentType, cacheMutator],
   );
 
-  // Debounced auto-save (2 second delay)
+  // Debounced title save - triggers when title changes
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const debouncedSave = useCallback(
-    debounce((content: string, titleToSave: string) => {
-      saveDocument(content, titleToSave);
+  const debouncedTitleSave = useCallback(
+    debounce((titleToSave: string, contentToSave: string) => {
+      void saveDocument(contentToSave, titleToSave);
     }, 2000),
     [saveDocument],
+  );
+
+  // Combined save handler that includes title
+  const handleSave = useCallback(
+    async (contentToSave: string) => {
+      await saveDocument(contentToSave, title);
+    },
+    [saveDocument, title],
+  );
+
+  // Handle title changes with debounced save
+  const handleTitleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const newTitle = e.target.value;
+      setTitle(newTitle);
+
+      // Trigger debounced save with current content
+      debouncedTitleSave(newTitle, content);
+    },
+    [debouncedTitleSave, content],
   );
 
   // Expose saveNow method via ref
   useImperativeHandle(ref, () => ({
     saveNow: async () => {
-      if (!editor) return;
-      const markdown =
-        // biome-ignore lint/suspicious/noExplicitAny: Tiptap storage types don't include markdown extension
-        (editor.storage as any).markdown?.getMarkdown?.() || editor.getText();
-      await saveDocument(markdown, title);
+      await saveDocument(content, title);
     },
   }));
-
-  // Listen for content changes
-  useEffect(() => {
-    if (!editor) return;
-
-    const handleUpdate = () => {
-      // Get markdown content from editor
-      const markdown =
-        // biome-ignore lint/suspicious/noExplicitAny: Tiptap storage types don't include markdown extension
-        (editor.storage as any).markdown?.getMarkdown?.() || editor.getText();
-      debouncedSave(markdown, title);
-    };
-
-    editor.on('update', handleUpdate);
-
-    return () => {
-      editor.off('update', handleUpdate);
-    };
-  }, [editor, title, debouncedSave]);
-
-  // Listen for title changes
-  useEffect(() => {
-    if (!editor) return;
-    // Get markdown content from editor
-    const markdown =
-      // biome-ignore lint/suspicious/noExplicitAny: Tiptap storage types don't include markdown extension
-      (editor.storage as any).markdown?.getMarkdown?.() || editor.getText();
-    debouncedSave(markdown, title);
-  }, [title, editor, debouncedSave]);
-
-  if (!editor) {
-    return <div className="p-6 text-muted-foreground">Loading editor...</div>;
-  }
-
-  const characterCount =
-    // biome-ignore lint/suspicious/noExplicitAny: Tiptap storage types don't include markdown extension
-    ((editor.storage as any).markdown?.getMarkdown?.() || editor.getText())
-      .length;
 
   return (
     <Card>
@@ -193,29 +154,27 @@ export const DocumentEditor = forwardRef<
           <Input
             id="title"
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={handleTitleChange}
             placeholder="Enter document title..."
             className="text-lg font-semibold"
           />
         </div>
       </CardHeader>
       <CardContent>
-        <div className="border rounded-lg bg-background">
-          <EditorContent editor={editor} />
-        </div>
-
-        <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
-          <div>
-            {isSaving ? (
-              <span>Saving...</span>
-            ) : lastSaved ? (
-              <span>Last saved: {lastSaved.toLocaleTimeString()}</span>
-            ) : (
-              <span>No changes yet</span>
-            )}
-          </div>
-          <div>{characterCount} characters</div>
-        </div>
+        <MarkdownEditor
+          value={content}
+          onChange={setContent}
+          onSave={handleSave}
+          placeholder="Start writing your document..."
+          maxLength={50000}
+          showToolbar
+          toolbarMode="floating"
+          autoSave
+          saveDebounce={2000}
+          showCharacterCount
+          className="mt-4"
+          ariaLabel="Document content editor"
+        />
       </CardContent>
     </Card>
   );
