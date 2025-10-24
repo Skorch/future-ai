@@ -254,6 +254,166 @@
     @apply border-l-4 border-muted-foreground pl-4 my-4 italic;
 }
 
+/* Code Block Styling - Global */
+/* Light mode: dark background for code blocks */
+/* Dark mode: slightly darker background for code blocks */
+
+pre {
+    @apply bg-zinc-900 text-zinc-100 dark:bg-zinc-950 dark:text-zinc-100;
+    @apply p-4 rounded-lg overflow-x-auto;
+    @apply my-4 border border-zinc-800 dark:border-zinc-800;
+}
+
+pre code {
+    @apply bg-transparent text-zinc-100 dark:text-zinc-100;
+    @apply p-0 rounded-none;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+/* Inline code - subtle background with good contrast */
+code:not(pre code) {
+    @apply bg-zinc-200 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100;
+    @apply px-1.5 py-0.5 rounded text-sm;
+    font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+}
+
+/* Override Tiptap code styles with the global styles */
+.tiptap code {
+    @apply bg-zinc-200 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100;
+    @apply px-1.5 py-0.5 rounded text-sm;
+}
+
+.tiptap pre {
+    @apply bg-zinc-900 text-zinc-100 dark:bg-zinc-950 dark:text-zinc-100;
+    @apply p-4 rounded-lg my-4 overflow-x-auto border border-zinc-800 dark:border-zinc-800;
+}
+
+.tiptap pre code {
+    @apply bg-transparent text-zinc-100 dark:text-zinc-100;
+    @apply p-0;
+}
+
+/* Task List Styling */
+.tiptap ul[data-type="taskList"] {
+    @apply list-none pl-0 my-4;
+}
+
+.tiptap ul[data-type="taskList"] li {
+    @apply flex items-start gap-2 my-1;
+    /* Inherits font-family, font-size, and line-height from .tiptap li */
+}
+
+.tiptap ul[data-type="taskList"] li[data-checked="true"] > div > p {
+    @apply line-through text-muted-foreground;
+}
+
+.tiptap ul[data-type="taskList"] input[type="checkbox"] {
+    @apply appearance-none w-5 h-5 rounded border-2 border-border bg-background cursor-pointer shrink-0 mt-0.5;
+    @apply hover:border-primary transition-colors;
+    @apply focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background;
+}
+
+.tiptap ul[data-type="taskList"] input[type="checkbox"]:checked {
+    @apply bg-primary border-primary;
+    background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/%3e%3c/svg%3e");
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+.tiptap ul[data-type="taskList"] li > div {
+    @apply flex-1 min-w-0;
+    /* Text content wrapper - no font overrides */
+}
+
+.tiptap ul[data-type="taskList"] li > div > p {
+    @apply my-0;
+    /* Inherits all font properties from parent paragraph styles */
+}
+
+/* Nested task lists */
+.tiptap ul[data-type="taskList"] ul[data-type="taskList"] {
+    @apply pl-6 mt-2;
+}
+
+/* Table Styling */
+.tiptap table {
+    @apply border-collapse my-6 w-full;
+    border: 2px solid hsl(var(--border));
+}
+
+.tiptap th {
+    @apply bg-muted font-semibold text-left;
+    @apply border-2 border-border;
+    @apply px-4 py-3;
+    @apply text-foreground;
+}
+
+.tiptap td {
+    @apply border border-border;
+    @apply px-4 py-3;
+    @apply text-foreground;
+}
+
+/* Alternating row colors for better readability */
+.tiptap tbody tr:nth-child(even) {
+    @apply bg-muted/30;
+}
+
+/* Hover state for rows */
+.tiptap tbody tr:hover {
+    @apply bg-muted/50;
+    @apply transition-colors duration-150;
+}
+
+/* Hover state for individual cells */
+.tiptap td:hover,
+.tiptap th:hover {
+    @apply bg-muted/70;
+    @apply transition-colors duration-150;
+}
+
+/* Dark mode adjustments */
+.dark .tiptap table {
+    border-color: hsl(var(--border));
+}
+
+.dark .tiptap th {
+    @apply bg-muted/80;
+}
+
+.dark .tiptap tbody tr:nth-child(even) {
+    @apply bg-muted/20;
+}
+
+.dark .tiptap tbody tr:hover {
+    @apply bg-muted/40;
+}
+
+.dark .tiptap td:hover,
+.dark .tiptap th:hover {
+    @apply bg-muted/60;
+}
+
+/* Selected cell styling (when editing) */
+.tiptap .selectedCell {
+    @apply bg-primary/20;
+    @apply border-primary;
+    box-shadow: inset 0 0 0 2px hsl(var(--primary));
+}
+
+.dark .tiptap .selectedCell {
+    @apply bg-primary/30;
+}
+
+/* Empty cell placeholder */
+.tiptap td:empty::before,
+.tiptap th:empty::before {
+    content: '\00a0';
+    @apply text-muted-foreground/50;
+}
+
 /* React Data Grid Document Table Styling */
 .rdg {
     --rdg-row-height: 56px;
