@@ -3,7 +3,11 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PlusIcon, Target, BookOpen, FolderOpen, FileEdit } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
+import {
+  NavigationTabsList,
+  NavigationTabTrigger,
+} from '@/components/ui/navigation-tabs';
 import { Button } from '@/components/ui/button';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { ObjectiveTable } from '@/components/objective-table';
@@ -93,42 +97,31 @@ export function WorkspacePageClient({
           </div>
 
           {/* Tabs */}
-          <TabsList className="h-auto w-full justify-start gap-2 bg-transparent px-6 pb-6">
-            <TabsTrigger
+          <NavigationTabsList className="px-6 pb-6" tabWidth="9rem">
+            <NavigationTabTrigger
               value="objectives"
-              className="flex flex-col items-center gap-2 w-32 py-3 data-[state=active]:bg-muted hover:bg-muted/50 rounded-full transition-all"
-            >
-              <Target className="size-5" />
-              <span className="text-sm font-medium">
-                Objectives ({objectives.length})
-              </span>
-            </TabsTrigger>
-            <TabsTrigger
+              icon={Target}
+              label="Objectives"
+              count={objectives.length}
+            />
+            <NavigationTabTrigger
               value="context"
-              className="flex flex-col items-center gap-2 w-32 py-3 data-[state=active]:bg-muted hover:bg-muted/50 rounded-full transition-all"
-            >
-              <FileEdit className="size-5" />
-              <span className="text-sm font-medium">
-                {contextLabels?.tab || 'Context'}
-              </span>
-            </TabsTrigger>
-            <TabsTrigger
+              icon={FileEdit}
+              label={contextLabels?.tab || 'Context'}
+            />
+            <NavigationTabTrigger
               value="knowledge"
-              className="flex flex-col items-center gap-2 w-32 py-3 data-[state=active]:bg-muted hover:bg-muted/50 rounded-full transition-all"
-            >
-              <BookOpen className="size-5" />
-              <span className="text-sm font-medium">
-                Knowledge ({knowledge.length})
-              </span>
-            </TabsTrigger>
-            <TabsTrigger
+              icon={BookOpen}
+              label="Knowledge"
+              count={knowledge.length}
+            />
+            <NavigationTabTrigger
               value="raw"
-              className="flex flex-col items-center gap-2 w-32 py-3 data-[state=active]:bg-muted hover:bg-muted/50 rounded-full transition-all"
-            >
-              <FolderOpen className="size-5" />
-              <span className="text-sm font-medium">Raw ({raw.length})</span>
-            </TabsTrigger>
-          </TabsList>
+              icon={FolderOpen}
+              label="Raw"
+              count={raw.length}
+            />
+          </NavigationTabsList>
         </div>
 
         {/* Content Area */}

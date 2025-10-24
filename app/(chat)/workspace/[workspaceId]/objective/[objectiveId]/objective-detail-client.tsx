@@ -39,7 +39,11 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
+import {
+  NavigationTabsList,
+  NavigationTabTrigger,
+} from '@/components/ui/navigation-tabs';
 import { KnowledgeTable } from '@/components/knowledge-table';
 import type { KnowledgeDocument } from '@/lib/db/knowledge-document';
 import { ObjectiveGoalTab } from '@/components/objective/objective-goal-tab';
@@ -319,60 +323,45 @@ export function ObjectiveDetailClient({
       >
         {/* Tabs Navigation */}
         <div className="border-b px-6 pt-4">
-          <TabsList className="h-auto w-full justify-start gap-2 bg-transparent">
-            <TabsTrigger
+          <NavigationTabsList tabWidth="10rem">
+            <NavigationTabTrigger
               value="context"
-              className="flex flex-col items-center gap-2 w-32 py-3 data-[state=active]:bg-muted hover:bg-muted/50 rounded-full transition-all"
-            >
-              <FileEdit className="size-4" />
-              <span className="text-sm font-medium">
-                {contextLabels?.tab || 'Context'}
-              </span>
-            </TabsTrigger>
-            <TabsTrigger
+              icon={FileEdit}
+              label={contextLabels?.tab || 'Context'}
+              iconSize="size-4"
+            />
+            <NavigationTabTrigger
               value="actions"
-              className="flex flex-col items-center gap-2 w-32 py-3 data-[state=active]:bg-muted hover:bg-muted/50 rounded-full transition-all"
-            >
-              <CheckSquare className="size-4" />
-              <span className="text-sm font-medium">
-                {actionsLabels?.tab || 'Action Items'}
-              </span>
-            </TabsTrigger>
-            <TabsTrigger
+              icon={CheckSquare}
+              label={actionsLabels?.tab || 'Action Items'}
+              iconSize="size-4"
+            />
+            <NavigationTabTrigger
               value="objective"
-              className="flex flex-col items-center gap-2 w-32 py-3 data-[state=active]:bg-muted hover:bg-muted/50 rounded-full transition-all"
-            >
-              <Target className="size-4" />
-              <span className="text-sm font-medium text-center leading-tight">
-                {documentLabels?.tab || 'Objective Document'}
-              </span>
-            </TabsTrigger>
-            <TabsTrigger
+              icon={Target}
+              label={documentLabels?.tab || 'Objective Document'}
+              iconSize="size-4"
+            />
+            <NavigationTabTrigger
               value="taskHistory"
-              className="flex flex-col items-center gap-2 w-32 py-3 data-[state=active]:bg-muted hover:bg-muted/50 rounded-full transition-all"
-            >
-              <MessageSquare className="size-4" />
-              <span className="text-sm font-medium">
-                Task History ({chats.length})
-              </span>
-            </TabsTrigger>
-            <TabsTrigger
+              icon={MessageSquare}
+              label="Task History"
+              count={chats.length}
+              iconSize="size-4"
+            />
+            <NavigationTabTrigger
               value="knowledge"
-              className="flex flex-col items-center gap-2 w-32 py-3 data-[state=active]:bg-muted hover:bg-muted/50 rounded-full transition-all"
-            >
-              <BookOpen className="size-5" />
-              <span className="text-sm font-medium">
-                Knowledge ({knowledge.length})
-              </span>
-            </TabsTrigger>
-            <TabsTrigger
+              icon={BookOpen}
+              label="Knowledge"
+              count={knowledge.length}
+            />
+            <NavigationTabTrigger
               value="raw"
-              className="flex flex-col items-center gap-2 w-32 py-3 data-[state=active]:bg-muted hover:bg-muted/50 rounded-full transition-all"
-            >
-              <FolderOpen className="size-5" />
-              <span className="text-sm font-medium">Raw ({raw.length})</span>
-            </TabsTrigger>
-          </TabsList>
+              icon={FolderOpen}
+              label="Raw"
+              count={raw.length}
+            />
+          </NavigationTabsList>
         </div>
 
         {/* Tab Content */}
