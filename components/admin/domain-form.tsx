@@ -1,24 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useEditor, EditorContent } from '@tiptap/react';
-import TiptapStarterKit from '@tiptap/starter-kit';
-import { Markdown } from 'tiptap-markdown';
-import {
-  Bold,
-  Italic,
-  List,
-  ListOrdered,
-  Heading1,
-  Heading2,
-  Heading3,
-  Code,
-  Edit,
-} from 'lucide-react';
+import { Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -38,6 +25,7 @@ import {
 import type { DomainWithRelations, ArtifactType } from '@/lib/db/schema';
 import { ArtifactCategory } from '@/lib/db/schema';
 import { WORKSPACE_CONTEXT_MAX_LENGTH } from '@/lib/constants/limits';
+import { MarkdownEditor } from '@/components/markdown/markdown-editor';
 
 const domainSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -124,102 +112,6 @@ export function DomainForm({ domain, artifactTypes }: DomainFormProps) {
     'defaultObjectiveContextArtifactTypeId',
   );
 
-  // Create Tiptap editor for system prompt
-  const systemPromptEditor = useEditor({
-    extensions: [
-      TiptapStarterKit,
-      Markdown.configure({
-        html: true,
-        tightLists: true,
-        transformPastedText: true,
-        transformCopiedText: true,
-      }),
-    ],
-    content: domain?.systemPrompt || '',
-    immediatelyRender: false,
-    editorProps: {
-      attributes: {
-        class:
-          'prose dark:prose-invert max-w-none focus:outline-none p-4 min-h-[300px]',
-      },
-    },
-    onUpdate: ({ editor }) => {
-      const markdown =
-        // biome-ignore lint/suspicious/noExplicitAny: Tiptap storage types don't include markdown extension
-        (editor.storage as any).markdown?.getMarkdown?.() || editor.getText();
-      setValue('systemPrompt', markdown);
-    },
-  });
-
-  // Create Tiptap editor for default workspace context
-  const defaultWorkspaceContextEditor = useEditor({
-    extensions: [
-      TiptapStarterKit,
-      Markdown.configure({
-        html: false,
-        transformPastedText: true,
-        transformCopiedText: true,
-      }),
-    ],
-    content: domain?.defaultWorkspaceContext || '',
-    immediatelyRender: false,
-    editorProps: {
-      attributes: {
-        class:
-          'prose dark:prose-invert max-w-none focus:outline-none p-4 min-h-[200px]',
-      },
-    },
-    onUpdate: ({ editor }) => {
-      const markdown =
-        // biome-ignore lint/suspicious/noExplicitAny: Tiptap storage types don't include markdown extension
-        (editor.storage as any).markdown?.getMarkdown?.() || editor.getText();
-      setValue('defaultWorkspaceContext', markdown);
-    },
-  });
-
-  // Cleanup editors on unmount
-  useEffect(() => {
-    return () => {
-      systemPromptEditor?.destroy();
-      defaultWorkspaceContextEditor?.destroy();
-    };
-  }, [systemPromptEditor, defaultWorkspaceContextEditor]);
-
-  // Force re-renders when selection changes to update button active states
-  const [, setEditorState] = useState(0);
-
-  useEffect(() => {
-    if (!systemPromptEditor) return;
-
-    const handleUpdate = () => {
-      setEditorState((prev) => prev + 1);
-    };
-
-    systemPromptEditor.on('selectionUpdate', handleUpdate);
-    systemPromptEditor.on('update', handleUpdate);
-
-    return () => {
-      systemPromptEditor.off('selectionUpdate', handleUpdate);
-      systemPromptEditor.off('update', handleUpdate);
-    };
-  }, [systemPromptEditor]);
-
-  useEffect(() => {
-    if (!defaultWorkspaceContextEditor) return;
-
-    const handleUpdate = () => {
-      setEditorState((prev) => prev + 1);
-    };
-
-    defaultWorkspaceContextEditor.on('selectionUpdate', handleUpdate);
-    defaultWorkspaceContextEditor.on('update', handleUpdate);
-
-    return () => {
-      defaultWorkspaceContextEditor.off('selectionUpdate', handleUpdate);
-      defaultWorkspaceContextEditor.off('update', handleUpdate);
-    };
-  }, [defaultWorkspaceContextEditor]);
-
   const onSubmit = async (data: DomainFormData) => {
     setIsSubmitting(true);
     try {
@@ -295,152 +187,17 @@ export function DomainForm({ domain, artifactTypes }: DomainFormProps) {
         <Label htmlFor="systemPrompt">
           System Prompt <span className="text-destructive">*</span>
         </Label>
-        <div className="border rounded-md">
-          <div className="flex gap-1 p-2 border-b bg-muted/50">
-            {/* Bold */}
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() =>
-                systemPromptEditor?.chain().focus().toggleBold().run()
-              }
-              className={systemPromptEditor?.isActive('bold') ? 'bg-muted' : ''}
-            >
-              <Bold className="size-4" />
-            </Button>
-
-            {/* Italic */}
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() =>
-                systemPromptEditor?.chain().focus().toggleItalic().run()
-              }
-              className={
-                systemPromptEditor?.isActive('italic') ? 'bg-muted' : ''
-              }
-            >
-              <Italic className="size-4" />
-            </Button>
-
-            <div className="w-px h-6 bg-border mx-1" />
-
-            {/* Heading 1 */}
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() =>
-                systemPromptEditor
-                  ?.chain()
-                  .focus()
-                  .toggleHeading({ level: 1 })
-                  .run()
-              }
-              className={
-                systemPromptEditor?.isActive('heading', { level: 1 })
-                  ? 'bg-muted'
-                  : ''
-              }
-            >
-              <Heading1 className="size-4" />
-            </Button>
-
-            {/* Heading 2 */}
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() =>
-                systemPromptEditor
-                  ?.chain()
-                  .focus()
-                  .toggleHeading({ level: 2 })
-                  .run()
-              }
-              className={
-                systemPromptEditor?.isActive('heading', { level: 2 })
-                  ? 'bg-muted'
-                  : ''
-              }
-            >
-              <Heading2 className="size-4" />
-            </Button>
-
-            {/* Heading 3 */}
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() =>
-                systemPromptEditor
-                  ?.chain()
-                  .focus()
-                  .toggleHeading({ level: 3 })
-                  .run()
-              }
-              className={
-                systemPromptEditor?.isActive('heading', { level: 3 })
-                  ? 'bg-muted'
-                  : ''
-              }
-            >
-              <Heading3 className="size-4" />
-            </Button>
-
-            <div className="w-px h-6 bg-border mx-1" />
-
-            {/* Bullet List */}
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() =>
-                systemPromptEditor?.chain().focus().toggleBulletList().run()
-              }
-              className={
-                systemPromptEditor?.isActive('bulletList') ? 'bg-muted' : ''
-              }
-            >
-              <List className="size-4" />
-            </Button>
-
-            {/* Ordered List */}
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() =>
-                systemPromptEditor?.chain().focus().toggleOrderedList().run()
-              }
-              className={
-                systemPromptEditor?.isActive('orderedList') ? 'bg-muted' : ''
-              }
-            >
-              <ListOrdered className="size-4" />
-            </Button>
-
-            <div className="w-px h-6 bg-border mx-1" />
-
-            {/* Code Block */}
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() =>
-                systemPromptEditor?.chain().focus().toggleCodeBlock().run()
-              }
-              className={
-                systemPromptEditor?.isActive('codeBlock') ? 'bg-muted' : ''
-              }
-            >
-              <Code className="size-4" />
-            </Button>
-          </div>
-          <EditorContent editor={systemPromptEditor} />
-        </div>
+        <MarkdownEditor
+          value={watch('systemPrompt')}
+          onChange={(content) => setValue('systemPrompt', content)}
+          placeholder="Enter system prompt instructions..."
+          maxLength={50000}
+          showToolbar={false}
+          toolbarMode="none"
+          autoSave={false}
+          showCharacterCount={true}
+          ariaLabel="System prompt editor"
+        />
         {errors.systemPrompt && (
           <p className="text-sm text-destructive">
             {errors.systemPrompt.message}
@@ -453,175 +210,18 @@ export function DomainForm({ domain, artifactTypes }: DomainFormProps) {
         <Label htmlFor="defaultWorkspaceContext">
           Default Workspace Context{' '}
           <span className="text-muted-foreground">(Optional)</span>
-          <span className="ml-2 text-xs text-muted-foreground">
-            Max {WORKSPACE_CONTEXT_MAX_LENGTH.toLocaleString()} characters
-          </span>
         </Label>
-        <div className="rounded-md border">
-          {/* Toolbar */}
-          <div className="flex items-center gap-1 border-b p-2 bg-muted/50">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() =>
-                defaultWorkspaceContextEditor
-                  ?.chain()
-                  .focus()
-                  .toggleBold()
-                  .run()
-              }
-              className={
-                defaultWorkspaceContextEditor?.isActive('bold')
-                  ? 'bg-muted'
-                  : ''
-              }
-            >
-              <Bold className="size-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() =>
-                defaultWorkspaceContextEditor
-                  ?.chain()
-                  .focus()
-                  .toggleItalic()
-                  .run()
-              }
-              className={
-                defaultWorkspaceContextEditor?.isActive('italic')
-                  ? 'bg-muted'
-                  : ''
-              }
-            >
-              <Italic className="size-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() =>
-                defaultWorkspaceContextEditor
-                  ?.chain()
-                  .focus()
-                  .toggleBulletList()
-                  .run()
-              }
-              className={
-                defaultWorkspaceContextEditor?.isActive('bulletList')
-                  ? 'bg-muted'
-                  : ''
-              }
-            >
-              <List className="size-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() =>
-                defaultWorkspaceContextEditor
-                  ?.chain()
-                  .focus()
-                  .toggleOrderedList()
-                  .run()
-              }
-              className={
-                defaultWorkspaceContextEditor?.isActive('orderedList')
-                  ? 'bg-muted'
-                  : ''
-              }
-            >
-              <ListOrdered className="size-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() =>
-                defaultWorkspaceContextEditor
-                  ?.chain()
-                  .focus()
-                  .toggleHeading({ level: 1 })
-                  .run()
-              }
-              className={
-                defaultWorkspaceContextEditor?.isActive('heading', {
-                  level: 1,
-                })
-                  ? 'bg-muted'
-                  : ''
-              }
-            >
-              <Heading1 className="size-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() =>
-                defaultWorkspaceContextEditor
-                  ?.chain()
-                  .focus()
-                  .toggleHeading({ level: 2 })
-                  .run()
-              }
-              className={
-                defaultWorkspaceContextEditor?.isActive('heading', {
-                  level: 2,
-                })
-                  ? 'bg-muted'
-                  : ''
-              }
-            >
-              <Heading2 className="size-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() =>
-                defaultWorkspaceContextEditor
-                  ?.chain()
-                  .focus()
-                  .toggleHeading({ level: 3 })
-                  .run()
-              }
-              className={
-                defaultWorkspaceContextEditor?.isActive('heading', {
-                  level: 3,
-                })
-                  ? 'bg-muted'
-                  : ''
-              }
-            >
-              <Heading3 className="size-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() =>
-                defaultWorkspaceContextEditor
-                  ?.chain()
-                  .focus()
-                  .toggleCodeBlock()
-                  .run()
-              }
-              className={
-                defaultWorkspaceContextEditor?.isActive('codeBlock')
-                  ? 'bg-muted'
-                  : ''
-              }
-            >
-              <Code className="size-4" />
-            </Button>
-          </div>
-          {/* Editor */}
-          <EditorContent editor={defaultWorkspaceContextEditor} />
-        </div>
+        <MarkdownEditor
+          value={watch('defaultWorkspaceContext') || ''}
+          onChange={(content) => setValue('defaultWorkspaceContext', content)}
+          placeholder="Enter default workspace context..."
+          maxLength={WORKSPACE_CONTEXT_MAX_LENGTH}
+          showToolbar={false}
+          toolbarMode="none"
+          autoSave={false}
+          showCharacterCount={true}
+          ariaLabel="Default workspace context editor"
+        />
         <p className="text-xs text-muted-foreground">
           This markdown content will be automatically copied to new workspaces
           created with this domain. Useful for providing default context,

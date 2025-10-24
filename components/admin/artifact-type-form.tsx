@@ -1,24 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useEditor, EditorContent, type Editor } from '@tiptap/react';
-import TiptapStarterKit from '@tiptap/starter-kit';
-import { Markdown } from 'tiptap-markdown';
-import {
-  Bold,
-  Italic,
-  List,
-  ListOrdered,
-  Heading1,
-  Heading2,
-  Heading3,
-  Code,
-  FileCode,
-} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -38,6 +24,7 @@ import {
 import type { ArtifactType } from '@/lib/db/schema';
 import { ArtifactCategory } from '@/lib/db/schema';
 import { getCategoryDisplayName } from '@/lib/artifacts/utils';
+import { MarkdownEditor } from '@/components/markdown/markdown-editor';
 
 const artifactTypeSchema = z.object({
   category: z.enum([
@@ -87,91 +74,6 @@ export function ArtifactTypeForm({
     },
   });
 
-  // Create Tiptap editor for instruction prompt
-  const instructionPromptEditor = useEditor({
-    extensions: [
-      TiptapStarterKit,
-      Markdown.configure({
-        html: true,
-        tightLists: true,
-        transformPastedText: true,
-        transformCopiedText: true,
-      }),
-    ],
-    content: artifactType?.instructionPrompt || '',
-    immediatelyRender: false,
-    editorProps: {
-      attributes: {
-        class:
-          'prose dark:prose-invert max-w-none focus:outline-none p-4 min-h-[200px]',
-      },
-    },
-    onUpdate: ({ editor }) => {
-      const markdown =
-        // biome-ignore lint/suspicious/noExplicitAny: Tiptap storage types don't include markdown extension
-        (editor.storage as any).markdown?.getMarkdown?.() || editor.getText();
-      setValue('instructionPrompt', markdown);
-    },
-  });
-
-  // Create Tiptap editor for template
-  const templateEditor = useEditor({
-    extensions: [
-      TiptapStarterKit,
-      Markdown.configure({
-        html: true,
-        tightLists: true,
-        transformPastedText: true,
-        transformCopiedText: true,
-      }),
-    ],
-    content: artifactType?.template || '',
-    immediatelyRender: false,
-    editorProps: {
-      attributes: {
-        class:
-          'prose dark:prose-invert max-w-none focus:outline-none p-4 min-h-[200px]',
-      },
-    },
-    onUpdate: ({ editor }) => {
-      const markdown =
-        // biome-ignore lint/suspicious/noExplicitAny: Tiptap storage types don't include markdown extension
-        (editor.storage as any).markdown?.getMarkdown?.() || editor.getText();
-      setValue('template', markdown);
-    },
-  });
-
-  // Cleanup editors on unmount
-  useEffect(() => {
-    return () => {
-      instructionPromptEditor?.destroy();
-      templateEditor?.destroy();
-    };
-  }, [instructionPromptEditor, templateEditor]);
-
-  // Force re-renders when selection changes to update button active states
-  const [, setEditorState] = useState(0);
-
-  useEffect(() => {
-    if (!instructionPromptEditor && !templateEditor) return;
-
-    const handleUpdate = () => {
-      setEditorState((prev) => prev + 1);
-    };
-
-    instructionPromptEditor?.on('selectionUpdate', handleUpdate);
-    instructionPromptEditor?.on('update', handleUpdate);
-    templateEditor?.on('selectionUpdate', handleUpdate);
-    templateEditor?.on('update', handleUpdate);
-
-    return () => {
-      instructionPromptEditor?.off('selectionUpdate', handleUpdate);
-      instructionPromptEditor?.off('update', handleUpdate);
-      templateEditor?.off('selectionUpdate', handleUpdate);
-      templateEditor?.off('update', handleUpdate);
-    };
-  }, [instructionPromptEditor, templateEditor]);
-
   const onSubmit = async (data: ArtifactTypeFormData) => {
     setIsSubmitting(true);
     try {
@@ -206,139 +108,6 @@ export function ArtifactTypeForm({
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const renderToolbar = (editor: Editor | null, editorName: string) => {
-    if (!editor) return null;
-    return (
-      <div className="flex gap-1 p-2 border-b bg-muted/50">
-        {/* Bold */}
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => editor?.chain().focus().toggleBold().run()}
-          className={editor?.isActive('bold') ? 'bg-muted' : ''}
-          aria-label={`Toggle bold in ${editorName}`}
-        >
-          <Bold className="size-4" />
-        </Button>
-
-        {/* Italic */}
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => editor?.chain().focus().toggleItalic().run()}
-          className={editor?.isActive('italic') ? 'bg-muted' : ''}
-          aria-label={`Toggle italic in ${editorName}`}
-        >
-          <Italic className="size-4" />
-        </Button>
-
-        <div className="w-px h-6 bg-border mx-1" />
-
-        {/* Heading 1 */}
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() =>
-            editor?.chain().focus().toggleHeading({ level: 1 }).run()
-          }
-          className={
-            editor?.isActive('heading', { level: 1 }) ? 'bg-muted' : ''
-          }
-          aria-label={`Toggle heading 1 in ${editorName}`}
-        >
-          <Heading1 className="size-4" />
-        </Button>
-
-        {/* Heading 2 */}
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() =>
-            editor?.chain().focus().toggleHeading({ level: 2 }).run()
-          }
-          className={
-            editor?.isActive('heading', { level: 2 }) ? 'bg-muted' : ''
-          }
-          aria-label={`Toggle heading 2 in ${editorName}`}
-        >
-          <Heading2 className="size-4" />
-        </Button>
-
-        {/* Heading 3 */}
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() =>
-            editor?.chain().focus().toggleHeading({ level: 3 }).run()
-          }
-          className={
-            editor?.isActive('heading', { level: 3 }) ? 'bg-muted' : ''
-          }
-          aria-label={`Toggle heading 3 in ${editorName}`}
-        >
-          <Heading3 className="size-4" />
-        </Button>
-
-        <div className="w-px h-6 bg-border mx-1" />
-
-        {/* Bullet List */}
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => editor?.chain().focus().toggleBulletList().run()}
-          className={editor?.isActive('bulletList') ? 'bg-muted' : ''}
-          aria-label={`Toggle bullet list in ${editorName}`}
-        >
-          <List className="size-4" />
-        </Button>
-
-        {/* Ordered List */}
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => editor?.chain().focus().toggleOrderedList().run()}
-          className={editor?.isActive('orderedList') ? 'bg-muted' : ''}
-          aria-label={`Toggle ordered list in ${editorName}`}
-        >
-          <ListOrdered className="size-4" />
-        </Button>
-
-        <div className="w-px h-6 bg-border mx-1" />
-
-        {/* Code */}
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => editor?.chain().focus().toggleCode().run()}
-          className={editor?.isActive('code') ? 'bg-muted' : ''}
-          aria-label={`Toggle inline code in ${editorName}`}
-        >
-          <Code className="size-4" />
-        </Button>
-
-        {/* Code Block */}
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => editor?.chain().focus().toggleCodeBlock().run()}
-          className={editor?.isActive('codeBlock') ? 'bg-muted' : ''}
-          aria-label={`Toggle code block in ${editorName}`}
-        >
-          <FileCode className="size-4" />
-        </Button>
-      </div>
-    );
   };
 
   return (
@@ -448,10 +217,17 @@ export function ArtifactTypeForm({
         <Label htmlFor="instructionPrompt">
           Instruction Prompt <span className="text-destructive">*</span>
         </Label>
-        <div className="border rounded-md">
-          {renderToolbar(instructionPromptEditor, 'instruction prompt')}
-          <EditorContent editor={instructionPromptEditor} />
-        </div>
+        <MarkdownEditor
+          value={watch('instructionPrompt')}
+          onChange={(content) => setValue('instructionPrompt', content)}
+          placeholder="Enter AI instructions for generating this artifact type..."
+          maxLength={50000}
+          showToolbar={false}
+          toolbarMode="none"
+          autoSave={false}
+          showCharacterCount={true}
+          ariaLabel="Instruction prompt editor"
+        />
         <p className="text-xs text-muted-foreground">
           AI system prompt with instructions for generating this artifact type
         </p>
@@ -465,10 +241,17 @@ export function ArtifactTypeForm({
       {/* Template Editor */}
       <div className="space-y-2">
         <Label htmlFor="template">Template (Optional)</Label>
-        <div className="border rounded-md">
-          {renderToolbar(templateEditor, 'template')}
-          <EditorContent editor={templateEditor} />
-        </div>
+        <MarkdownEditor
+          value={watch('template') || ''}
+          onChange={(content) => setValue('template', content)}
+          placeholder="Enter markdown template structure (optional)..."
+          maxLength={50000}
+          showToolbar={false}
+          toolbarMode="none"
+          autoSave={false}
+          showCharacterCount={true}
+          ariaLabel="Template editor"
+        />
         <p className="text-xs text-muted-foreground">
           Markdown template structure for generated content (optional for
           context types)
