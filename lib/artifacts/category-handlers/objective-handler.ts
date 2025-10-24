@@ -2,7 +2,7 @@ import 'server-only';
 
 import type { CategoryHandler, GenerationContext } from './types';
 import type { ArtifactType } from '@/lib/db/schema';
-import { ArtifactCategory } from '@/lib/db/schema';
+import { ArtifactCategory, workspace } from '@/lib/db/schema';
 import { ObjectiveDocumentBuilder } from '@/lib/ai/prompts/builders';
 import {
   processStream,
@@ -10,7 +10,6 @@ import {
   fetchSourceDocuments,
 } from '@/lib/artifacts/document-types/base-handler';
 import { db } from '@/lib/db/queries';
-import { workspace } from '@/lib/db/schema';
 import { and, eq, isNull } from 'drizzle-orm';
 import { getObjectiveById } from '@/lib/db/objective';
 import { getCurrentVersionGoal } from '@/lib/db/objective-document';
