@@ -14,7 +14,7 @@ import { useArtifactSelector } from '@/hooks/use-artifact';
 import { toast } from './toast';
 import { useAutoResume } from '@/hooks/use-auto-resume';
 import { ChatSDKError } from '@/lib/errors';
-import type { Attachment, ChatMessage } from '@/lib/types';
+import type { ChatMessage } from '@/lib/types';
 import { getLogger } from '@/lib/logger';
 
 const logger = getLogger('Chat');
@@ -165,7 +165,6 @@ export function Chat({
     fetcher,
   );
 
-  const [attachments, setAttachments] = useState<Array<Attachment>>([]);
   const isArtifactVisible = useArtifactSelector((state) => state.isVisible);
 
   useAutoResume({
@@ -206,8 +205,6 @@ export function Chat({
               setInput={setInput}
               status={status}
               stop={stop}
-              attachments={attachments}
-              setAttachments={setAttachments}
               messages={messages}
               setMessages={setMessages}
               sendMessage={sendMessage}
@@ -224,8 +221,6 @@ export function Chat({
         setInput={setInput}
         status={status}
         stop={stop}
-        attachments={attachments}
-        setAttachments={setAttachments}
         sendMessage={sendMessage}
         messages={messages}
         setMessages={setMessages}
