@@ -18,6 +18,10 @@ interface PlaybookResult {
     whenToUse: string;
     content: string;
     stepCount: number;
+    steps?: Array<{
+      sequence: number;
+      instruction: string;
+    }>;
   };
   message?: string;
   error?: string;
@@ -45,6 +49,7 @@ export function PlaybookToolResult({ result }: PlaybookToolResultProps) {
   }
 
   const { playbook } = result;
+  const steps = playbook.steps || [];
 
   return (
     <Collapsible
@@ -54,16 +59,13 @@ export function PlaybookToolResult({ result }: PlaybookToolResultProps) {
     >
       <CollapsibleTrigger className="flex w-full items-center justify-between gap-2 p-3 min-w-0">
         <div className="flex items-center gap-2 min-w-0 flex-1">
-          <BookOpenIcon className="size-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
+          <BookOpenIcon className="size-4 text-primary shrink-0" />
           <span className="font-medium text-sm truncate">
             Retrieved Playbook
           </span>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <Badge
-            variant="secondary"
-            className="rounded-full text-xs bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300"
-          >
+          <Badge variant="secondary" className="rounded-full text-xs">
             {playbook.stepCount} steps
           </Badge>
           <ChevronDownIcon
@@ -78,35 +80,30 @@ export function PlaybookToolResult({ result }: PlaybookToolResultProps) {
       <CollapsibleContent className="data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2 text-popover-foreground outline-none data-[state=closed]:animate-out data-[state=open]:animate-in">
         <div className="px-3 pb-3 space-y-3">
           {/* Playbook Header */}
-          <div className="p-3 bg-indigo-50 dark:bg-indigo-900/10 rounded-md space-y-2">
-            <div className="text-sm font-semibold text-indigo-900 dark:text-indigo-100">
-              {playbook.name}
-            </div>
+          <div className="p-3 bg-accent/10 rounded-md space-y-2">
+            <div className="text-sm font-semibold">{playbook.name}</div>
             {playbook.description && (
-              <div className="text-sm text-indigo-700 dark:text-indigo-300">
+              <div className="text-sm text-muted-foreground">
                 {playbook.description}
               </div>
             )}
           </div>
 
-          {/* When to Use */}
-          <div className="p-3 bg-muted/50 rounded-md space-y-2">
-            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              When to Use
-            </div>
-            <div className="text-sm">{playbook.whenToUse}</div>
-          </div>
-
-          {/* Steps Preview */}
-          <div className="p-3 bg-muted/30 rounded-md">
-            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
-              Workflow Preview
-            </div>
-            <div className="text-sm text-muted-foreground">
-              This playbook contains {playbook.stepCount} sequential steps to
-              guide your workflow. The agent will follow these steps to ensure
-              completeness and consistency.
-            </div>
+          {/* Steps List */}
+          <div className="space-y-3">
+            {steps.map((step) => (
+              <div
+                key={step.sequence}
+                className="p-3 bg-muted/30 rounded-md border-l-2 border-primary"
+              >
+                <div className="text-xs font-semibold text-primary mb-1">
+                  Step {step.sequence}
+                </div>
+                <div className="text-sm whitespace-pre-wrap">
+                  {step.instruction}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </CollapsibleContent>

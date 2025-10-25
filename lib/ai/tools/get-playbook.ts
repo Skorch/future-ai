@@ -109,6 +109,10 @@ This playbook is complete when all validation steps have been executed and user 
             whenToUse: playbook.whenToUse,
             content: fullContent,
             stepCount: playbook.steps.length,
+            steps: playbook.steps.map((step: PlaybookStep) => ({
+              sequence: step.sequence,
+              instruction: step.instruction,
+            })),
           },
           message: `Retrieved playbook "${playbook.name}" with ${playbook.steps.length} steps.`,
         };
