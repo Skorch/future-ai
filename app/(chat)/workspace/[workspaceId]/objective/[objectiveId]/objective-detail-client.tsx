@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import {
-  PlusIcon,
   FileTextIcon,
   MessageSquare,
   ChevronDownIcon,
@@ -15,6 +14,7 @@ import {
   FileEdit,
   Target,
   CheckSquare,
+  Zap,
 } from 'lucide-react';
 import {
   Card,
@@ -50,6 +50,10 @@ import { ObjectiveGoalTab } from '@/components/objective/objective-goal-tab';
 import { ObjectiveActionsTab } from '@/components/objective/objective-actions-tab';
 import { TaskHistoryTab } from '@/components/objective/task-history-tab';
 import { ObjectiveEmptyState } from '@/components/knowledge/compositions/empty-state';
+import {
+  PlaybookCommandPalette,
+  PLAYBOOK_MESSAGE_TEMPLATE,
+} from '@/components/playbook/playbook-command-palette';
 
 interface Chat {
   id: string;
@@ -265,18 +269,31 @@ export function ObjectiveDetailClient({
         {/* Quick Actions Bar */}
         <div className="px-6 pb-6">
           <div className="flex gap-2 flex-wrap">
-            <Button
-              asChild
-              variant="outline"
-              className="flex items-center gap-2 rounded-full hover:bg-muted/50 transition-all"
-            >
-              <Link
-                href={`/workspace/${workspaceId}/chat/new?objectiveId=${objectiveId}`}
-              >
-                <PlusIcon className="size-4" />
-                <span className="font-medium">New Task</span>
-              </Link>
-            </Button>
+            <PlaybookCommandPalette
+              workspaceId={workspaceId}
+              objectiveId={objectiveId}
+              includeGeneralOption={true}
+              trigger={
+                <Button
+                  variant="outline"
+                  className="flex items-center gap-2 rounded-full hover:bg-muted/50 transition-all"
+                >
+                  <Zap className="size-4" />
+                  <span className="font-medium">New Task</span>
+                </Button>
+              }
+              onSelect={(playbook) => {
+                const baseUrl = `/workspace/${workspaceId}/chat/new?objectiveId=${objectiveId}`;
+                if (playbook) {
+                  const query = PLAYBOOK_MESSAGE_TEMPLATE(playbook.name);
+                  router.push(
+                    `${baseUrl}&query=${encodeURIComponent(query)}&autoSubmit=true`,
+                  );
+                } else {
+                  router.push(baseUrl);
+                }
+              }}
+            />
 
             <Button
               variant="outline"
