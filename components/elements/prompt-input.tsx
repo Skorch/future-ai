@@ -170,6 +170,12 @@ export const PromptInputSubmit = ({
     Icon = <XIcon className="size-4" />;
   }
 
+  console.log('[PromptInputSubmit] Rendering:', {
+    status,
+    disabled: props.disabled,
+    className,
+  });
+
   return (
     <Button
       className={cn('gap-1.5 rounded-lg', className)}
