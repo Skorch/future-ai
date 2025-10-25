@@ -192,8 +192,6 @@ export function DomainForm({ domain, artifactTypes }: DomainFormProps) {
           onChange={(content) => setValue('systemPrompt', content)}
           placeholder="Enter system prompt instructions..."
           maxLength={50000}
-          showToolbar={false}
-          toolbarMode="none"
           autoSave={false}
           showCharacterCount={true}
           ariaLabel="System prompt editor"
@@ -216,8 +214,6 @@ export function DomainForm({ domain, artifactTypes }: DomainFormProps) {
           onChange={(content) => setValue('defaultWorkspaceContext', content)}
           placeholder="Enter default workspace context..."
           maxLength={WORKSPACE_CONTEXT_MAX_LENGTH}
-          showToolbar={false}
-          toolbarMode="none"
           autoSave={false}
           showCharacterCount={true}
           ariaLabel="Default workspace context editor"

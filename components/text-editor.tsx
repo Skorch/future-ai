@@ -137,7 +137,6 @@ function EditingEditor({
       onChange={handleChange}
       placeholder=""
       showToolbar={true}
-      toolbarMode="floating"
       autoSave={false} // We handle saving via onChange callback
       showCharacterCount={false} // Keep UI minimal
       features={['all']}

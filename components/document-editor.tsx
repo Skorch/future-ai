@@ -168,7 +168,6 @@ export const DocumentEditor = forwardRef<
           placeholder="Start writing your document..."
           maxLength={50000}
           showToolbar
-          toolbarMode="floating"
           autoSave
           saveDebounce={2000}
           showCharacterCount

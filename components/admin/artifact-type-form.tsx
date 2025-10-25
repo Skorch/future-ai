@@ -222,8 +222,6 @@ export function ArtifactTypeForm({
           onChange={(content) => setValue('instructionPrompt', content)}
           placeholder="Enter AI instructions for generating this artifact type..."
           maxLength={50000}
-          showToolbar={false}
-          toolbarMode="none"
           autoSave={false}
           showCharacterCount={true}
           ariaLabel="Instruction prompt editor"
@@ -246,8 +244,6 @@ export function ArtifactTypeForm({
           onChange={(content) => setValue('template', content)}
           placeholder="Enter markdown template structure (optional)..."
           maxLength={50000}
-          showToolbar={false}
-          toolbarMode="none"
           autoSave={false}
           showCharacterCount={true}
           ariaLabel="Template editor"
